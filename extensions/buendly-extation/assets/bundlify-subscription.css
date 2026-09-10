@@ -1,0 +1,28 @@
+.bundlify-subscription-widget { display:block; max-width:680px; margin:24px auto; padding:24px; color:#101b38; background:linear-gradient(135deg,#f7f7fb,#eff0f6); border:1px solid #e1e4ef; border-radius:24px; font-family:inherit; box-shadow:0 14px 40px -24px #141d4a66; }
+.bundlify-subscription-widget * { box-sizing:border-box; }
+.bundlify-subscription-widget h3 { margin:0 0 20px; font-size:18px; color:inherit; }
+.bundlify-subscription-widget select { width:100%; padding:12px; border:1px solid #d3d8e6; border-radius:12px; background:white; color:inherit; margin:8px 0 22px; font:inherit; }
+.bundlify-subscription-widget fieldset { padding:0; margin:0 0 20px; border:0; min-width:0; }
+.bundlify-subscription-widget legend { font-size:12px; margin-bottom:12px; }
+.bundlify-subscription-widget [hidden] { display:none !important; }
+.bundlify-subscription-widget .bundlify-purchase-cards { display:flex; gap:12px; margin-bottom:22px; }
+.bundlify-subscription-widget .bundlify-purchase-card { flex:1; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:9px; min-height:150px; padding:16px; background:#ffffff80; border:1px solid #dfe2ec; border-radius:20px; cursor:pointer; font-size:14px; }
+.bundlify-subscription-widget .bundlify-purchase-card:has(input:checked) { background:white; border-color:#6251e5; box-shadow:0 7px 24px -10px #34268366; }
+.bundlify-subscription-widget .bundlify-purchase-card input { position:absolute; top:12px; left:12px; accent-color:#5743de; }
+.bundlify-subscription-widget .bundlify-card-icon { font-size:32px; line-height:1; }
+.bundlify-subscription-widget .bundlify-card-icon svg { display:block; }
+.bundlify-subscription-widget .bundlify-purchase-card[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
+.bundlify-subscription-widget small { display:block; font-size:11px; }
+.bundlify-subscription-widget .bundlify-eyebrow { font-size:10px; letter-spacing:2px; margin:12px 0; }
+.bundlify-subscription-widget .bundlify-option { display:flex; align-items:center; gap:10px; padding:14px 12px; border:1px solid transparent; border-radius:10px; cursor:pointer; margin:6px 0; font-size:13px; }
+.bundlify-subscription-widget .bundlify-option:has(input:checked) { background:#0b1535; color:white; }
+.bundlify-subscription-widget .bundlify-option input { flex-shrink:0; accent-color:#705cf1; margin:0; }
+.bundlify-subscription-widget .bundlify-plan-copy { flex:1; overflow-wrap:anywhere; }
+.bundlify-subscription-widget .bundlify-price { text-align:right; font-weight:650; }
+.bundlify-subscription-widget details { margin-top:16px; font-size:12px; }
+.bundlify-subscription-widget summary { cursor:pointer; }
+.bundlify-subscription-widget .bundlify-quantity { display:block; width:90px; margin:8px 0 16px; padding:10px; border:1px solid #cbd1e1; border-radius:24px; background:white; color:inherit; }
+.bundlify-subscription-widget button[data-bundlify-submit] { width:100%; padding:14px; border:0; border-radius:28px; background:#101b38; color:white; font:inherit; font-weight:650; cursor:pointer; }
+.bundlify-subscription-widget button:disabled { opacity:.5; cursor:not-allowed; }
+.bundlify-subscription-widget :is(input,select,button,summary):focus-visible { outline:3px solid #8a79f3; outline-offset:3px; }
+@media(max-width:440px) { .bundlify-subscription-widget { padding:16px; } .bundlify-subscription-widget .bundlify-option { flex-wrap:wrap; } .bundlify-subscription-widget .bundlify-price { width:100%; text-align:left; margin-left:24px; } }

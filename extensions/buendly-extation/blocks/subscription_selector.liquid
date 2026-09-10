@@ -1,0 +1,15 @@
+{% render 'subscription-options', product: product, block: block %}
+{% schema %}
+{
+  "name": "Subscription Selector",
+  "target": "section",
+  "javascript": "bundlify-subscription.js",
+  "stylesheet": "bundlify-subscription.css",
+  "enabled_on": {
+    "templates": [
+      "product"
+    ]
+  },
+  "settings": []
+}
+{% endschema %}

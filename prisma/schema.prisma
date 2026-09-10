@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model SubscriptionPlan {
+  id Int @id @default(autoincrement())
+
+  shop String
+
+  name String
+
+  productId String
+
+  productTitle String?
+
+  productImage String?
+
+  frequency String
+
+  discount Int
+
+  status String @default("ACTIVE")
+
+  sellingPlanGroupId String? @unique
+  deliveryOptions DeliveryOption[]
+
+  createdAt DateTime @default(now())
+
+  @@index([shop, createdAt])
+}
+
+model DeliveryOption {
+  id Int @id @default(autoincrement())
+  subscriptionPlanId Int
+  subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
+  frequency String
+  interval String
+  intervalCount Int
+  discount Int
+  sellingPlanId String? @unique
+}
+
+
+model Bundle {
+  id        Int             @id @default(autoincrement())
+  shop      String
+  name      String
+  discount  Int
+  status    String          @default("DRAFT")
+  createdAt DateTime        @default(now())
+  products  BundleProduct[]
+
+  @@index([shop, createdAt])
+}
+
+model BundleProduct {
+  id           Int    @id @default(autoincrement())
+  bundleId     Int
+  productId    String
+  productTitle String
+  bundle       Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, productId])
+}

@@ -1,0 +1,61 @@
+﻿{% assign selected_variant = product.selected_or_first_available_variant %}
+
+<bundlify-subscription data-variant-id="{{ selected_variant.id }}" class="bundlify-subscription-widget" {{ block.shopify_attributes }}>
+  <h3>Purchase options</h3>
+  {% if product != blank %}
+      {% for variant in product.variants %}
+        <fieldset data-bundlify-plans="{{ variant.id }}" data-available="{{ variant.available }}"
+          {% unless variant.id == selected_variant.id %}hidden disabled{% endunless %}>
+          <legend>Choose how to purchase</legend>
+          <div class="bundlify-purchase-cards">
+            {% unless variant.requires_selling_plan %}
+              <label class="bundlify-purchase-card">
+                <input type="radio" data-mode name="mode-{{ block.id }}-{{ variant.id }}" value="one-time" checked>
+                <span class="bundlify-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 15 17-8 17 8-17 8-17-8Zm0 0v19l17 8 17-8V15M24 23v19M15 11l18 8"/></svg>
+                </span>
+                <span>One-time purchase</span>
+                <small>Buy once, without a subscription</small>
+                <strong>{{ variant.price | money_with_currency }}</strong>
+              </label>
+            {% endunless %}
+              <label class="bundlify-purchase-card" {% if variant.selling_plan_allocations.size == 0 %}aria-disabled="true"{% endif %}>
+                <input type="radio" data-mode name="mode-{{ block.id }}-{{ variant.id }}" value="subscription"
+                  {% if variant.selling_plan_allocations.size == 0 %}disabled{% endif %}
+                  {% if variant.requires_selling_plan %}checked{% endif %}>
+                <span class="bundlify-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 16a18 18 0 0 1 31-5l4 5M42 6v10H32M41 32A18 18 0 0 1 10 37l-4-5M6 42V32h10"/><path d="m17 20 7-4 7 4v9l-7 4-7-4v-9Zm0 0 7 4 7-4M24 24v9"/></svg>
+                </span>
+                <span>Subscribe &amp; Save</span>
+                {% if variant.selling_plan_allocations.size > 0 %}
+                <small>Choose your delivery schedule</small>
+                {% else %}
+                <small>No subscription available for this option</small>
+                {% endif %}
+              </label>
+          </div>
+          <div data-frequencies {% unless variant.requires_selling_plan %}hidden{% endunless %}>
+            <p class="bundlify-eyebrow">DELIVERY FREQUENCY</p>
+            {% for allocation in variant.selling_plan_allocations %}
+              <label class="bundlify-option">
+                <input type="radio" data-plan name="plan-{{ block.id }}-{{ variant.id }}" value="{{ allocation.selling_plan.id }}" {% if forloop.first %}checked{% endif %}>
+                <span class="bundlify-plan-copy">
+                  <span>{{ allocation.selling_plan.name | escape }}</span>
+                  {% if variant.price > allocation.price and variant.price > 0 %}
+                    {% assign saving = variant.price | minus: allocation.price | times: 100.0 | divided_by: variant.price | round %}
+                    <small>Save {{ saving }}%</small>
+                  {% endif %}
+                </span>
+                <span class="bundlify-price">{{ allocation.price | money_with_currency }}<small> / delivery</small></span>
+              </label>
+            {% endfor %}
+            <details><summary>Subscription details</summary><p>You are choosing recurring deliveries at the selected frequency. Review the payment schedule and subscription terms at checkout.</p></details>
+          </div>
+        </fieldset>
+      {% endfor %}
+      <p data-bundlify-error role="status" hidden></p>
+      <noscript>Enable JavaScript to select a subscription.</noscript>
+  {% else %}
+    <p>Select a product to preview its purchase options.</p>
+  {% endif %}
+</bundlify-subscription>
