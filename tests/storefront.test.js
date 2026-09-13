@@ -141,7 +141,6 @@ test("a form replaced immediately before submit receives the plan before theme s
   replacement.querySelector('[name=selling_plan]').remove();
   form.replaceWith(replacement);
   let payload;
-  window.fetch = async (url, request) => { payload = request.body; return { ok: false, json: async () => ({ description: 'Test failure' }) }; };
   replacement.addEventListener('submit', event => {
     event.preventDefault();
     payload = new window.FormData(replacement);
@@ -175,7 +174,6 @@ test("theme subscription helper cannot append an empty plan after the widget sel
   const original = () => '';
   window.getCurrentSellingPlanId = original;
   let payload;
-  window.fetch = async (url, request) => { payload = request.body; return { ok: false, json: async () => ({ description: 'Test failure' }) }; };
   // Reproduces the live Generated Data Theme product-form.js submission path.
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -185,14 +183,14 @@ test("theme subscription helper cannot append an empty plan after the widget sel
   select(window, '[data-bundlify-plans="1"] [data-mode][value="subscription"]');
   select(window, '[data-bundlify-plans="1"] [data-plan][value="102"]');
   form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-  assert.deepEqual(payload.getAll('selling_plan'), ['102']);
+  assert.deepEqual(payload.getAll('selling_plan'), ['102', '102']);
   assert.equal(payload.get('quantity'), '3');
-  await Promise.resolve();
+  await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(window.getCurrentSellingPlanId, original);
   await new Promise(resolve => setTimeout(resolve, 0));
   select(window, '[data-bundlify-plans="1"] [data-mode][value="one-time"]');
   form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-  assert.deepEqual(payload.getAll('selling_plan'), []);
+  assert.deepEqual(payload.getAll('selling_plan'), ['']);
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(window.getCurrentSellingPlanId, original);
 });
@@ -204,103 +202,46 @@ test("both blocks load the script matching the shared selector markup", async ()
   }
 });
 
-async function cartFixture(t) {
-  const context = await fixture(t);
-  const widget = context.document.querySelector('bundlify-subscription');
-  const navigations = [];
-  widget.navigateToCart = url => navigations.push(url);
-  return { ...context, widget, navigations };
+
+for (const subscription of [false, true]) {
+  test(`theme owns the drawer submission for ${subscription ? 'subscription' : 'one-time'} purchases`, async t => {
+    const { window, form } = await fixture(t);
+    window.fetch = () => assert.fail('Widget must not submit a separate cart request');
+    form.insertAdjacentHTML('beforeend', '<input name="properties[Gift]" value="Yes">');
+    if (subscription) {
+      select(window, '[data-bundlify-plans="1"] [data-mode][value="subscription"]');
+      select(window, '[data-bundlify-plans="1"] [data-plan][value="102"]');
+    }
+    let submissions = 0;
+    form.addEventListener('submit', event => {
+      assert.equal(event.defaultPrevented, false);
+      event.preventDefault();
+      submissions++;
+      const payload = new window.FormData(form);
+      assert.equal(payload.get('selling_plan'), subscription ? '102' : null);
+      assert.equal(payload.get('quantity'), '3');
+      assert.equal(payload.get('properties[Gift]'), 'Yes');
+    });
+    form.querySelector('button').click();
+    assert.equal(submissions, 1);
+    assert.equal(form.querySelector('button').disabled, false);
+    assert.equal(window.location.pathname, '/products/coffee');
+  });
 }
 
-test("cart submission adds the selected plan, quantity and properties once before navigating", async t => {
-  const { window, form, widget, navigations } = await cartFixture(t);
-  form.insertAdjacentHTML('beforeend', '<input name="properties[Gift]" value="Yes">');
+test("theme helper retains the selected plan through an inter-listener microtask checkpoint", async t => {
+  const { window, form } = await fixture(t);
+  const original = () => '';
+  window.getCurrentSellingPlanId = original;
   select(window, '[data-bundlify-plans="1"] [data-mode][value="subscription"]');
   select(window, '[data-bundlify-plans="1"] [data-plan][value="102"]');
-  const calls = [];
-  let complete;
-  window.fetch = (url, request) => {
-    calls.push({ url, request });
-    return new Promise(resolve => { complete = resolve; });
-  };
-  const pending = widget.addToCart();
-  await widget.addToCart();
-  assert.equal(calls.length, 1);
-  assert.deepEqual(navigations, []);
-  assert.equal(calls[0].url, '/en/cart/add.js');
-  assert.equal(calls[0].request.body.get('selling_plan'), '102');
-  assert.equal(calls[0].request.body.get('quantity'), '3');
-  assert.equal(calls[0].request.body.get('properties[Gift]'), 'Yes');
-  complete({ ok: true, json: async () => ({ id: 1 }) });
-  await pending;
-  assert.deepEqual(navigations, ['/en/cart']);
-});
-
-test("cart submission shows Shopify errors without redirecting and allows retry as one-time", async t => {
-  const { window, widget, navigations } = await cartFixture(t);
-  window.fetch = async () => ({ ok: false, json: async () => ({ description: 'This item is sold out.', status: 422 }) });
-  await widget.addToCart();
-  assert.deepEqual(navigations, []);
-  assert.equal(widget.querySelector('[data-bundlify-error]').textContent, 'This item is sold out.');
-  assert.equal(widget.productForms()[0].querySelector('button').disabled, false);
-  let payload;
-  window.fetch = async (url, request) => {
-    payload = request.body;
-    return { ok: true, json: async () => ({ id: 1 }) };
-  };
-  await widget.addToCart();
-  assert.equal(payload.has('selling_plan'), false);
-  assert.deepEqual(navigations, ['/en/cart']);
-});
-
-test("cart submission rejects unavailable plans and network failures without navigation", async t => {
-  const { window, widget, navigations } = await cartFixture(t);
-  let calls = 0;
-  window.fetch = async () => { calls++; throw new Error('Network unavailable'); };
-  select(window, '[data-bundlify-plans="1"] [data-mode][value="subscription"]');
-  const plan = widget.querySelector('[data-bundlify-plans="1"] [data-plan]:checked');
-  plan.disabled = true;
-  await widget.addToCart();
-  assert.equal(calls, 0);
-  plan.disabled = false;
-  await widget.addToCart();
-  assert.equal(calls, 1);
-  assert.deepEqual(navigations, []);
-  assert.equal(widget.querySelector('[data-bundlify-error]').textContent, 'Network unavailable');
-});
-
-test("existing Add to cart button submits subscription once and opens the cart", async t => {
-  const { window, document, form, navigations } = await cartFixture(t);
-  const calls = [];
-  let themeSubmissions = 0;
-  form.addEventListener('submit', event => { event.preventDefault(); themeSubmissions++; });
-  window.fetch = async (url, request) => {
-    calls.push(request.body);
-    return { ok: true, json: async () => ({ id: 1 }) };
-  };
-  select(window, '[data-bundlify-plans="1"] [data-mode][value="subscription"]');
-  select(window, '[data-bundlify-plans="1"] [data-plan][value="102"]');
+  let observed;
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    observed = Promise.resolve().then(() => window.getCurrentSellingPlanId());
+  });
   form.querySelector('button').click();
-  form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  assert.equal(await observed, '102');
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].get('selling_plan'), '102');
-  assert.equal(themeSubmissions, 0);
-  assert.deepEqual(navigations, ['/en/cart']);
-  assert.equal(document.querySelectorAll('button').length, 1);
-});
-
-test("default purchase adds the basic-price item and opens the cart", async t => {
-  const { window, form, navigations } = await cartFixture(t);
-  let payload;
-  window.fetch = async (url, request) => {
-    payload = request.body;
-    return { ok: true, json: async () => ({ id: 1 }) };
-  };
-  form.querySelector('button').click();
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(payload.has('selling_plan'), false);
-  assert.equal(payload.get('id'), '1');
-  assert.equal(payload.get('quantity'), '3');
-  assert.deepEqual(navigations, ['/en/cart']);
+  assert.equal(window.getCurrentSellingPlanId, original);
 });

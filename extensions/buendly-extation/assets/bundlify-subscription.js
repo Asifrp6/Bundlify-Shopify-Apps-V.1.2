@@ -23,19 +23,25 @@ if (!customElements.get("bundlify-subscription")) {
           (event) => {
             // Discover replacement forms synchronously, before the theme serializes them.
             if (!this.productForms().includes(event.target)) return;
-            if (this.pending) {
-              event.preventDefault();
-              event.stopImmediatePropagation();
-              return;
-            }
             if (!this.update(event.target)) {
               event.preventDefault();
               event.stopImmediatePropagation();
               return;
             }
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            void this.addToCart(event.target, event.submitter);
+            // Let the theme serialize the form and manage its cart drawer.
+            const original = window.getCurrentSellingPlanId;
+            if (typeof original === "function") {
+              const form = event.target;
+              const selectedPlan = () =>
+                form.querySelector("[data-bundlify-selling-plan]")?.value || "";
+              window.getCurrentSellingPlanId = selectedPlan;
+              // Browser-dispatched events can run microtasks between listeners.
+              // Restore only after all synchronous theme submit handlers finish.
+              setTimeout(() => {
+                if (window.getCurrentSellingPlanId === selectedPlan)
+                  window.getCurrentSellingPlanId = original;
+              });
+            }
           },
           { ...options, capture: true },
         );
@@ -120,11 +126,11 @@ if (!customElements.get("bundlify-subscription")) {
             (!!plan && !active.querySelector("[data-plan]:checked")?.disabled));
         const error = this.querySelector("[data-bundlify-error]");
         if (error) {
-          const message = this.cartError || (!forms.length
+          const message = !forms.length
             ? "Subscription selection is unavailable: product form not found."
             : !valid
               ? "Choose an available purchase option."
-              : "");
+              : "";
           if (error.textContent !== message) error.textContent = message;
           if (error.hidden !== !message) error.hidden = !message;
         }
@@ -160,43 +166,6 @@ if (!customElements.get("bundlify-subscription")) {
           if (input.disabled !== !plan) input.disabled = !plan;
         }
         return valid && !!main;
-      }
-      async addToCart(form = this.productForms()[0], submitter) {
-        if (this.pending) return;
-        this.cartError = "";
-        if (!this.update(form) || !form.reportValidity()) return;
-        const data = new FormData(form);
-        // Normalize after theme formdata listeners have run.
-        const plan = form.querySelector("[data-bundlify-selling-plan]")?.value;
-        if (plan) data.set("selling_plan", plan);
-        else data.delete("selling_plan");
-        const root = new URL(form.action).pathname.replace(/cart\/add(?:\.js)?\/?$/, "");
-        const button = submitter || form.querySelector('button[type="submit"], button:not([type]), input[type="submit"]');
-        const wasDisabled = button?.disabled;
-        this.pending = true;
-        if (button) button.disabled = true;
-        this.setAttribute("aria-busy", "true");
-        try {
-          const response = await fetch(`${root}cart/add.js`, {
-            method: "POST",
-            headers: { Accept: "application/json" },
-            body: data,
-          });
-          const result = await response.json();
-          if (!response.ok || result.status >= 400) {
-            throw new Error(result.description || result.message || "Unable to add this purchase option to your cart.");
-          }
-          this.navigateToCart(`${root}cart`);
-        } catch (error) {
-          this.cartError = error.message || "Unable to reach the cart. Please try again.";
-          this.pending = false;
-          if (button) button.disabled = wasDisabled;
-          this.removeAttribute("aria-busy");
-          this.update();
-        }
-      }
-      navigateToCart(url) {
-        window.location.assign(url);
       }
       disconnectedCallback() {
         this.controller?.abort();
