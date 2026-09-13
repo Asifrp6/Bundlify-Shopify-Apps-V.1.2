@@ -1,6 +1,6 @@
-import { redirect, Form, useLoaderData } from "react-router";
-import { login } from "../../shopify.server";
-import styles from "./styles.module.css";
+import { Form, redirect, useLoaderData } from "react-router";
+import { login } from "../shopify.server";
+import styles from "../styles/landing.module.css";
 
 export async function loader({ request }) {
   const url = new URL(request.url);

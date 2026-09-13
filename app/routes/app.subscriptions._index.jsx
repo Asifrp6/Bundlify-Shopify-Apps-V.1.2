@@ -1,17 +1,10 @@
-import { useLoaderData, useSearchParams } from "react-router";
-import {
-  Badge,
-  Button,
-  Banner,
-  BlockStack,
-  Card,
-  InlineStack,
-  Page,
-  Text,
-} from "@shopify/polaris";
+import { useState } from "react";
+import { Link, useLoaderData, useSearchParams } from "react-router";
+import { Banner } from "@shopify/polaris";
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
 import { reportRouteFailure } from "../services/route-diagnostics.server";
+import styles from "../styles/subscriptions.module.css";
 
 export async function loader({ request }) {
   let session;
@@ -35,78 +28,59 @@ export async function loader({ request }) {
   }
 }
 
+function PlanSymbol() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m4 7 8-4 8 4v10l-8 4-8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10M8 5l8 4"/></svg>;
+}
+
+const statusOf = plan => plan.status === "ACTIVE" && plan.sellingPlanGroupId ? "active" : plan.status === "PENDING" ? "review" : "draft";
+
 export default function Subscriptions() {
   const { subscriptions } = useLoaderData();
   const [params] = useSearchParams();
-  const active = subscriptions.filter(
-    (plan) => plan.status === "ACTIVE" && plan.sellingPlanGroupId,
-  );
-  return (
-    <Page
-      title="Subscription plans"
-      primaryAction={{
-        content: "Create subscription",
-        url: "/app/subscriptions/new",
-      }}
-    >
-      <BlockStack gap="400">
-        {params.get("updated") === "1" && <Banner tone="success">Subscription plan updated.</Banner>}
-        {params.get("deleted") === "1" && <Banner tone="success">Subscription plan deleted.</Banner>}
-        {params.get("created") === "1" && (
-          <Banner tone="success">Subscription plan created in Shopify.</Banner>
-        )}
-        <Card>
-          <Text as="p">
-            {subscriptions.length} total plans · {active.length} active plans
-          </Text>
-        </Card>
-        {!subscriptions.length && (
-          <Card>
-            <Text as="p">
-              Create your first recurring purchase plan for a product.
-            </Text>
-          </Card>
-        )}
-        {subscriptions.map((plan) => (
-          <Card key={plan.id}>
-            <BlockStack gap="200">
-              <InlineStack align="space-between">
-                <Text as="h2" variant="headingMd">
-                  {plan.name}
-                </Text>
-                <InlineStack gap="200" blockAlign="center">
-                <Badge
-                  tone={
-                    plan.status === "ACTIVE" && plan.sellingPlanGroupId
-                      ? "success"
-                      : "attention"
-                  }
-                >
-                  {plan.status === "ACTIVE" && plan.sellingPlanGroupId
-                    ? "Active"
-                    : plan.status === "PENDING"
-                      ? "Needs review"
-                      : "Draft"}
-                </Badge>
-                <Button variant="primary" url={`/app/subscriptions/${plan.id}`}>Edit</Button>
-                <Button tone="critical" url={`/app/subscriptions/${plan.id}#delete-plan`}>Delete</Button>
-                </InlineStack>
-              </InlineStack>
-              <Text as="p">{plan.productTitle || plan.productId}</Text>
-              <Text as="p">
-                {plan.deliveryOptions.length ? plan.deliveryOptions.map(o => o.frequency + " / " + o.discount + "% off").join(" � ") : plan.frequency + " / " + plan.discount + "% off"}
-              </Text>
-              {!plan.sellingPlanGroupId && (
-                <Text as="p" tone="subdued">
-                  {plan.status === "PENDING"
-                    ? "Creation was interrupted. Check selling plans in Shopify before creating another plan."
-                    : "This plan is saved locally and is not active in Shopify."}
-                </Text>
-              )}
-            </BlockStack>
-          </Card>
-        ))}
-      </BlockStack>
-    </Page>
-  );
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const activeCount = subscriptions.filter(plan => statusOf(plan) === "active").length;
+  const reviewCount = subscriptions.filter(plan => statusOf(plan) === "review").length;
+  const filtered = subscriptions.filter(plan => (filter === "all" || statusOf(plan) === filter) && `${plan.name} ${plan.productTitle || plan.productId}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const tabs = [{id:"all",label:"All plans",count:subscriptions.length},{id:"active",label:"Active",count:activeCount},{id:"draft",label:"Drafts",count:subscriptions.length-activeCount-reviewCount},{id:"review",label:"Needs review",count:reviewCount}];
+
+  return <div className={styles.page}>
+    <header className={styles.header}>
+      <div><span className={styles.eyebrow}>RECURRING PURCHASES</span><h1>Subscription plans</h1><p>Thoughtful plans. More reasons for customers to come back.</p></div>
+      <Link className={styles.primaryButton} to="/app/subscriptions/new"><span aria-hidden="true">+</span> Create subscription</Link>
+    </header>
+    {params.get("created") === "1" && <Banner tone="success">Subscription plan created in Shopify.</Banner>}
+    {params.get("updated") === "1" && <Banner tone="success">Subscription plan updated successfully.</Banner>}
+    {params.get("deleted") === "1" && <Banner tone="success">Subscription plan deleted successfully.</Banner>}
+
+    <section className={styles.stats} aria-label="Plan overview">
+      <div className={styles.stat}><div className={styles.statTop}><span>Total plans</span><span className={styles.miniIcon}><PlanSymbol /></span></div><strong>{subscriptions.length}</strong><p>Your subscription collection</p></div>
+      <div className={`${styles.stat} ${styles.activeStat}`}><div className={styles.statTop}><span>Active plans</span><span className={styles.liveDot} aria-hidden="true" /></div><strong>{activeCount}</strong><p>Available for recurring purchases</p></div>
+      <div className={styles.stat}><div className={styles.statTop}><span>Needs review</span><span className={styles.reviewIcon} aria-hidden="true">!</span></div><strong>{reviewCount}</strong><p>{reviewCount ? "Check interrupted plan creation" : "No plans waiting for review"}</p></div>
+    </section>
+
+    <section className={styles.collection} aria-label="Your subscription plans">
+      <div className={styles.collectionHeading}><div><h2>Your plans <span>{subscriptions.length}</span></h2><p>Manage delivery schedules and subscriber savings.</p></div></div>
+      <div className={styles.toolbar}>
+        <div className={styles.filters} aria-label="Filter by status">{tabs.map(tab => <button key={tab.id} type="button" aria-pressed={filter === tab.id} className={filter === tab.id ? styles.selectedFilter : styles.filter} onClick={() => setFilter(tab.id)}>{tab.label}<span>{tab.count}</span></button>)}</div>
+        <label className={styles.search}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input aria-label="Search subscription plans" placeholder="Search plans…" value={query} onChange={event => setQuery(event.target.value)} type="search" /></label>
+      </div>
+      <div className={styles.cards}>
+        {filtered.map(plan => {
+          const status = statusOf(plan);
+          const options = plan.deliveryOptions?.length ? plan.deliveryOptions : [{frequency:plan.frequency,discount:plan.discount}];
+          return <article key={plan.id} className={styles.planCard}>
+            <div className={styles.planHeading}><div className={styles.productIcon}>{plan.productImage ? <img src={plan.productImage} alt="" loading="lazy" /> : <PlanSymbol />}</div><div className={styles.planTitle}><Link to={`/app/subscriptions/${plan.id}`}><h3>{plan.name}</h3></Link><p>{plan.productId === "ALL_PRODUCTS" ? "All products" : plan.productTitle || plan.productId}</p></div><span className={`${styles.badge} ${styles[status]}`}><span aria-hidden="true" />{status === "active" ? "Active" : status === "review" ? "Needs review" : "Draft"}</span></div>
+            <div className={styles.delivery}><span className={styles.detailLabel}>DELIVERY & SAVINGS</span><div className={styles.options}>{options.map((option,index) => <div className={styles.option} key={`${option.frequency}-${index}`}><span className={styles.frequency}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg>{option.frequency}</span><span className={styles.savings}>{option.discount}% off</span></div>)}</div></div>
+            {status === "review" && <p className={styles.notice}>Review this plan in Shopify before creating another.</p>}
+            {status === "draft" && <p className={styles.notice}>Saved locally. This plan is not active in Shopify.</p>}
+            <footer className={styles.cardFooter}><span>{options.length} delivery {options.length === 1 ? "option" : "options"}</span><div><Link className={styles.editButton} to={`/app/subscriptions/${plan.id}`} aria-label={`Edit ${plan.name}`}>Edit plan <span aria-hidden="true">?</span></Link><Link className={styles.deleteButton} to={`/app/subscriptions/${plan.id}#delete-plan`} aria-label={`Delete ${plan.name}`} title="Delete plan"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/></svg></Link></div></footer>
+          </article>;
+        })}
+        {!filtered.length && <div className={styles.empty}><span className={styles.productIcon}><PlanSymbol /></span><h3>{subscriptions.length ? "No matching plans" : "Start something recurring"}</h3><p>{subscriptions.length ? "Try another search or status to find your plan." : "Create your first subscription plan and give customers a reason to return."}</p>{subscriptions.length ? <button className={styles.editButton} onClick={() => {setQuery("");setFilter("all");}}>Clear filters</button> : <Link className={styles.primaryButton} to="/app/subscriptions/new">Create your first plan</Link>}</div>}
+      </div>
+      <div className={styles.collectionFooter} role="status">Showing {filtered.length} of {subscriptions.length} plans</div>
+    </section>
+    <p className={styles.footnote}><span aria-hidden="true">?</span> Plan changes apply to future purchases. Existing customer subscriptions stay unchanged.</p>
+  </div>;
 }

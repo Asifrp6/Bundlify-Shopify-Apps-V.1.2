@@ -9,7 +9,7 @@ export function planOptions(plan) {
   return plan.deliveryOptions?.length ? plan.deliveryOptions : [{ frequency: plan.frequency, discount: plan.discount, ...schedules[plan.frequency] }];
 }
 export function sellingPlanInput(name, option) {
-  const schedule = schedules[option.frequency];
+  const schedule = Object.hasOwn(schedules, option.frequency) ? schedules[option.frequency] : null;
   if (!schedule || !Number.isInteger(option.discount) || option.discount < 0 || option.discount > 100)
     throw new Error("Invalid delivery option.");
   return {

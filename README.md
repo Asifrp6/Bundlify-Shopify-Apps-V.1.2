@@ -8,6 +8,7 @@ Embedded Shopify app built with React Router, Polaris, and Prisma/SQLite.
 - `/app/subscriptions`: saved subscription plans and their actual local creation status.
 - `/app/subscriptions/new`: creates a Shopify selling plan with matching billing and delivery intervals, associates the selected product or the entire current catalog (in batches of 250), and saves the Shopify group ID. Rejected requests show errors; interrupted requests retain a recovery record. A failed local save attempts to roll back the newly created Shopify group.
 - `/app/bundles`: saved bundle drafts.
+- `/app/bundles/:id`: edits a draft's products, name, and planned discount, or deletes it after confirmation. Reads and writes are scoped to the authenticated shop.
 - `/app/bundles/new`: selects real Shopify products and saves a draft with a planned percentage discount. Drafts do not create Shopify bundle products or apply checkout discounts.
 - `/api/products`: authenticated product listing with pagination through the Shopify catalog.
 
@@ -30,7 +31,7 @@ npm test
 npm run build
 ```
 
-Tests cover validation, selling-plan product associations, pagination, rejected requests, uncertain remote outcomes, and compensating rollback. Live checkout and recurring billing are not covered by these local tests.
+Tests cover validation, selling-plan product associations, pagination, pricing-policy mapping, rejected requests, uncertain remote outcomes, compensating rollback, and storefront purchase-mode changes. Live checkout and recurring billing are not covered by these local tests.
 
 ## Shopify configuration
 
@@ -42,7 +43,7 @@ The theme extension provides subscription selection through the existing theme A
 
 ## Subscription activation and recurring orders
 
-1. Deploy the app and theme extension to the intended Shopify app/store. Enable **one** Bundlify Subscription or Subscription Selector app block in the product template near the existing Buy buttons. Both block names now use the same selector. Remove duplicate blocks. There is no extra cart button, quantity selector, or product form.
+1. Deploy the app and theme extension to the intended Shopify app/store. Enable **one** Bundlify Subscription or Subscription Selector app block in the product template near the existing Buy buttons. Both block names now use the same selector. Remove duplicate blocks. Use the existing theme Add to cart button: purchases preserve the form quantity and properties and open the cart page after Shopify confirms the add. Only subscription purchases include the selected selling plan; the default one-time purchase uses the basic product price. The selector adds no extra button.
 2. Create a plan, choose **All products** or one product, and add weekly/monthly delivery options. All products means the catalog at creation time; it does not automatically include future products. Editing or deleting selling plans does not change existing customer contracts.
 3. Set a strong random `BILLING_CRON_SECRET` on the deployed web server and billing worker, and set `SHOPIFY_APP_URL` on the worker. Run `npm run billing:worker` as a persistent supervised process alongside the web server. It checks every five minutes. Alternatively schedule an authenticated POST to `/internal/billing` every five minutes using `Authorization: Bearer <BILLING_CRON_SECRET>`. The endpoint rejects requests when the secret is unset. The worker requires a running, reachable web server and the app's offline Shopify session.
 4. Monitor non-200 billing responses and worker logs. Failed payments or authentication-required payments stop automatic billing for that contract until resolved; the worker does not blindly retry declined cards. Shopify processing that is still pending is checked on subsequent runs. Stable keys prevent duplicate attempts when requests overlap or time out. At most one overdue cycle per contract is attempted per run.

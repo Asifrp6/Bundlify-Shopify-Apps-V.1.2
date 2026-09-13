@@ -1,0 +1,59 @@
+.page { max-width: 1120px; margin: 0 auto; padding: 38px 24px 44px; display: flex; flex-direction: column; gap: 30px; color: #233c34; font-size: 18px; line-height: 1.5; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.eyebrow { color: #687e6e; font-size: 12px; letter-spacing: 1.6px; font-weight: 650; }
+.heading h1 { font-size: 32px; line-height: 1.2; letter-spacing: -1px; font-weight: 650; margin: 7px 0 0; }
+.workspace { font-size: 14px; color: #6a7e70; background: #edf2ec; border: 1px solid #dde6dc; border-radius: 20px; padding: 7px 13px; }
+.hero { position: relative; display: flex; align-items: center; overflow: hidden; padding: 40px; border: 1px solid #244f3c; border-radius: 18px; background: linear-gradient(115deg, #224d3b, #326349); color: #fff; }
+.heroCopy { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.heroEyebrow { font-size: 11px; color: #d0e2b6; letter-spacing: 1.8px; font-weight: 600; }
+.hero h2 { font-size: clamp(30px, 4vw, 42px); font-weight: 550; line-height: 1.15; letter-spacing: -1.1px; margin: 15px 0; }
+.hero p { max-width: 530px; font-size: 18px; line-height: 1.65; color: #d1dfd5; margin: 0; }
+.heroActions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 11px 16px; border-radius: 8px; font-size: 18px; font-weight: 550; text-decoration: none; }
+.primary { background: #e4edc9; color: #284a33; border: 1px solid #e4edc9; }
+.primary:hover { background: #f0f5df; }
+.secondary { color: #edf4ed; border: 1px solid #6a8d74; background: #ffffff05; }
+.secondary:hover { background: #ffffff15; }
+.art { position: relative; flex-shrink: 0; width: 260px; height: 260px; margin-left: 16px; }
+.ring, .ringInner { position: absolute; border: 1px solid #8daa7c40; border-radius: 50%; }
+.ring { inset: 0; }
+.ringInner { inset: 30px; border-style: dashed; }
+.artBox { position: absolute; display: grid; place-items: center; width: 128px; height: 128px; background: #dce7c4; color: #426143; border: 1px solid #e4edce; border-radius: 26px; left: 78px; top: 51px; transform: rotate(12deg); box-shadow: 0 14px 35px #0a281831; }
+.artBox svg { width: 79px; height: 79px; }
+.artRepeat { display: grid; place-items: center; position: absolute; width: 76px; height: 76px; background: #f4f5e9; color: #5b7751; border-radius: 19px; left: 27px; top: 140px; transform: rotate(-12deg); box-shadow: 0 8px 15px #0a281826; }
+.artRepeat svg { width: 40px; height: 40px; }
+.spark { position: absolute; right: 13px; top: 25px; color: #dfedba; font-size: 31px; }
+.dot { position: absolute; left: 30px; top: 45px; width: 9px; height: 9px; background: #9eb586; border-radius: 50%; }
+.sectionHeading { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+.sectionHeading h2 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.25px; }
+.sectionHeading > span { font-size: 14px; color: #7b877c; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { padding: 23px; border: 1px solid #dfe6dc; border-radius: 13px; background: #fff; text-decoration: none; color: inherit; box-shadow: 0 3px 7px #2d472703; }
+.statTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.icon { display: inline-flex; align-items: center; justify-content: center; width: 43px; height: 43px; border-radius: 11px; color: #5a7e51; background: #eff4e8; }
+.arrow { color: #81917b; font-size: 22px; }
+.stat strong { display: block; font-size: 38px; font-weight: 550; letter-spacing: -1.4px; line-height: 1.2; margin: 18px 0 4px; }
+.stat h3 { margin: 0; font-size: 18px; font-weight: 550; }
+.stat p { color: #748270; font-size: 14px; margin: 6px 0 0; }
+.activeStat { background: #eef5e9; border-color: #dce8d4; }
+.activeStat .icon { background: #deebd4; }
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #3d704b; }
+.status > span { width: 6px; height: 6px; border-radius: 50%; background: #4d8856; }
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.action { display: flex; align-items: flex-start; gap: 18px; padding: 26px; color: inherit; text-decoration: none; border: 1px solid #dfe6dc; background: #fff; border-radius: 13px; }
+.actionIcon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 46px; height: 46px; border: 1px solid #e5ebdf; background: #f6f8f2; border-radius: 12px; color: #6a815b; }
+.label { font-size: 10px; color: #7a8c6f; font-weight: 650; letter-spacing: 1.1px; }
+.action h3 { font-size: 21px; font-weight: 600; margin: 7px 0; line-height: 1.3; letter-spacing: -.4px; }
+.action p { font-size: 16px; color: #74816d; margin: 0; line-height: 1.6; }
+.actionLink { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-size: 16px; font-weight: 550; color: #365f3f; }
+.actionLink > span { font-size: 21px; }
+.action:hover, a.stat:hover { border-color: #abc29f; box-shadow: 0 5px 16px #2d472709; }
+.note { display: flex; align-items: baseline; justify-content: center; gap: 9px; color: #74816e; }
+.note > span { flex-shrink: 0; width: 17px; height: 17px; border: 1px solid #91a083; border-radius: 50%; text-align: center; font-size: 12px; line-height: 16px; }
+.note p { margin: 0; font-size: 14px; }
+.page a:focus-visible { outline: 2px solid #347d53; outline-offset: 4px; }
+.hero a:focus-visible { outline-color: #e4edc9; }
+@media (max-width: 1000px) { .art { width: 210px; height: 240px; transform: scale(.85); transform-origin: center right; margin-left: 0; } .hero { padding: 32px; } .action { padding: 22px; gap: 13px; } }
+@media (max-width: 780px) { .art { display: none; } .hero p { max-width: none; } .action { flex-direction: column; } .sectionHeading > span { display: none; } }
+@media (max-width: 640px) { .page { padding: 24px 8px 32px; gap: 24px; } .heading h1 { font-size: 28px; } .workspace { display: none; } .hero { padding: 28px 23px; border-radius: 14px; } .hero h2 { font-size: 34px; } .heroActions { align-items: stretch; flex-direction: column; } .stats { grid-template-columns: 1fr; gap: 12px; } .stat { padding: 20px; } .stat strong { margin-top: 12px; } .actions { grid-template-columns: 1fr; gap: 12px; } .action { flex-direction: row; } .note p { font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { .page a { transition: none !important; } }

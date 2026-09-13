@@ -7,12 +7,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json* ./
-
-RUN npm ci --omit=dev && npm cache clean --force
-
 COPY . .
 
-RUN npm run build
+# Build tools and extension workspace manifests are needed during installation.
+RUN npm ci --include=dev
+RUN npm run build && npm prune --omit=dev && npm cache clean --force
 
 CMD ["npm", "run", "docker-start"]

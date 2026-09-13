@@ -51,16 +51,18 @@ async function query(admin, document, variables) {
 
 export async function listProducts(admin) {
   const products = [];
+  const seen = new Set();
   let after = null;
   do {
     const result = await query(admin, PRODUCTS_QUERY, { after });
     const connection = result.products;
-    if (!connection?.nodes || !connection.pageInfo)
+    if (!Array.isArray(connection?.nodes) || !connection.pageInfo)
       throw new Error("Invalid product response.");
     products.push(...connection.nodes);
     if (!connection.pageInfo.hasNextPage) return products;
     const next = connection.pageInfo.endCursor;
-    if (!next || next === after) throw new Error("Invalid product pagination.");
+    if (!next || seen.has(next)) throw new Error("Invalid product pagination.");
+    seen.add(next);
     after = next;
   } while (after);
   return products;

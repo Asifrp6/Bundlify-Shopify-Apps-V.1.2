@@ -11,7 +11,9 @@ import {
   Button,
   Card,
   ChoiceList,
+  Checkbox,
   Page,
+  Text,
   TextField,
 } from "@shopify/polaris";
 import { useState } from "react";
@@ -24,7 +26,8 @@ export async function loader({ request }) {
   const { admin } = await authenticate.admin(request);
   try {
     return { products: await listProducts(admin), error: null };
-  } catch {
+  } catch (error) {
+    if (error instanceof Response) throw error;
     return {
       products: [],
       error: "Products could not be loaded. Refresh the page to try again.",
@@ -39,7 +42,8 @@ export async function action({ request }) {
   let products;
   try {
     products = await getProducts(admin, values.productIds);
-  } catch {
+  } catch (error) {
+    if (error instanceof Response) throw error;
     return data(
       { error: "Could not verify the selected products. Please try again." },
       { status: 502 },
@@ -80,19 +84,26 @@ export async function action({ request }) {
 }
 
 export default function NewBundle() {
-  const { products, error: loadError } = useLoaderData();
+  const { products, bundle, error: loadError } = useLoaderData();
   const result = useActionData();
   const navigation = useNavigation();
-  const [name, setName] = useState("");
-  const [discount, setDiscount] = useState("0");
-  const [selected, setSelected] = useState([]);
+  const [name, setName] = useState(bundle?.name || "");
+  const [discount, setDiscount] = useState(String(bundle?.discount ?? 0));
+  const [selected, setSelected] = useState(
+    bundle?.products.map((product) => product.productId) || [],
+  );
+  const [confirm, setConfirm] = useState(false);
+  const missingProducts = (bundle?.products || []).filter(
+    (saved) => !products.some((product) => product.id === saved.productId),
+  );
   const submitting = navigation.state !== "idle";
   return (
     <Page
-      title="Create bundle draft"
+      title={bundle ? "Edit bundle draft" : "Create bundle draft"}
       backAction={{ content: "Bundle drafts", url: "/app/bundles" }}
     >
       <Form method="post">
+        {bundle && <input type="hidden" name="intent" value="update" />}
         <BlockStack gap="400">
           <Banner>
             This saves a draft offer. It does not apply a storefront or checkout
@@ -122,10 +133,16 @@ export default function NewBundle() {
                 allowMultiple
                 selected={selected}
                 onChange={setSelected}
-                choices={products.map((product) => ({
-                  label: product.title,
-                  value: product.id,
-                }))}
+                choices={[
+                  ...products.map((product) => ({
+                    label: product.title,
+                    value: product.id,
+                  })),
+                  ...missingProducts.map((product) => ({
+                    label: `${product.productTitle} (no longer available; remove to save)`,
+                    value: product.productId,
+                  })),
+                ]}
                 error={result?.errors?.productIds}
               />
               {selected.map((id) => (
@@ -148,7 +165,12 @@ export default function NewBundle() {
                 submit
                 variant="primary"
                 loading={submitting}
-                disabled={selected.length < 2 || submitting}
+                disabled={
+                  !!loadError ||
+                  selected.length < 2 ||
+                  selected.length > 50 ||
+                  submitting
+                }
               >
                 Save bundle draft
               </Button>
@@ -156,6 +178,39 @@ export default function NewBundle() {
           </Card>
         </BlockStack>
       </Form>
+      {bundle && (
+        <div id="delete-bundle">
+          <Card>
+            <Form method="post">
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">
+                  Delete bundle draft
+                </Text>
+                <Text as="p">This permanently removes the saved draft.</Text>
+                <Checkbox
+                  label="I confirm I want to delete this draft"
+                  checked={confirm}
+                  onChange={setConfirm}
+                />
+                <input type="hidden" name="intent" value="delete" />
+                <input
+                  type="hidden"
+                  name="confirmDelete"
+                  value={confirm ? "yes" : "no"}
+                />
+                <Button
+                  submit
+                  variant="primary"
+                  tone="critical"
+                  disabled={!confirm || submitting}
+                >
+                  Delete draft
+                </Button>
+              </BlockStack>
+            </Form>
+          </Card>
+        </div>
+      )}
     </Page>
   );
 }

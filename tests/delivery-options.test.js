@@ -11,10 +11,14 @@ test("delivery options validate bounds, duplicates and interval counts", () => {
   const result=validatePlan(form);
   assert.deepEqual(result.errors,{});
   assert.equal(result.values.deliveryOptions[1].intervalCount,2);
-  for (const invalid of [[], [options[0],options[0]], [{frequency:"Daily",discount:""}], [{frequency:"Daily",discount:101}], [{frequency:"Hourly",discount:0}]]) {
+  for (const invalid of [[], [options[0],options[0]], [{frequency:"Daily",discount:""}], [{frequency:"Daily",discount:101}], [{frequency:"Hourly",discount:0}], [{frequency:"Monthly",discount:true}], [{frequency:"Monthly",discount:[]}], [{frequency:"Monthly",discount:[10]}], [{frequency:"toString",discount:0}], [{frequency:"__proto__",discount:0}]]) {
     form.set("deliveryOptions",JSON.stringify(invalid));
     assert.ok(validatePlan(form).errors.deliveryOptions);
   }
+});
+
+test("selling plan input rejects inherited schedule properties", () => {
+  assert.throws(() => sellingPlanInput("Coffee", {frequency: "toString", discount: 0}), /Invalid/);
 });
 test("daily and biweekly policies keep billing and delivery aligned", () => {
   for (const frequency of ["Daily","Every 2 weeks"]) {

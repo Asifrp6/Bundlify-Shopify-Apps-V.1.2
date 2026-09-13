@@ -9,7 +9,7 @@ export function validatePlan(formData) {
       const raw = JSON.parse(String(formData.get("deliveryOptions")));
       if (!Array.isArray(raw) || !raw.length || raw.length > 5) throw new Error();
       deliveryOptions = raw.map(option => {
-        if (!option || !schedules[option.frequency] || String(option.discount ?? "").trim() === "" || !Number.isInteger(Number(option.discount)) || Number(option.discount) < 0 || Number(option.discount) > 100) throw new Error();
+        if (!option || !Object.hasOwn(schedules, option.frequency) || !["string", "number"].includes(typeof option.discount) || String(option.discount).trim() === "" || !Number.isInteger(Number(option.discount)) || Number(option.discount) < 0 || Number(option.discount) > 100) throw new Error();
         return { frequency: option.frequency, discount: Number(option.discount), ...schedules[option.frequency] };
       });
       if (new Set(deliveryOptions.map(o => o.frequency)).size !== deliveryOptions.length) throw new Error();

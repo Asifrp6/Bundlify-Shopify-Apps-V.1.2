@@ -35,11 +35,12 @@ async function query(admin, document, variables) {
   return result.data;
 }
 
-function nextCursor(connection, previous) {
-  if (!connection?.nodes || !connection.pageInfo) throw new Error("Invalid billing pagination.");
+function nextCursor(connection, seen) {
+  if (!Array.isArray(connection?.nodes) || !connection.pageInfo) throw new Error("Invalid billing pagination.");
   if (!connection.pageInfo.hasNextPage) return null;
   const next = connection.pageInfo.endCursor;
-  if (!next || next === previous) throw new Error("Invalid billing cursor.");
+  if (!next || seen.has(next)) throw new Error("Invalid billing cursor.");
+  seen.add(next);
   return next;
 }
 
@@ -51,12 +52,13 @@ export function billingKey(shop, contractId, cycleIndex) {
 // A stable key makes timeouts, overlapping workers and process restarts safe to retry.
 export async function billContract({ admin, shop, contract, now }) {
   if (contract.status !== "ACTIVE") return { status: "inactive" };
+  const seen = new Set();
   let after = null;
   do {
     const { subscriptionBillingCycles: connection } = await query(admin, CYCLES, {
       id: contract.id, after, start: contract.createdAt, end: now.toISOString(),
     });
-    const next = nextCursor(connection, after);
+    const next = nextCursor(connection, seen);
     for (const cycle of connection.nodes) {
       if (cycle.skipped || cycle.status !== "UNBILLED" || new Date(cycle.billingAttemptExpectedDate) > now) continue;
       const previous = cycle.billingAttempts.nodes[0];
@@ -86,10 +88,11 @@ export async function billContract({ admin, shop, contract, now }) {
 
 export async function runRecurringBilling({ admin, shop, now = new Date() }) {
   const results = [];
+  const seen = new Set();
   let after = null;
   do {
     const { subscriptionContracts: connection } = await query(admin, CONTRACTS, { after });
-    const next = nextCursor(connection, after);
+    const next = nextCursor(connection, seen);
     for (const contract of connection.nodes) {
       if (contract.status !== "ACTIVE") continue;
       try { results.push({ contractId: contract.id, ...await billContract({ admin, shop, contract, now }) }); }
