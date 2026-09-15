@@ -1,0 +1,10 @@
+{% assign appearance = shop.metafields.bundlify.bundle_appearance.value %}
+{{ 'bundlify-bundles.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'bundlify-bundles.js' | asset_url }}" defer></script>
+{% render 'block-appearance', kind: 'bundle', appearance: appearance %}
+<bundlify-bundles data-button-text="{{ appearance.buttonText | default: 'Add bundle to cart' | escape }}" data-currency="{{ cart.currency.iso_code }}" data-root="{{ routes.root_url }}" data-product="{% if block.settings.match_product %}{{ product.id }}{% endif %}" data-editor="{{ request.design_mode }}" hidden {{ block.shopify_attributes }}>
+  {% if appearance.logoUrl != blank %}<img class="bundlify-custom-logo" src="{{ appearance.logoUrl | escape }}" alt="{{ shop.name | escape }}" width="160" height="80">{% endif %}
+  <h2>{{ appearance.heading | default: block.settings.heading | default: 'Better together' | escape }}</h2>
+  <div data-list></div>
+  <p data-message role="status"></p>
+</bundlify-bundles>

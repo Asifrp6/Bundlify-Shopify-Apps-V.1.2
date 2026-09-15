@@ -12,12 +12,23 @@ if (!customElements.get("bundlify-subscription")) {
         const options = { signal: this.controller.signal };
         this.scope = this.closest('[id^="shopify-section-"]') || document;
         this.forms = new Set();
-        this.addEventListener("change", () => this.update(), options);
-        document.addEventListener("change", () => this.update(), options);
-        document.addEventListener("click", () => this.update(), {
-          ...options,
-          capture: true,
-        });
+        this.addEventListener("change", () => {
+          this.update();
+          // Both legacy and current blocks can be added to the same product.
+          // Keep their choices in sync before either serializes the cart form.
+          for (const peer of document.querySelectorAll("bundlify-subscription")) {
+            if (peer === this || !peer.controller) continue;
+            const field = [...peer.querySelectorAll("[data-bundlify-plans]")]
+              .find(item => item.dataset.bundlifyPlans === this.lastVariant);
+            if (!field) continue;
+            field.querySelectorAll("[data-mode]").forEach(input => { input.checked = input.value === this.lastMode; });
+            field.querySelectorAll("[data-plan]").forEach(input => { input.checked = input.value === this.lastPlan; });
+            peer.update();
+          }
+        }, options);
+        document.addEventListener("change", event => {
+          if (!event.target.closest("bundlify-subscription")) this.update();
+        }, options);
         document.addEventListener(
           "submit",
           (event) => {
@@ -45,7 +56,12 @@ if (!customElements.get("bundlify-subscription")) {
           },
           { ...options, capture: true },
         );
-        this.observer = new MutationObserver(() => this.update());
+        this.observer = new MutationObserver(records => {
+          if (records.some(record => [...record.addedNodes, ...record.removedNodes].some(node =>
+            node.nodeType === 1 && (node.matches('form, input[name="id"], [data-bundlify-plans]') ||
+              node.querySelector('form, input[name="id"], [data-bundlify-plans]'))
+          ))) this.update();
+        });
         this.observer.observe(document.documentElement, {
           childList: true,
           subtree: true,

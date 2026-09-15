@@ -1,0 +1,17 @@
+api_version = "2026-01"
+
+[[extensions]]
+name = "Bundlify bundle discount"
+handle = "bundlify-bundle-discount"
+uid = "fb4acd2c-7ee0-7a1f-1b5d-e9f2f60d18bd0855a04e"
+type = "function"
+description = "Discounts complete bundles added using Bundlify."
+
+[[extensions.targeting]]
+target = "cart.lines.discounts.generate.run"
+input_query = "src/cart_lines_discounts_generate_run.graphql"
+export = "cart-lines-discounts-generate-run"
+
+[extensions.build]
+command = ""
+path = "dist/function.wasm"

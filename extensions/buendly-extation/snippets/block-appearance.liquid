@@ -1,0 +1,18 @@
+<style>
+  .bundlify-custom-logo { display:block; max-width:160px; height:80px; object-fit:contain; margin-bottom:16px; }
+  {% if appearance != blank %}
+    {% if kind == 'bundle' %}
+      bundlify-bundles { color:{{ appearance.text | escape }}; }
+      bundlify-bundles article { background:{{ appearance.background | escape }}; color:{{ appearance.text | escape }}; }
+      bundlify-bundles button { background:{{ appearance.accent | escape }}; color:{{ appearance.buttonTextColor | escape }}; }
+      bundlify-bundles .bundlify-product-price strong, bundlify-bundles .bundlify-total strong, bundlify-bundles .bundlify-total small { color:{{ appearance.accent | escape }}; }
+    {% else %}
+      bundlify-subscription.bundlify-subscription-widget { background:{{ appearance.background | escape }}; color:{{ appearance.text | escape }}; }
+      bundlify-subscription.bundlify-subscription-widget h3,
+      bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card,
+      bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card:has(input:checked) { color:{{ appearance.text | escape }}; }
+      bundlify-subscription.bundlify-subscription-widget .bundlify-option:has(input:checked) { background:{{ appearance.accent | escape }}; color:{{ appearance.buttonTextColor | escape }}; }
+      bundlify-subscription.bundlify-subscription-widget input { accent-color:{{ appearance.accent | escape }}; }
+    {% endif %}
+  {% endif %}
+</style>

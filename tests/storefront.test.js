@@ -28,6 +28,35 @@ function select(window, selector) {
   input.checked = true;
   input.dispatchEvent(new window.Event("change", { bubbles: true }));
 }
+
+test("two subscription blocks synchronize frequencies and the submitted selling plan", async t => {
+  const { window, document, form } = await fixture(t);
+  const first = document.querySelector("bundlify-subscription");
+  const second = first.cloneNode(true);
+  second.querySelectorAll("input[name]").forEach(input => { input.name += "-second"; });
+  first.after(second);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const subscription = second.querySelector('[data-bundlify-plans="1"] [data-mode][value="subscription"]');
+  subscription.click();
+  for (const widget of [first, second]) {
+    assert.equal(widget.querySelector('[data-bundlify-plans="1"] [data-frequencies]').hidden, false);
+    assert.equal(widget.querySelector('[data-bundlify-plans="1"] [data-mode]:checked').value, "subscription");
+  }
+  second.querySelector('[data-bundlify-plans="1"] [data-plan][value="102"]').click();
+  assert.equal(new window.FormData(form).get("selling_plan"), "102");
+  first.querySelector('[data-bundlify-plans="1"] [data-mode][value="one-time"]').click();
+  assert.equal(new window.FormData(form).has("selling_plan"), false);
+  assert.equal(second.querySelector('[data-bundlify-plans="1"] [data-frequencies]').hidden, true);
+});
+
+test("subscription block includes its script directly and duplicate loading is safe", async t => {
+  const snippet = await readFile(new URL("../extensions/buendly-extation/snippets/subscription-options.liquid", import.meta.url), "utf8");
+  assert.match(snippet, /<script[^>]+bundlify-subscription\.js[^>]+defer/);
+  const { window, form } = await fixture(t);
+  window.eval(source);
+  select(window, '[data-bundlify-plans="1"] [data-mode][value="subscription"]');
+  assert.equal(new window.FormData(form).get("selling_plan"), "101");
+});
 test("initial selection is one-time and subscription choices start hidden", async t => {
   const { window, document, form } = await fixture(t);
   assert.equal(new window.FormData(form).has('selling_plan'), false);
@@ -195,8 +224,18 @@ test("theme subscription helper cannot append an empty plan after the widget sel
   assert.equal(window.getCurrentSellingPlanId, original);
 });
 
-test("both blocks load the script matching the shared selector markup", async () => {
-  for (const name of ['subscription_selector', 'star_rating']) {
+test("bundle product filtering is optional and off by default", async () => {
+  for (const name of ['bundles', 'star_rating']) {
+    const block = await readFile(new URL(`../extensions/buendly-extation/blocks/${name}.liquid`, import.meta.url), 'utf8');
+    const schema = JSON.parse(block.split('{% schema %}')[1].split('{% endschema %}')[0]);
+    assert.equal(schema.settings.find(setting => setting.id === 'match_product').default, false);
+  }
+  const snippet = await readFile(new URL('../extensions/buendly-extation/snippets/bundle-options.liquid', import.meta.url), 'utf8');
+  assert.match(snippet, /data-product="\{% if block.settings.match_product %\}/);
+});
+
+test("subscription block loads the subscription script", async () => {
+  for (const name of ['subscription_selector']) {
     const block = await readFile(new URL(`../extensions/buendly-extation/blocks/${name}.liquid`, import.meta.url), 'utf8');
     assert.match(block, /"javascript": "bundlify-subscription.js"/);
   }
@@ -245,3 +284,12 @@ test("theme helper retains the selected plan through an inter-listener microtask
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(window.getCurrentSellingPlanId, original);
 });
+
+ test("bundle blocks render bundle data independently of subscription choices", async () => {
+   for (const name of ['bundles', 'star_rating']) {
+     const block = await readFile(new URL('../extensions/buendly-extation/blocks/' + name + '.liquid', import.meta.url), 'utf8');
+     assert.match(block, /render 'bundle-options'/);
+     assert.match(block, /"javascript": "bundlify-bundles.js"/);
+     assert.doesNotMatch(block, /subscription-options|bundlify-subscription/);
+   }
+ });

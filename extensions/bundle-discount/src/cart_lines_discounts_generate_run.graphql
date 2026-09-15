@@ -1,0 +1,13 @@
+query CartInput {
+  cart {
+    lines {
+      id
+      quantity
+      bundle: attribute(key: "_bundlify_bundle") { value }
+      group: attribute(key: "_bundlify_group") { value }
+      sellingPlanAllocation { sellingPlan { id } }
+      merchandise { ... on ProductVariant { product { id } } }
+    }
+  }
+  discount { metafield(namespace: "$app:bundlify", key: "bundle") { jsonValue } }
+}

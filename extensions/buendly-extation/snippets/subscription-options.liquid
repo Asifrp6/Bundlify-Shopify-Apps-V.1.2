@@ -1,7 +1,13 @@
-﻿{% assign selected_variant = product.selected_or_first_available_variant %}
+{{ 'bundlify-subscription.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'bundlify-subscription.js' | asset_url }}" defer></script>
+{% render 'subscription-card-styles' %}
+{% assign appearance = shop.metafields.bundlify.subscription_appearance.value %}
+{% render 'block-appearance', kind: 'subscription', appearance: appearance %}
+{% assign selected_variant = product.selected_or_first_available_variant %}
 
 <bundlify-subscription data-variant-id="{{ selected_variant.id }}" class="bundlify-subscription-widget" {{ block.shopify_attributes }}>
-  <h3>Purchase options</h3>
+  {% if appearance.logoUrl != blank %}<img class="bundlify-custom-logo" src="{{ appearance.logoUrl | escape }}" alt="{{ shop.name | escape }}" width="160" height="80">{% endif %}
+  <h3>{{ appearance.heading | default: 'Purchase options' | escape }}</h3>
   {% if product != blank %}
       {% for variant in product.variants %}
         <fieldset data-bundlify-plans="{{ variant.id }}" data-available="{{ variant.available }}"
@@ -14,7 +20,7 @@
                 <span class="bundlify-card-icon" aria-hidden="true">
                   <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 15 17-8 17 8-17 8-17-8Zm0 0v19l17 8 17-8V15M24 23v19M15 11l18 8"/></svg>
                 </span>
-                <span>One-time purchase</span>
+                <span class="bundlify-card-title">{{ appearance.oneTimeText | default: 'One-time purchase' | escape }}</span>
                 <small>Buy once, without a subscription</small>
                 <strong>{{ variant.price | money_with_currency }}</strong>
               </label>
@@ -26,7 +32,7 @@
                 <span class="bundlify-card-icon" aria-hidden="true">
                   <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 16a18 18 0 0 1 31-5l4 5M42 6v10H32M41 32A18 18 0 0 1 10 37l-4-5M6 42V32h10"/><path d="m17 20 7-4 7 4v9l-7 4-7-4v-9Zm0 0 7 4 7-4M24 24v9"/></svg>
                 </span>
-                <span>Subscribe &amp; Save</span>
+                <span class="bundlify-card-title">{{ appearance.buttonText | default: 'Subscribe & Save' | escape }}</span>
                 {% if variant.selling_plan_allocations.size > 0 %}
                 <small>Choose your delivery schedule</small>
                 {% else %}

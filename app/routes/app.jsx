@@ -1,7 +1,7 @@
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
 import { Icon } from "@shopify/polaris";
-import { HomeIcon, PackageIcon, RefreshIcon } from "@shopify/polaris-icons";
+import { HomeIcon, PackageIcon, RefreshIcon, SettingsIcon } from "@shopify/polaris-icons";
 
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
@@ -50,7 +50,7 @@ export default function App() {
       destination: "/app",
     },
     {
-      label: "Bundle Drafts",
+      label: "Bundles",
       icon: PackageIcon,
       destination: "/app/bundles",
     },
@@ -59,6 +59,7 @@ export default function App() {
       icon: RefreshIcon,
       destination: "/app/subscriptions",
     },
+    { label: "Settings", icon: SettingsIcon, destination: "/app/settings" },
   ];
 
   const isActive = (path) =>

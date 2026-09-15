@@ -59,3 +59,12 @@
 .page a:focus-visible { outline: 2px solid #347d53; outline-offset: 3px; }
 @media (max-width: 850px) { .header { align-items: flex-start; flex-direction: column; gap: 16px; } .steps { gap: 16px; padding: 24px; } .steps > div { flex-direction: column; } }
 @media (max-width: 640px) { .page { padding: 24px 8px 32px; gap: 18px; } .header h1 { font-size: 28px; } .collectionHeader { padding: 20px; flex-wrap: wrap; } .collectionHeader p { font-size: 14px; } .empty { padding: 24px 18px 32px; } .empty h2 { font-size: 25px; } .steps { grid-template-columns: 1fr; gap: 20px; } .steps > div { flex-direction: row; } .grid { grid-template-columns: 1fr; padding: 14px; } .info { padding: 15px; } }
+
+.activeBadge { background: #d9f0e2; color: #20583d; }
+.setupSteps { padding: 8px 44px 24px; line-height: 1.7; }
+.setupSteps li + li { margin-top: 12px; }
+
+.activation { padding: 0 20px 20px; }
+.activation p { font-size: 13px; margin: 10px 0; }
+.activation button { cursor:pointer; font:inherit; }
+.activation button:disabled { opacity:.6; cursor:wait; }

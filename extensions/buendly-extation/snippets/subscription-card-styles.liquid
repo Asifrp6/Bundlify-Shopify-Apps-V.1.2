@@ -1,0 +1,33 @@
+{% comment %}Keep the core card layout available during theme editor section reloads.{% endcomment %}
+<style>
+  bundlify-subscription.bundlify-subscription-widget {
+    display: block; width: 100%; max-width: 620px; margin: 24px auto;
+    padding: 28px; border-radius: 28px; color: #0a1435;
+    background: linear-gradient(145deg, #f8f9fc, #eef0f5);
+    box-sizing: border-box; font-family: inherit; line-height: 1.5;
+  }
+  bundlify-subscription.bundlify-subscription-widget * { box-sizing: border-box; }
+  bundlify-subscription.bundlify-subscription-widget fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+  bundlify-subscription.bundlify-subscription-widget [hidden] { display: none !important; }
+  bundlify-subscription.bundlify-subscription-widget legend { font-size: 12px; padding: 0; margin-bottom: 12px; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 10px; min-height: 174px; padding: 20px 12px;
+    margin: 0; border: 1px solid transparent; border-radius: 24px;
+    background: #ffffff70; color: #657087; text-align: center; cursor: pointer;
+  }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card:has(input:checked) { background: #fff; color: #0a1435; box-shadow: 0 14px 36px #1220421f; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card:has(input:focus-visible) { outline: 3px solid #6251e5; outline-offset: 3px; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg { display: block; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card small { display: block; font-size: 12px; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-option { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 6px; cursor: pointer; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-option:has(input:checked) { background: #020b3f; color: #fff; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-plan-copy { flex: 1; }
+  @media (max-width: 480px) {
+    bundlify-subscription.bundlify-subscription-widget { padding: 16px; }
+    bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card { padding: 16px 10px; }
+  }
+</style>

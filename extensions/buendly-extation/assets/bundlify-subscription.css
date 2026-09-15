@@ -1,28 +1,266 @@
-.bundlify-subscription-widget { display:block; max-width:680px; margin:24px auto; padding:24px; color:#101b38; background:linear-gradient(135deg,#f7f7fb,#eff0f6); border:1px solid #e1e4ef; border-radius:24px; font-family:inherit; box-shadow:0 14px 40px -24px #141d4a66; }
+.bundlify-subscription-widget {
+  width: 100%;
+  max-width: 620px;
+  padding: 32px;
+  border-radius: 32px;
+  background: linear-gradient(145deg, #f8f9fc 0%, #eef0f5 100%);
+  box-sizing: border-box;
+  color: #0a1435;
+}
+
+.bundlify-subscription-widget .bundlify-purchase-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.bundlify-subscription-widget .bundlify-purchase-card {
+  min-height: 174px;
+  padding: 24px;
+  border: 0;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.45);
+  color: #7b8499;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.bundlify-subscription-widget .bundlify-purchase-card:hover {
+  transform: translateY(-1px);
+}
+
+.bundlify-subscription-widget .bundlify-purchase-card:has(input:checked) {
+  background: #ffffff;
+  color: #0a1435;
+  box-shadow: 0 14px 36px rgba(18, 32, 66, 0.12);
+}
+
+.bundlify-subscription-widget .bundlify-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.bundlify-subscription-widget .bundlify-card-title {
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 500;
+  text-align: center;
+}
+
+.bundlify-subscription-widget .bundlify-card-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-frequencies] {
+  margin-top: 20px;
+}
+
+.bundlify-subscription-widget .bundlify-eyebrow {
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: #24304d;
+}
+
+.bundlify-subscription-widget .bundlify-option {
+  width: 100%;
+  min-height: 43px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #19233f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  text-align: left;
+  box-sizing: border-box;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.bundlify-subscription-widget .bundlify-option + .bundlify-option {
+  margin-top: 2px;
+}
+
+.bundlify-subscription-widget .bundlify-option:has(input:checked) {
+  background: #020b3f;
+  color: #ffffff;
+}
+
+.bundlify-subscription-widget .bundlify-plan-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bundlify-subscription-widget .bundlify-radio {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 1px solid #c5cad4;
+  border-radius: 50%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.bundlify-subscription-widget .bundlify-option:has(input:checked) .bundlify-radio {
+  border-color: #ffffff;
+  background: #ffffff;
+}
+
+.bundlify-subscription-widget .bundlify-option:has(input:checked) .bundlify-radio::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #020b3f;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.bundlify-subscription-widget .bundlify-plan-label {
+  font-weight: 400;
+}
+
+.bundlify-subscription-widget .bundlify-option:has(input:checked) .bundlify-plan-label {
+  font-weight: 700;
+}
+
+.bundlify-subscription-widget .bundlify-price {
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.bundlify-subscription-widget .bundlify-option:has(input:checked) .bundlify-price {
+  font-weight: 700;
+}
+
+.bundlify-subscription-widget .bundlify-details {
+  margin-top: 22px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #24304d;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.bundlify-subscription-widget .bundlify-info-icon {
+  width: 15px;
+  height: 15px;
+  border: 1px solid #8791a4;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.bundlify-subscription-widget .bundlify-details-arrow {
+  font-size: 20px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.bundlify-subscription-widget .bundlify-details-content {
+  margin-top: 12px;
+  color: #5b6478;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .bundlify-subscription-widget {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .bundlify-purchase-cards {
+    gap: 12px;
+  }
+
+  .bundlify-purchase-card {
+    min-height: 145px;
+    padding: 16px 10px;
+    border-radius: 22px;
+  }
+
+  .bundlify-card-title {
+    font-size: 14px;
+  }
+
+  .bundlify-card-subtitle {
+    font-size: 12px;
+  }
+
+  .bundlify-option {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .bundlify-price {
+    font-size: 13px;
+  }
+}
+.bundlify-subscription-widget { display:block; margin:24px auto; font-family:inherit; line-height:1.5; }
 .bundlify-subscription-widget * { box-sizing:border-box; }
-.bundlify-subscription-widget h3 { margin:0 0 20px; font-size:18px; color:inherit; }
-.bundlify-subscription-widget select { width:100%; padding:12px; border:1px solid #d3d8e6; border-radius:12px; background:white; color:inherit; margin:8px 0 22px; font:inherit; }
-.bundlify-subscription-widget fieldset { padding:0; margin:0 0 20px; border:0; min-width:0; }
-.bundlify-subscription-widget legend { font-size:12px; margin-bottom:12px; }
+.bundlify-subscription-widget h3 { margin:0 0 20px; color:inherit; font-size:18px; font-weight:600; }
+.bundlify-subscription-widget fieldset { min-width:0; margin:0; padding:0; border:0; }
+.bundlify-subscription-widget legend { margin:0 0 12px; padding:0; font-size:12px; color:#5b6478; }
 .bundlify-subscription-widget [hidden] { display:none !important; }
-.bundlify-subscription-widget .bundlify-purchase-cards { display:flex; gap:12px; margin-bottom:22px; }
-.bundlify-subscription-widget .bundlify-purchase-card { flex:1; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:9px; min-height:150px; padding:16px; background:#ffffff80; border:1px solid #dfe2ec; border-radius:20px; cursor:pointer; font-size:14px; }
-.bundlify-subscription-widget .bundlify-purchase-card:has(input:checked) { background:white; border-color:#6251e5; box-shadow:0 7px 24px -10px #34268366; }
-.bundlify-subscription-widget .bundlify-purchase-card input { position:absolute; top:12px; left:12px; accent-color:#5743de; }
-.bundlify-subscription-widget .bundlify-card-icon { font-size:32px; line-height:1; }
+.bundlify-subscription-widget .bundlify-purchase-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.bundlify-subscription-widget .bundlify-purchase-card { position:relative; margin:0; text-transform:none; letter-spacing:normal; gap:8px; overflow-wrap:anywhere; }
+.bundlify-subscription-widget .bundlify-purchase-card > input { position:absolute; opacity:0; width:1px; height:1px; }
+.bundlify-subscription-widget .bundlify-purchase-card:has(input:focus-visible) { outline:3px solid #6251e5; outline-offset:3px; }
+.bundlify-subscription-widget .bundlify-card-icon { margin-bottom:8px; }
 .bundlify-subscription-widget .bundlify-card-icon svg { display:block; }
+.bundlify-subscription-widget .bundlify-purchase-card > small { font-size:12px; text-align:center; }
 .bundlify-subscription-widget .bundlify-purchase-card[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
-.bundlify-subscription-widget small { display:block; font-size:11px; }
-.bundlify-subscription-widget .bundlify-eyebrow { font-size:10px; letter-spacing:2px; margin:12px 0; }
-.bundlify-subscription-widget .bundlify-option { display:flex; align-items:center; gap:10px; padding:14px 12px; border:1px solid transparent; border-radius:10px; cursor:pointer; margin:6px 0; font-size:13px; }
-.bundlify-subscription-widget .bundlify-option:has(input:checked) { background:#0b1535; color:white; }
-.bundlify-subscription-widget .bundlify-option input { flex-shrink:0; accent-color:#705cf1; margin:0; }
-.bundlify-subscription-widget .bundlify-plan-copy { flex:1; overflow-wrap:anywhere; }
-.bundlify-subscription-widget .bundlify-price { text-align:right; font-weight:650; }
-.bundlify-subscription-widget details { margin-top:16px; font-size:12px; }
+.bundlify-subscription-widget .bundlify-option { padding:12px 15px; margin:2px 0; text-transform:none; letter-spacing:normal; }
+.bundlify-subscription-widget .bundlify-option input { margin:0; flex-shrink:0; accent-color:#6251e5; width:16px; height:16px; }
+.bundlify-subscription-widget .bundlify-plan-copy { flex:1; display:block; overflow-wrap:anywhere; }
+.bundlify-subscription-widget .bundlify-option small { display:block; font-size:11px; }
+.bundlify-subscription-widget .bundlify-price { text-align:right; }
+.bundlify-subscription-widget details { margin-top:22px; font-size:13px; }
 .bundlify-subscription-widget summary { cursor:pointer; }
-.bundlify-subscription-widget .bundlify-quantity { display:block; width:90px; margin:8px 0 16px; padding:10px; border:1px solid #cbd1e1; border-radius:24px; background:white; color:inherit; }
-.bundlify-subscription-widget button[data-bundlify-submit] { width:100%; padding:14px; border:0; border-radius:28px; background:#101b38; color:white; font:inherit; font-weight:650; cursor:pointer; }
-.bundlify-subscription-widget button:disabled { opacity:.5; cursor:not-allowed; }
-.bundlify-subscription-widget :is(input,select,button,summary):focus-visible { outline:3px solid #8a79f3; outline-offset:3px; }
-@media(max-width:440px) { .bundlify-subscription-widget { padding:16px; } .bundlify-subscription-widget .bundlify-option { flex-wrap:wrap; } .bundlify-subscription-widget .bundlify-price { width:100%; text-align:left; margin-left:24px; } }
+.bundlify-subscription-widget details p { line-height:1.6; }
+.bundlify-subscription-widget [data-bundlify-error] { font-size:13px; color:#a02a2a; }
+.bundlify-subscription-widget :is(input,summary):focus-visible { outline:3px solid #6251e5; outline-offset:3px; }
+@media (max-width:440px) {
+ .bundlify-subscription-widget { padding:16px; }
+ .bundlify-subscription-widget .bundlify-purchase-card { padding:16px 10px; min-height:145px; border-radius:22px; }
+ .bundlify-subscription-widget .bundlify-option { flex-wrap:wrap; gap:8px; }
+ .bundlify-subscription-widget .bundlify-price { width:100%; margin-left:24px; text-align:left; white-space:normal; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .bundlify-subscription-widget .bundlify-purchase-card { transition:none; }
+ .bundlify-subscription-widget .bundlify-purchase-card:hover { transform:none; }
+}

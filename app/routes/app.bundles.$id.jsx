@@ -4,6 +4,8 @@ import prisma from "../db.server";
 import { getProducts, listProducts } from "../services/products.server";
 import { validateBundle } from "../services/validation";
 
+import { removeBundleDiscount } from "../services/bundle-discount.server";
+
 export { default } from "./app.bundles.new";
 
 async function findBundle(id, shop) {
@@ -47,6 +49,8 @@ export async function action({ request, params }) {
         { error: "Confirm deletion before continuing." },
         { status: 400 },
       );
+    try { await removeBundleDiscount(admin, bundle); }
+    catch (error) { return data({ error: error.message }, { status: 502 }); }
     await prisma.bundle.deleteMany({
       where: { id: bundle.id, shop: session.shop },
     });
@@ -75,9 +79,12 @@ export async function action({ request, params }) {
       { status: 400 },
     );
   try {
+    await removeBundleDiscount(admin, bundle);
     await prisma.bundle.update({
       where: { id: bundle.id, shop: session.shop },
       data: {
+        status: "DRAFT",
+        discountNodeId: null,
         name: values.name,
         discount: values.discount,
         products: {

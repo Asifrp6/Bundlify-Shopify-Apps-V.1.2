@@ -106,8 +106,8 @@ export default function NewBundle() {
         {bundle && <input type="hidden" name="intent" value="update" />}
         <BlockStack gap="400">
           <Banner>
-            This saves a draft offer. It does not apply a storefront or checkout
-            discount.
+            Save your bundle, then activate it to apply its discount in the cart and
+            at checkout. Editing an active bundle returns it to draft until reactivated.
           </Banner>
           {(loadError || result?.error) && (
             <Banner tone="critical">{loadError || result.error}</Banner>
@@ -149,7 +149,7 @@ export default function NewBundle() {
                 <input key={id} type="hidden" name="productIds" value={id} />
               ))}
               <TextField
-                label="Planned discount"
+                label="Bundle discount"
                 name="discount"
                 type="number"
                 min={0}
