@@ -5,7 +5,7 @@ bundlify-bundles article { border:1px solid #dce5de; border-radius:16px; padding
 bundlify-bundles a { display:block; margin-top:12px; color:inherit; text-underline-offset:3px; }
 bundlify-bundles a:focus-visible { outline:2px solid currentColor; outline-offset:4px; }
 bundlify-bundles [data-message]:empty { display:none; }
-bundlify-bundles label { display:block; margin-top:16px; font-size:14px; }
+bundlify-bundles label { display:block; margin-top:16px; font-size:calc(14px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles select { display:block; width:100%; margin:6px 0 12px; padding:10px; border:1px solid #ccd8cf; border-radius:8px; background:white; color:#20382b; font:inherit; }
 bundlify-bundles button { margin-top:20px; padding:12px 18px; border:0; border-radius:8px; background:#285c43; color:white; font:inherit; cursor:pointer; width:100%; }
 bundlify-bundles button:disabled { opacity:.6; cursor:default; }
@@ -13,20 +13,20 @@ bundlify-bundles a[hidden] { display:none; }
 bundlify-bundles :is(select,button):focus-visible { outline:2px solid #285c43; outline-offset:3px; }
 
 bundlify-bundles article { background:#fff; box-shadow:0 4px 20px #1f3a2710; }
-bundlify-bundles article h3 { margin:0 0 18px; font-size:22px; }
+bundlify-bundles article h3 { margin:0 0 18px; font-size:calc(22px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-product { display:grid; grid-template-columns:96px minmax(0,1fr); gap:16px; padding:18px 0; border-top:1px solid #e7ede8; align-items:start; }
 bundlify-bundles .bundlify-product img { width:96px; height:112px; object-fit:contain; border-radius:10px; background:#f5f7f5; }
-bundlify-bundles .bundlify-image-placeholder { display:grid; place-items:center; width:96px; height:112px; border-radius:10px; background:#f5f7f5; color:#637267; font-size:12px; }
+bundlify-bundles .bundlify-image-placeholder { display:grid; place-items:center; width:96px; height:112px; border-radius:10px; background:#f5f7f5; color:#637267; font-size:calc(12px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-product a { margin:0 0 10px; text-decoration:none; font-weight:600; }
 bundlify-bundles .bundlify-product a:hover { text-decoration:underline; }
 bundlify-bundles .bundlify-product-price { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-bundlify-bundles s { color:#6c776e; font-size:14px; font-weight:400; }
+bundlify-bundles s { color:#6c776e; font-size:calc(14px * var(--bundlify-font-scale, 1)); font-weight:400; }
 bundlify-bundles .bundlify-product-price strong { color:#205a3d; }
 bundlify-bundles .bundlify-total { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; padding-top:18px; border-top:1px solid #dce5de; }
-bundlify-bundles .bundlify-total > span { grid-column:1; grid-row:1; font-weight:700; font-size:18px; }
-bundlify-bundles .bundlify-total > s { grid-column:2; grid-row:1; text-align:right; font-weight:600; font-size:17px; }
-bundlify-bundles .bundlify-total strong { grid-column:2; grid-row:2; text-align:right; color:#205a3d; font-size:24px; }
-bundlify-bundles .bundlify-total small { grid-column:1; grid-row:2; justify-self:start; padding:8px 12px; border-radius:24px; background:#e7f1e9; color:#205a3d; font-size:13px; }
+bundlify-bundles .bundlify-total > span { grid-column:1; grid-row:1; font-weight:700; font-size:calc(18px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-total > s { grid-column:2; grid-row:1; text-align:right; font-weight:600; font-size:calc(17px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-total strong { grid-column:2; grid-row:2; text-align:right; color:#205a3d; font-size:calc(24px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-total small { grid-column:1; grid-row:2; justify-self:start; padding:8px 12px; border-radius:24px; background:#e7f1e9; color:#205a3d; font-size:calc(13px * var(--bundlify-font-scale, 1)); }
 @media(max-width:440px) { bundlify-bundles .bundlify-total small { grid-column:1 / -1; grid-row:3; } }
 bundlify-bundles [hidden] { display:none !important; }
 .bundlify-cart-drawer { box-sizing:border-box; position:fixed; inset:0 0 0 auto; margin:0; width:min(100%,460px); height:100dvh; max-height:100dvh; max-width:100%; padding:24px; border:0; background:#fff; color:#20382b; overflow-y:auto; }

@@ -17,9 +17,10 @@ export async function createSubscription({
       deliveryOptions: { create: optionRecords(options) },
       productTitle: product.title,
       productImage: product.featuredImage?.url ?? null,
-      status: "PENDING",
+      status: values.status === "DRAFT" ? "DRAFT" : "PENDING",
     },
   });
+  if (values.status === "DRAFT") return plan;
   let group;
   try {
     group = await createSellingPlan(admin, {

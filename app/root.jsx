@@ -11,6 +11,8 @@ import bundlesCss from "./styles/bundles.module.css?inline";
 import subscriptionsCss from "./styles/subscriptions.module.css?inline";
 import planFormCss from "./styles/plan-form.module.css?inline";
 import landingCss from "./styles/landing.module.css?inline";
+import bundleEditorCss from "./styles/bundle-editor.module.css?inline";
+import settingsCss from "./styles/settings.module.css?inline";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
@@ -36,7 +38,7 @@ export default function App() {
 
         <Links />
         {/* Deliver scoped app styles with the HTML, including before hydration. */}
-        <style data-bundlify-styles>{[headerCss, dashboardCss, bundlesCss, subscriptionsCss, landingCss, planFormCss].join("\n")}</style>
+        <style data-bundlify-styles>{[headerCss, dashboardCss, bundlesCss, subscriptionsCss, landingCss, planFormCss, bundleEditorCss, settingsCss].join("\n")}</style>
 
         <style>{`
           * {

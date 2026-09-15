@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useLoaderData, useSearchParams } from "react-router";
+import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
+import { setSubscriptionStatus } from "../services/subscription-status.server";
 import { Banner } from "@shopify/polaris";
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
@@ -28,6 +29,36 @@ export async function loader({ request }) {
   }
 }
 
+export async function action({ request }) {
+  const { admin, session } = await authenticate.admin(request);
+  const form = await request.formData();
+  const id = Number(form.get("planId"));
+  const status = form.get("status");
+  if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || !["DRAFT", "ACTIVE"].includes(status)) return data({ error: "Invalid plan or status." }, { status: 400 });
+  const plan = await prisma.subscriptionPlan.findFirst({ where: { id, shop: session.shop }, include: { deliveryOptions: true } });
+  if (!plan) return data({ error: "Plan not found." }, { status: 404 });
+  try {
+    await setSubscriptionStatus({ prisma, admin, plan, status });
+    return { success: true };
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    return data({ error: error.message }, { status: 502 });
+  }
+}
+
+/* eslint-disable react/prop-types */
+function PlanStatus({ plan }) {
+  const fetcher = useFetcher();
+  return <div>
+    {plan.status !== "PENDING" && <fetcher.Form method="post">
+      <input type="hidden" name="planId" value={plan.id} />
+      <input type="hidden" name="status" value={plan.status === "ACTIVE" ? "DRAFT" : "ACTIVE"} />
+      <button className={styles.editButton} type="submit" disabled={fetcher.state !== "idle"}>{fetcher.state !== "idle" ? "Saving…" : plan.status === "ACTIVE" ? "Move to draft" : "Activate subscription"}</button>
+    </fetcher.Form>}
+    {fetcher.data?.error && <p role="alert" className={styles.notice}>{fetcher.data.error}</p>}
+  </div>;
+}
+/* eslint-enable react/prop-types */
 function PlanSymbol() {
   return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m4 7 8-4 8 4v10l-8 4-8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10M8 5l8 4"/></svg>;
 }
@@ -49,7 +80,7 @@ export default function Subscriptions() {
       <div><span className={styles.eyebrow}>RECURRING PURCHASES</span><h1>Subscription plans</h1><p>Thoughtful plans. More reasons for customers to come back.</p></div>
       <Link className={styles.primaryButton} to="/app/subscriptions/new"><span aria-hidden="true">+</span> Create subscription</Link>
     </header>
-    {params.get("created") === "1" && <Banner tone="success">Subscription plan created in Shopify.</Banner>}
+    {params.get("created") === "1" && <Banner tone="success">Subscription plan saved successfully.</Banner>}
     {params.get("updated") === "1" && <Banner tone="success">Subscription plan updated successfully.</Banner>}
     {params.get("deleted") === "1" && <Banner tone="success">Subscription plan deleted successfully.</Banner>}
 
@@ -74,6 +105,7 @@ export default function Subscriptions() {
             <div className={styles.delivery}><span className={styles.detailLabel}>DELIVERY & SAVINGS</span><div className={styles.options}>{options.map((option,index) => <div className={styles.option} key={`${option.frequency}-${index}`}><span className={styles.frequency}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg>{option.frequency}</span><span className={styles.savings}>{option.discount}% off</span></div>)}</div></div>
             {status === "review" && <p className={styles.notice}>Review this plan in Shopify before creating another.</p>}
             {status === "draft" && <p className={styles.notice}>Saved locally. This plan is not active in Shopify.</p>}
+            <PlanStatus plan={plan} />
             <footer className={styles.cardFooter}><span>{options.length} delivery {options.length === 1 ? "option" : "options"}</span><div><Link className={styles.editButton} to={`/app/subscriptions/${plan.id}`} aria-label={`Edit ${plan.name}`}>Edit plan <span aria-hidden="true">?</span></Link><Link className={styles.deleteButton} to={`/app/subscriptions/${plan.id}#delete-plan`} aria-label={`Delete ${plan.name}`} title="Delete plan"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/></svg></Link></div></footer>
           </article>;
         })}

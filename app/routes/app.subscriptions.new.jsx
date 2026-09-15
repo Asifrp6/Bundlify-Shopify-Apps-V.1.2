@@ -62,7 +62,11 @@ export async function loader({ request }) {
 export async function action({ request }) {
   // Authentication may throw a redirect; let React Router handle it.
   const { admin, session, redirect } = await authenticate.admin(request);
-  const { values, errors } = validatePlan(await request.formData());
+  const form = await request.formData();
+  const status = form.get("status") || "ACTIVE";
+  if (!["DRAFT", "ACTIVE"].includes(status)) return data({ error: "Choose Draft or Active." }, { status: 400 });
+  const { values, errors } = validatePlan(form);
+  values.status = status;
   if (Object.keys(errors).length) {
     return data({ error: Object.values(errors).join(" ") }, { status: 400 });
   }
@@ -127,6 +131,7 @@ export default function NewSubscription() {
   const revalidator = useRevalidator();
 
   const submitting = navigation.state !== "idle";
+  const [status, setStatus] = useState("DRAFT");
 
   const [name, setName] = useState("");
 
@@ -356,6 +361,7 @@ export default function NewSubscription() {
             </section>
           </div>
           <aside className={styles.summary} aria-labelledby="summary-heading">
+            <label className={styles.summaryLabel}>Plan status<select name="status" value={status} onChange={event => setStatus(event.target.value)} style={{ display: "block", width: "100%", padding: 10, margin: "8px 0 16px", borderRadius: 8 }}><option value="DRAFT">Draft ? save for later</option><option value="ACTIVE">Active ? publish to storefront</option></select></label>
             <div className={styles.summaryTop}>
               <span className={styles.eyebrow}>AT A GLANCE</span>
               <span className={styles.previewTag}>Live summary</span>
@@ -410,7 +416,7 @@ export default function NewSubscription() {
               className={styles.primary}
               disabled={submitting || !products.length || !!error}
             >
-              {submitting ? "Creating plan..." : "Create subscription plan"}
+              {submitting ? "Saving plan..." : status === "DRAFT" ? "Save subscription draft" : "Create active subscription"}
               <span aria-hidden="true">&rarr;</span>
             </button>
           </div>

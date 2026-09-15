@@ -1,26 +1,18 @@
 import {
   Form,
+  Link,
   data,
   useActionData,
   useLoaderData,
   useNavigation,
 } from "react-router";
-import {
-  Banner,
-  BlockStack,
-  Button,
-  Card,
-  ChoiceList,
-  Checkbox,
-  Page,
-  Text,
-  TextField,
-} from "@shopify/polaris";
+import { Banner } from "@shopify/polaris";
 import { useState } from "react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { listProducts, getProducts } from "../services/products.server";
 import { validateBundle } from "../services/validation";
+import styles from "../styles/bundle-editor.module.css";
 
 export async function loader({ request }) {
   const { admin } = await authenticate.admin(request);
@@ -89,128 +81,54 @@ export default function NewBundle() {
   const navigation = useNavigation();
   const [name, setName] = useState(bundle?.name || "");
   const [discount, setDiscount] = useState(String(bundle?.discount ?? 0));
-  const [selected, setSelected] = useState(
-    bundle?.products.map((product) => product.productId) || [],
-  );
+  const [selected, setSelected] = useState(bundle?.products.map(product => product.productId) || []);
+  const [search, setSearch] = useState("");
   const [confirm, setConfirm] = useState(false);
-  const missingProducts = (bundle?.products || []).filter(
-    (saved) => !products.some((product) => product.id === saved.productId),
-  );
+  const missing = (bundle?.products || []).filter(saved => !products.some(product => product.id === saved.productId));
+  const choices = [...products, ...missing.map(product => ({ id: product.productId, title: product.productTitle, missing: true }))];
+  const visible = choices.filter(product => product.title.toLowerCase().includes(search.trim().toLowerCase()));
   const submitting = navigation.state !== "idle";
-  return (
-    <Page
-      title={bundle ? "Edit bundle draft" : "Create bundle draft"}
-      backAction={{ content: "Bundle drafts", url: "/app/bundles" }}
-    >
-      <Form method="post">
-        {bundle && <input type="hidden" name="intent" value="update" />}
-        <BlockStack gap="400">
-          <Banner>
-            Save your bundle, then activate it to apply its discount in the cart and
-            at checkout. Editing an active bundle returns it to draft until reactivated.
-          </Banner>
-          {(loadError || result?.error) && (
-            <Banner tone="critical">{loadError || result.error}</Banner>
-          )}
-          {products.length < 2 && !loadError && (
-            <Banner>
-              Add at least two products to your store to create a bundle.
-            </Banner>
-          )}
-          <Card>
-            <BlockStack gap="400">
-              <TextField
-                label="Bundle name"
-                name="name"
-                value={name}
-                onChange={setName}
-                autoComplete="off"
-                maxLength={120}
-                error={result?.errors?.name}
-              />
-              <ChoiceList
-                title="Products"
-                allowMultiple
-                selected={selected}
-                onChange={setSelected}
-                choices={[
-                  ...products.map((product) => ({
-                    label: product.title,
-                    value: product.id,
-                  })),
-                  ...missingProducts.map((product) => ({
-                    label: `${product.productTitle} (no longer available; remove to save)`,
-                    value: product.productId,
-                  })),
-                ]}
-                error={result?.errors?.productIds}
-              />
-              {selected.map((id) => (
-                <input key={id} type="hidden" name="productIds" value={id} />
-              ))}
-              <TextField
-                label="Bundle discount"
-                name="discount"
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                suffix="%"
-                value={discount}
-                onChange={setDiscount}
-                autoComplete="off"
-                error={result?.errors?.discount}
-              />
-              <Button
-                submit
-                variant="primary"
-                loading={submitting}
-                disabled={
-                  !!loadError ||
-                  selected.length < 2 ||
-                  selected.length > 50 ||
-                  submitting
-                }
-              >
-                Save bundle draft
-              </Button>
-            </BlockStack>
-          </Card>
-        </BlockStack>
-      </Form>
-      {bundle && (
-        <div id="delete-bundle">
-          <Card>
-            <Form method="post">
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingMd">
-                  Delete bundle draft
-                </Text>
-                <Text as="p">This permanently removes the saved draft.</Text>
-                <Checkbox
-                  label="I confirm I want to delete this draft"
-                  checked={confirm}
-                  onChange={setConfirm}
-                />
-                <input type="hidden" name="intent" value="delete" />
-                <input
-                  type="hidden"
-                  name="confirmDelete"
-                  value={confirm ? "yes" : "no"}
-                />
-                <Button
-                  submit
-                  variant="primary"
-                  tone="critical"
-                  disabled={!confirm || submitting}
-                >
-                  Delete draft
-                </Button>
-              </BlockStack>
-            </Form>
-          </Card>
-        </div>
-      )}
-    </Page>
-  );
+  const validDiscount = discount.trim() !== "" && Number.isInteger(Number(discount)) && Number(discount) >= 0 && Number(discount) <= 100;
+  const toggle = id => setSelected(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
+  return <main className={styles.page}>
+    <Link to="/app/bundles" className={styles.back}>? All bundles</Link>
+    <header className={styles.header}><div><span className={styles.eyebrow}>BETTER TOGETHER</span><h1>{bundle ? "Edit your bundle" : "Create a bundle"}</h1><p>Pair great products. Give customers a reason to choose more.</p></div><span className={styles.badge}>Draft offer</span></header>
+    {(loadError || result?.error) && <Banner tone="critical">{loadError || result.error}</Banner>}
+    <Form method="post" className={styles.layout}>
+      {bundle && <input type="hidden" name="intent" value="update" />}
+      {selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
+      <div className={styles.sections}>
+        <section className={styles.card}><div className={styles.sectionHeading}><span>01</span><div><h2>Bundle details</h2><p>Start with a name your customers will remember.</p></div></div>
+          <label className={styles.field}>Bundle name<input name="name" value={name} onChange={event => setName(event.target.value)} placeholder="e.g. The everyday essentials" autoComplete="off" maxLength={120} required aria-invalid={!!result?.errors?.name} /></label>
+          {result?.errors?.name && <p className={styles.error} role="alert">{result.errors.name}</p>}
+        </section>
+        <section className={styles.card}><div className={styles.sectionHeading}><span>02</span><div><h2>Choose your products</h2><p>Select 2?50 products to build your bundle.</p></div><b className={styles.count}>{selected.length} selected</b></div>
+          <label className={styles.search}><span className={styles.srOnly}>Search products</span><input type="search" placeholder="Search your products?" value={search} onChange={event => setSearch(event.target.value)} /></label>
+          <div className={styles.list} role="group" aria-label="Bundle products">
+            {visible.map(product => <label key={product.id} className={styles.product} data-selected={selected.includes(product.id)}>
+              <input type="checkbox" checked={selected.includes(product.id)} onChange={() => toggle(product.id)} disabled={!selected.includes(product.id) && selected.length >= 50} />
+              <span className={styles.productIcon} aria-hidden="true">{product.title.slice(0, 1).toUpperCase()}</span><span><strong>{product.title}</strong>{product.missing && <small>No longer available. Remove this product to save.</small>}</span>
+              {selected.includes(product.id) && <span className={styles.selectedLabel}>Selected</span>}
+            </label>)}
+            {!visible.length && <div className={styles.empty}>{products.length ? "No products match your search." : "Add at least two products to your store to get started."}</div>}
+          </div>
+          <div className={styles.listFooter}><span>{visible.length} products shown</span><button type="button" disabled={!selected.length} onClick={() => setSelected([])}>Clear selection</button></div>
+          {result?.errors?.productIds && <p className={styles.error} role="alert">{result.errors.productIds}</p>}
+        </section>
+        <section className={styles.card}><div className={styles.sectionHeading}><span>03</span><div><h2>Set the savings</h2><p>A little incentive to bring it all together.</p></div></div>
+          <label className={styles.field}>Bundle discount<div className={styles.discountInput}><input name="discount" type="number" min="0" max="100" step="1" required value={discount} onChange={event => setDiscount(event.target.value)} /><span>% off</span></div></label>
+          <p className={styles.hint}>Applied to complete bundles after activation.</p>
+          {result?.errors?.discount && <p className={styles.error} role="alert">{result.errors.discount}</p>}
+        </section>
+      </div>
+      <aside className={styles.sidebar}><section className={styles.summary}><div className={styles.summaryTop}><span className={styles.eyebrow}>YOUR BUNDLE</span><span className={styles.badge}>Draft</span></div><h2>{name.trim() || "Your bundle name"}</h2><p className={styles.hint}>Here?s how your offer is coming together.</p>
+        <div className={styles.metrics}><div><strong>{selected.length}</strong><span>Products</span></div><div><strong>{validDiscount ? discount + "%" : "?"}</strong><span>Bundle savings</span></div></div>
+        <div className={styles.summaryProducts}>{selected.length ? choices.filter(product => selected.includes(product.id)).map(product => <p key={product.id}><span aria-hidden="true">?</span>{product.title}</p>) : <p className={styles.hint}>Your selected products will appear here.</p>}</div>
+        <div className={styles.note}><strong>Save now. Activate when ready.</strong><p>Saving creates a draft. Activate it from Bundles to apply the discount in the cart and at checkout.{bundle && " Editing an active bundle returns it to draft until reactivated."}</p></div>
+        <button className={styles.primary} type="submit" disabled={!!loadError || selected.length < 2 || selected.length > 50 || !name.trim() || !validDiscount || submitting}>{submitting ? "Saving?" : "Save bundle draft"}</button>
+        <Link className={styles.cancel} to="/app/bundles">Cancel</Link>
+      </section></aside>
+    </Form>
+    {bundle && <section id="delete-bundle" className={styles.danger}><div><h2>Delete bundle</h2><p>Permanently remove this saved offer.</p></div><Form method="post"><input type="hidden" name="intent" value="delete" /><input type="hidden" name="confirmDelete" value={confirm ? "yes" : "no"} /><label><input type="checkbox" checked={confirm} onChange={event => setConfirm(event.target.checked)} /> I confirm I want to delete this bundle</label><button type="submit" disabled={!confirm || submitting}>Delete draft</button></Form></section>}
+  </main>;
 }

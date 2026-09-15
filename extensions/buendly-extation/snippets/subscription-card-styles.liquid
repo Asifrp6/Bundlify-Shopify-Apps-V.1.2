@@ -9,7 +9,7 @@
   bundlify-subscription.bundlify-subscription-widget * { box-sizing: border-box; }
   bundlify-subscription.bundlify-subscription-widget fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   bundlify-subscription.bundlify-subscription-widget [hidden] { display: none !important; }
-  bundlify-subscription.bundlify-subscription-widget legend { font-size: 12px; padding: 0; margin-bottom: 12px; }
+  bundlify-subscription.bundlify-subscription-widget legend { font-size:calc(12px * var(--bundlify-font-scale, 1)); padding: 0; margin-bottom: 12px; }
   bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card {
     position: relative; display: flex; flex-direction: column; align-items: center;
@@ -21,7 +21,7 @@
   bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card:has(input:focus-visible) { outline: 3px solid #6251e5; outline-offset: 3px; }
   bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg { display: block; }
-  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card small { display: block; font-size: 12px; }
+  bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card small { display: block; font-size:calc(12px * var(--bundlify-font-scale, 1)); }
   bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
   bundlify-subscription.bundlify-subscription-widget .bundlify-option { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 6px; cursor: pointer; }
   bundlify-subscription.bundlify-subscription-widget .bundlify-option:has(input:checked) { background: #020b3f; color: #fff; }

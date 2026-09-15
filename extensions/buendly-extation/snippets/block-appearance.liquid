@@ -1,4 +1,17 @@
+{% assign font_size = appearance.fontSize | default: 16 | plus: 0 | at_least: 12 | at_most: 24 %}
+{% if kind == 'bundle' %}{% assign typography_selector = 'bundlify-bundles' %}{% else %}{% assign typography_selector = 'bundlify-subscription.bundlify-subscription-widget' %}{% endif %}
 <style>
+  {{ typography_selector }} {
+    --bundlify-font-scale: {{ font_size | divided_by: 16.0 }};
+    font-size: {{ font_size }}px;
+    font-family: var(--font-body-family, inherit);
+    line-height: 1.5;
+  }
+  {{ typography_selector }} :is(button, select, input, label, p, span, strong, small, a, legend) { font-family: inherit; }
+  {{ typography_selector }} :is(h2, h3) { font-family: var(--font-heading-family, inherit); }
+  {{ typography_selector }} > h2 { font-size:calc(24px * var(--bundlify-font-scale)); }
+  bundlify-subscription.bundlify-subscription-widget > h3 { font-size:calc(20px * var(--bundlify-font-scale, 1)); }
+
   .bundlify-custom-logo { display:block; max-width:160px; height:80px; object-fit:contain; margin-bottom:16px; }
   {% if appearance != blank %}
     {% if kind == 'bundle' %}

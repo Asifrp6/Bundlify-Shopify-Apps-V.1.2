@@ -23,43 +23,81 @@ export async function action({ request }) {
   }
 }
 /* eslint-disable react/prop-types */
+const colorKeys = ["background", "text", "accent", "buttonTextColor"];
 function BlockSettings({ kind, initial }) {
   const [values, setValues] = useState(initial);
   const result = useActionData();
   const navigation = useNavigation();
-  const title = kind === "bundle" ? "Bundle block" : "Subscription block";
-  return <section className={styles.section}>
-    <h2>{title}</h2>
-    <Form method="post" className={styles.layout}>
+  const bundle = kind === "bundle";
+  const title = bundle ? "Bundle block" : "Subscription block";
+  const saving = navigation.state !== "idle" && navigation.formData?.get("kind") === kind;
+  const update = (key, value) => setValues(current => ({ ...current, [key]: value }));
+  const selectedStyle = { background: values.accent, color: values.buttonTextColor };
+  return <section id={kind} className={styles.section} aria-labelledby={kind + "-title"}>
+    <header className={styles.sectionHeader}>
+      <span className={styles.blockIcon} aria-hidden="true">{bundle ? "?" : "?"}</span>
+      <div><h2 id={kind + "-title"}>{title}</h2><p>{bundle ? "Make your product pairings feel like your brand." : "Give your purchase options a personal touch."}</p></div>
+      <span className={styles.badge}>Storefront</span>
+    </header>
+    <Form method="post">
       <input type="hidden" name="kind" value={kind} />
-      <div className={styles.controls}>
-        {Object.keys(defaults[kind]).map(key => <label key={key}>
-          {fields[key]}{kind === "subscription" && key === "buttonText" ? " (subscription choice)" : ""}
-          <input name={key} type={["background", "text", "accent", "buttonTextColor"].includes(key) ? "color" : key === "logoUrl" ? "url" : "text"}
-            value={values[key]} onChange={event => setValues({ ...values, [key]: event.target.value })}
-            required={key !== "logoUrl"} maxLength={key === "logoUrl" ? 2048 : 100} />
-        </label>)}
-        <p>Paste an HTTPS image link from Shopify Content ? Files. Leave it empty to hide the logo.</p>
-        {result?.error && result.kind === kind && <p role="alert">{result.error}</p>}
-        {result?.saved === kind && navigation.state === "idle" && <p role="status">Saved. Refresh your storefront to see the changes.</p>}
-        <div className={styles.actions}><button type="submit" disabled={navigation.state !== "idle"}>Save {kind} settings</button>
-        <button type="button" onClick={() => setValues({ ...defaults[kind] })}>Restore defaults</button></div>
-      </div>
-      <div><p className={styles.caption}>LIVE PREVIEW ? EXAMPLE CONTENT</p>
-        <div className={styles.preview} style={{ background: values.background, color: values.text }}>
-          {/^https:\/\//.test(values.logoUrl) && <img src={values.logoUrl} alt="Block logo" />}
-          <h3>{values.heading}</h3>
-          {kind === "bundle" ? <><p>Product one</p><hr /><p>Product two</p><hr /><p>Bundle total <strong>$90.00</strong></p><p>You save $10.00 (10%)</p></> : <><p>Choose how to purchase</p><p>{values.oneTimeText}</p></>}
-          <div className={styles.previewButton} style={{ background: values.accent, color: values.buttonTextColor }}>{values.buttonText}</div>
-          {kind === "subscription" && <p>Monthly delivery ? Save 10%</p>}
+      <div className={styles.layout}>
+        <div className={styles.controls}>
+          <fieldset className={styles.group}><legend>Colors</legend><p className={styles.hint}>A palette that feels like you.</p>
+            <div className={styles.colorGrid}>{colorKeys.map(key => <label className={styles.colorField} key={key}>
+              <span>{fields[key]}</span><div className={styles.colorControl}>
+                <input aria-label={fields[key]} name={key} type="color" value={values[key]} onChange={event => update(key, event.target.value)} />
+                <span>{values[key].toUpperCase()}</span><span className={styles.colorEdit} aria-hidden="true">?</span>
+              </div>
+            </label>)}</div>
+          </fieldset>
+          <fieldset className={styles.group}><legend>Typography</legend>
+            <label className={styles.textField}><span>Font size (px)</span><input name="fontSize" type="number" min="12" max="24" step="1" required value={values.fontSize} onChange={event => update("fontSize", event.target.value)} /></label>
+            <p className={styles.hint}>Automatically matches your store?s body and heading fonts. Sizes scale together from 12?24 px. This preview uses the app font; your storefront uses your theme font.</p>
+          </fieldset>
+          <fieldset className={styles.group}><legend>Brand logo</legend>
+            <label className={styles.textField}><span>Image URL <em>Optional</em></span><input name="logoUrl" type="url" placeholder="https://cdn.shopify.com/your-logo.png" value={values.logoUrl} onChange={event => update("logoUrl", event.target.value)} maxLength={2048} /></label>
+            <p className={styles.hint}>Paste an image link from Shopify Content ? Files. Leave blank to hide your logo.</p>
+          </fieldset>
+          <fieldset className={styles.group}><legend>Text & labels</legend>
+            <div className={styles.textGrid}>{Object.keys(defaults[kind]).filter(key => !colorKeys.includes(key) && key !== "logoUrl" && key !== "fontSize").map(key => <label className={styles.textField} key={key}>
+              <span>{key === "buttonText" && !bundle ? "Subscription choice label" : fields[key]}</span>
+              <input name={key} type="text" value={values[key]} onChange={event => update(key, event.target.value)} required maxLength={100} />
+            </label>)}</div>
+          </fieldset>
         </div>
+        <aside className={styles.previewPanel} aria-label={title + " preview"}>
+          <div className={styles.previewHeader}><span><i />Live preview</span><span>Example content</span></div>
+          <div className={styles.previewStage}>
+            <div className={styles.preview} style={{ background: values.background, color: values.text, "--preview-font-scale": Math.min(24, Math.max(12, Number(values.fontSize) || 16)) / 16 }}>
+              {/^https:\/\//.test(values.logoUrl) && <img className={styles.customLogo} src={values.logoUrl} alt="Block logo" />}
+              <h3>{values.heading}</h3>
+              {bundle ? <>
+                {["Everyday essentials", "The perfect companion"].map((name, index) => <div className={styles.product} key={name}><span className={styles.productArt} aria-hidden="true">{index ? "?" : "?"}</span><div><strong>{name}</strong><small>Example product</small><b>{index ? "$40.00" : "$60.00"}</b></div></div>)}
+                <div className={styles.total}><span>Bundle total<small>You save $10.00 (10%)</small></span><strong><s>$100.00</s>$90.00</strong></div>
+                <div className={styles.previewButton} style={selectedStyle}>{values.buttonText}</div>
+              </> : <><p className={styles.purchaseHint}>Choose how to purchase</p>
+                <div className={styles.purchaseChoices}><div><span aria-hidden="true">?</span><strong>{values.oneTimeText}</strong><small>Buy once, enjoy anytime</small><b>$100.00</b></div><div className={styles.chosenChoice}><span aria-hidden="true">?</span><strong>{values.buttonText}</strong><small>Your favorites, on repeat</small><b>Save 10%</b></div></div>
+                <p className={styles.frequency}>DELIVERY FREQUENCY</p>
+                <div className={styles.delivery} style={selectedStyle}><span aria-hidden="true">?</span><div><strong>Every month</strong><small>Save 10% on every delivery</small></div><b>$90.00</b></div>
+                <p className={styles.details}>Subscription details <span aria-hidden="true">?</span></p>
+              </>}
+            </div>
+          </div>
+          <p className={styles.previewNote}>Your changes appear here as you edit.<br />Save when you?re ready to update your store.</p>
+        </aside>
       </div>
+      <footer className={styles.footer}>
+        <div aria-live="polite">{result?.error && result.kind === kind ? <p className={styles.error} role="alert">{result.error}</p> : result?.saved === kind && navigation.state === "idle" ? <p className={styles.success}>Settings saved. Refresh your storefront to see them.</p> : <p>Changes apply to all {kind} blocks in your store.</p>}</div>
+        <div className={styles.actions}><button type="button" className={styles.secondary} onClick={() => setValues({ ...defaults[kind] })}>Restore defaults</button><button className={styles.primary} type="submit" disabled={navigation.state !== "idle"}>{saving ? "Saving?" : "Save changes"}</button></div>
+      </footer>
     </Form>
   </section>;
 }
 export default function Settings() {
   const { settings } = useLoaderData();
-  return <main className={styles.page}><h1>Settings</h1><p>Customize your subscription and bundle blocks separately. Saved changes apply to every instance of that block in your store.</p>
+  return <main className={styles.page}>
+    <header className={styles.pageHeader}><div><span className={styles.eyebrow}>MAKE IT YOURS</span><h1>Storefront settings</h1><p>Your brand, down to the details. Customize each block to fit your store.</p></div><span className={styles.pageBadge}><i />Two blocks. Your style.</span></header>
     <BlockSettings kind="subscription" initial={settings.subscription} />
     <BlockSettings kind="bundle" initial={settings.bundle} />
   </main>;
