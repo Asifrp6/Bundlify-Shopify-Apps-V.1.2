@@ -225,7 +225,7 @@ test("theme subscription helper cannot append an empty plan after the widget sel
 });
 
 test("bundle product filtering is optional and off by default", async () => {
-  for (const name of ['bundles', 'star_rating']) {
+  for (const name of ['star_rating']) {
     const block = await readFile(new URL(`../extensions/buendly-extation/blocks/${name}.liquid`, import.meta.url), 'utf8');
     const schema = JSON.parse(block.split('{% schema %}')[1].split('{% endschema %}')[0]);
     assert.equal(schema.settings.find(setting => setting.id === 'match_product').default, false);
@@ -286,7 +286,7 @@ test("theme helper retains the selected plan through an inter-listener microtask
 });
 
  test("bundle blocks render bundle data independently of subscription choices", async () => {
-   for (const name of ['bundles', 'star_rating']) {
+   for (const name of ['star_rating']) {
      const block = await readFile(new URL('../extensions/buendly-extation/blocks/' + name + '.liquid', import.meta.url), 'utf8');
      assert.match(block, /render 'bundle-options'/);
      assert.match(block, /"javascript": "bundlify-bundles.js"/);

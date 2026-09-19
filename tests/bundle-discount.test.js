@@ -6,6 +6,18 @@ const line = (id, product, quantity = 1, group = "purchase") => ({
   bundle: { value: "7" }, group: { value: group },
 });
 const input = lines => ({ cart: { lines }, discount: { metafield: { jsonValue: { id: "7", percentage: 10, products: ["a", "b"] } } } });
+
+test('custom discount requires two distinct eligible products in the same group and the active config', () => {
+  const customLine = (id, product, group = 'g') => ({ ...line(id, product, 1, group), custom: { value: 'true' } });
+  const build = lines => ({ cart: { lines }, discount: { metafield: { jsonValue: { custom: true, id: 'current' } } }, shop: { metafield: { jsonValue: { id: 'current', products: ['a', 'b', 'c'], percentage: 15 } } } });
+  const result = run(build([customLine('1', 'a'), customLine('2', 'c'), customLine('3', 'outsider')]));
+  assert.equal(result.operations[0].productDiscountsAdd.candidates[0].value.percentage.value, 15);
+  assert.deepEqual(result.operations[0].productDiscountsAdd.candidates[0].targets.map(t => t.cartLine.id), ['1', '2']);
+  for (const lines of [[customLine('1', 'a')], [customLine('1', 'a'), customLine('2', 'a')], [customLine('1', 'a'), customLine('2', 'b', 'other')], [customLine('1', 'a'), { ...customLine('2', 'b'), sellingPlanAllocation: {} }]]) assert.deepEqual(run(build(lines)), { operations: [] });
+  const retired = build([customLine('1', 'a'), customLine('2', 'b')]);
+  retired.discount.metafield.jsonValue.id = 'old';
+  assert.deepEqual(run(retired), { operations: [] });
+});
 test("only complete bundle quantities receive the configured discount", () => {
   const regular = line("regular", "a"); delete regular.bundle;
   const result = run(input([line("a", "a", 3), line("b", "b", 2), regular]));

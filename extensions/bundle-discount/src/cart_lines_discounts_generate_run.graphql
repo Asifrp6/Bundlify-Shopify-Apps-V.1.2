@@ -5,9 +5,11 @@ query CartInput {
       quantity
       bundle: attribute(key: "_bundlify_bundle") { value }
       group: attribute(key: "_bundlify_group") { value }
+      custom: attribute(key: "_bundlify_custom") { value }
       sellingPlanAllocation { sellingPlan { id } }
       merchandise { ... on ProductVariant { product { id } } }
     }
   }
   discount { metafield(namespace: "$app:bundlify", key: "bundle") { jsonValue } }
+  shop { metafield(namespace: "bundlify", key: "custom_bundle_discount") { jsonValue } }
 }

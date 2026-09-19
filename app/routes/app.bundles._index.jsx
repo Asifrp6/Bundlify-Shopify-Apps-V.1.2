@@ -76,6 +76,7 @@ export default function Bundles() {
 
     <div className={styles.info}><p>Click Activate bundle below to display it in your theme. <Link to="/app/extensions">Set up your storefront block</Link>. Active bundle discounts apply in the cart and at checkout. After deploying the discount extension, reactivate existing bundles to enable their savings.</p></div>
 
+    <div className={styles.info}><h2>Customer-created bundles</h2><p>Manage the products customers can choose when creating their own bundle.</p><Link className={styles.primary} to="/app/bundles/custom">Manage custom bundle products</Link></div>
     <section className={styles.collection} aria-labelledby="bundle-collection-title">
       <div className={styles.collectionHeader}><div><h2 id="bundle-collection-title">Your bundles <span>{bundles.length}</span></h2><p>A home for your next great product pairing.</p></div><span className={styles.productCount}>{products} unique {products === 1 ? "product" : "products"}</span></div>
       {!bundles.length ? <div className={styles.empty}>

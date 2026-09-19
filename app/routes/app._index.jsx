@@ -76,6 +76,7 @@ export default function Dashboard() {
             reasons to come back.
           </p>
           <div className={styles.heroActions}>
+            <Link className={styles.secondary} to="/app/bundles/custom">Manage custom bundle products</Link>
             <Link className={styles.primary} to="/app/subscriptions/new">
               <span aria-hidden="true">+</span> Create subscription
             </Link>

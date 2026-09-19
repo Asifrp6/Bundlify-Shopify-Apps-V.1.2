@@ -16,6 +16,16 @@ The previous `/bundles` and `/bundles/new` URLs redirect to the embedded app rou
 
 ## Local setup and checks
 
+### Customer-created bundles
+
+In **Apps → Bundlify → Bundles → Manage custom bundle products**, select 2–50 eligible products and save. The dashboard also links directly to this page. The shop-wide list is saved as a Shopify product-reference metafield and used by every **Bundle offers** app block. Clear the selection and save to disable custom bundles. Existing theme-editor selections are replaced by this app-managed list; select and save the desired products in the app after updating.
+
+Keep the **Bundle offers** app block in your product template. Two subscription-style icon buttons, **Our bundle** and **Custom bundle**, switch between preset offers and the custom picker without losing selections. The custom option is enabled when at least two eligible products resolve on the storefront. Customers choose their available variants and add one of each selected product. Unavailable and subscription-only products cannot be selected. The preset bundle product-page filter does not filter the custom list.
+
+Set **Custom bundle discount (%)** on the same management page (0–100). The storefront displays the original current-price total, discounted total, and savings percentage. This percentage applies to current prices; it is separate from preset bundle discounts. At 0%, any existing catalog sale savings are shown instead. Items are added as individual cart lines with a shared private group property. Shopify's discount function requires at least two distinct eligible products in the same custom group and excludes subscriptions and noneligible products. Removing products in the cart can remove eligibility.
+
+Deploy the app server, theme extension, and updated bundle discount function before saving a nonzero custom discount. No database migration is required. The saved shop configuration activates only its matching discount node, so old nodes cannot apply stale discounts. Test variant changes, cart edits, and a checkout on the live store after deployment.
+
 ```sh
 npm ci
 npm run setup

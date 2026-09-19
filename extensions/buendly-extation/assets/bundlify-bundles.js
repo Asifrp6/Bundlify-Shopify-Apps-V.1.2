@@ -9,12 +9,16 @@
         });
       }
       disconnectedCallback() {
+        this.querySelector('[data-custom-dialog]')?.close();
         this.controller?.abort();
       }
       async load() {
         this.controller?.abort();
         const controller = new AbortController();
         this.controller = controller;
+        const hasCustom = !!this.querySelector('[data-custom-bundle]');
+        this.prepareCustom(controller.signal);
+        if (hasCustom) this.hidden = false;
         const timeout = setTimeout(() => controller.abort(), 10000);
         try {
           const root = (this.dataset.root || "/").replace(/\/$/, "");
@@ -44,18 +48,107 @@
               productRequests,
             );
           }
-          this.hidden = !bundles.length && this.dataset.editor !== "true";
-          this.querySelector("[data-message]").textContent = bundles.length
+          this.hidden = !hasCustom && !bundles.length && this.dataset.editor !== "true";
+          this.querySelector("[data-message]").textContent = bundles.length || hasCustom
             ? ""
             : "Activate a bundle in Bundlify. Its products must be published and match this product page.";
+          if (!bundles.length && hasCustom) {
+            this.querySelector('[data-message]').textContent = 'No ready-made bundles are available right now. Create your own custom bundle.';
+          }
         } catch {
           if (!this.isConnected || this.controller !== controller) return;
-          this.hidden = this.dataset.editor !== "true";
+          this.hidden = !hasCustom && this.dataset.editor !== "true";
           this.querySelector("[data-message]").textContent =
-            "Unable to load bundles. Check that the app server is running and the app proxy is deployed.";
+            hasCustom ? "" : "Unable to load bundles. Check that the app server is running and the app proxy is deployed.";
         } finally {
           clearTimeout(timeout);
         }
+      }
+      prepareCustom(signal) {
+        const toggle = this.querySelector('[data-custom-toggle]');
+        const card = this.querySelector('[data-custom-picker]');
+        if (!toggle || !card) return;
+        const preset = this.querySelector('[data-preset-toggle]');
+        const panel = this.querySelector('[data-preset-panel]');
+        const dialog = this.querySelector('[data-custom-dialog]');
+        let result = this.querySelector('[data-custom-result]');
+        if (result) result.remove();
+        result = document.createElement('article');
+        result.dataset.customResult = '';
+        result.hidden = true;
+        this.querySelector('[data-custom-bundle]').append(result);
+        let hasResult = false;
+        let resultController;
+        signal.addEventListener('abort', () => resultController?.abort(), { once: true });
+        if (dialog?.open) dialog.close();
+        const resetMode = () => {
+          card.hidden = true;
+          result.hidden = !hasResult;
+          if (panel) panel.hidden = hasResult;
+          preset?.setAttribute('aria-pressed', String(!hasResult));
+          toggle.setAttribute('aria-pressed', String(hasResult));
+          toggle.setAttribute('aria-expanded', 'false');
+        };
+        dialog?.addEventListener('close', () => {
+          resetMode();
+          if (this.isConnected) toggle.focus();
+        }, { signal });
+        this.querySelector('[data-custom-close]')?.addEventListener('click', () => dialog.close(), { signal });
+        dialog?.addEventListener('click', event => {
+          if (event.target !== dialog) return;
+          const bounds = dialog.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+        }, { signal });
+        // Rebuild on reconnect so aborted listeners and stale prices are discarded.
+        while (card.children.length > 2) card.lastElementChild.remove();
+        card.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-pressed', 'false');
+        if (panel) panel.hidden = false;
+        preset?.setAttribute('aria-pressed', 'true');
+        preset?.addEventListener('click', () => {
+          if (dialog?.open) dialog.close();
+          card.hidden = true;
+          result.hidden = true;
+          if (panel) panel.hidden = false;
+          preset.setAttribute('aria-pressed', 'true');
+          toggle.setAttribute('aria-pressed', 'false');
+          toggle.setAttribute('aria-expanded', 'false');
+        }, { signal });
+        let prepared = false;
+        toggle.addEventListener('click', () => {
+          card.hidden = preset ? false : !card.hidden;
+          toggle.setAttribute('aria-expanded', String(!card.hidden));
+          toggle.setAttribute('aria-pressed', String(!card.hidden));
+          if (panel) panel.hidden = dialog ? false : !card.hidden;
+          preset?.setAttribute('aria-pressed', String(card.hidden));
+          if (dialog && !dialog.open) dialog.showModal();
+          if (prepared) return;
+          prepared = true;
+          const products = Array.from(this.querySelectorAll('[data-custom-products] [data-handle]'), node => ({ handle: node.dataset.handle, title: node.dataset.title }));
+          const discount = Number(this.querySelector('[data-custom-bundle]')?.dataset.customDiscount || 0);
+          const onDone = dialog ? (selectedProducts) => {
+            resultController?.abort();
+            resultController = new AbortController();
+            result.replaceChildren();
+            const heading = document.createElement('h3');
+            heading.textContent = 'Your custom bundle';
+            heading.tabIndex = -1;
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.textContent = 'Edit products';
+            edit.addEventListener('click', () => toggle.click(), { signal: resultController.signal });
+            result.append(heading, edit);
+            hasResult = true;
+            result.hidden = false;
+            this.preparePurchase(result, { custom: true, review: true, discount, products: selectedProducts },
+              (this.dataset.root || '/').replace(/\/$/, ''), resultController.signal);
+            dialog.addEventListener('close', () => { heading.focus(); result.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }, { once: true });
+            dialog.close();
+          } : null;
+          this.preparePurchase(card, { custom: true, discount, products, onDone },
+            (this.dataset.root || '/').replace(/\/$/, ''), signal);
+        }, { signal });
       }
       async preparePurchase(
         card,
@@ -64,7 +157,7 @@
         signal,
         productRequests = new Map(),
       ) {
-        const buttonLabel = this.dataset.buttonText || "Add bundle to cart";
+        const buttonLabel = bundle.onDone ? 'Done' : bundle.custom ? "Add custom bundle to cart" : this.dataset.buttonText || "Add bundle to cart";
         const button = document.createElement("button");
         button.type = "button";
         button.textContent = "Loading purchase options…";
@@ -82,6 +175,9 @@
         total.className = "bundlify-total";
         total.setAttribute("aria-live", "polite");
         card.insertBefore(total, button);
+        const productGrid = document.createElement('div');
+        productGrid.className = 'bundlify-product-grid';
+        card.insertBefore(productGrid, total);
         try {
           const currency =
             this.dataset.currency || window.Shopify?.currency?.active;
@@ -103,6 +199,7 @@
           const updatePrices = () => {
             let subtotal = 0;
             let savings = 0;
+            let originalTotal = 0;
             for (const entry of entries) {
               const variant = entry.variants.find(
                 (v) => String(v.id) === entry.select.value,
@@ -112,11 +209,20 @@
                 price,
                 Number(variant.compare_at_price) || 0,
               );
-              subtotal += price;
-              savings += Math.floor((price * discount) / 100);
-              entry.price.textContent = money(price);
-              entry.was.textContent = money(original);
-              entry.was.hidden = original <= price;
+              if (!entry.checkbox || entry.checkbox.checked) {
+                subtotal += price;
+                savings += Math.floor((price * discount) / 100);
+                originalTotal += original;
+              }
+              const finalPrice = price - Math.floor(price * discount / 100);
+              const displayedPrice = bundle.custom ? finalPrice : price;
+              const originalPrice = bundle.custom && discount > 0 ? price : original;
+              entry.price.textContent = money(displayedPrice);
+              entry.was.textContent = money(originalPrice);
+              entry.was.hidden = originalPrice <= displayedPrice;
+              const salePercentage = bundle.custom && discount > 0 ? discount : original > price ? Math.round((original - price) * 1000 / original) / 10 : 0;
+              entry.sale.textContent = salePercentage > 0 ? `Save ${salePercentage}%` : '';
+              entry.sale.hidden = salePercentage <= 0;
               const source =
                 variant.featured_image?.src ||
                 entry.details.featured_image ||
@@ -131,17 +237,27 @@
             const value = document.createElement("strong");
             value.textContent = money(subtotal - savings);
             total.append(label);
-            if (savings > 0) {
+            const displayedOriginal = bundle.custom && !discount ? originalTotal : subtotal;
+            const displayedSavings = displayedOriginal - (subtotal - savings);
+            const displayedPercentage = bundle.custom && !discount
+              ? (displayedOriginal > 0 ? Math.round(displayedSavings * 1000 / displayedOriginal) / 10 : 0)
+              : discount;
+            if (displayedSavings > 0) {
               const was = document.createElement("s");
-              was.textContent = money(subtotal);
+              was.textContent = money(displayedOriginal);
               was.setAttribute(
                 "aria-label",
-                `Original total ${money(subtotal)}`,
+                `Original total ${money(displayedOriginal)}`,
               );
               const saving = document.createElement("small");
-              saving.textContent = `You save ${money(savings)} (${discount}%)`;
+              saving.textContent = `You save ${money(displayedSavings)} (${displayedPercentage}%)`;
               total.append(was, value, saving);
             } else total.append(value);
+            if (bundle.custom) {
+              const count = entries.filter(entry => entry.checkbox.checked).length;
+              button.disabled = count < 2;
+              message.textContent = `${count} products selected. Choose at least 2.`;
+            }
           };
           const products = await Promise.all(
             bundle.products.map((product) => {
@@ -163,12 +279,13 @@
                   }),
                 );
               }
-              return productRequests.get(url);
+              return bundle.custom ? productRequests.get(url).catch(() => null) : productRequests.get(url);
             }),
           );
           if (signal.aborted || !this.isConnected) return;
           for (const [index, product] of bundle.products.entries()) {
             const details = products[index];
+            if (bundle.custom && !details) continue;
             const variants =
               details.variants?.filter(
                 (v) =>
@@ -176,6 +293,7 @@
                   !details.requires_selling_plan &&
                   !v.requires_selling_plan,
               ) || [];
+            if (bundle.custom && !variants.length) continue;
             if (!variants.length)
               throw new Error(
                 `${product.title} is unavailable for a one-time bundle purchase.`,
@@ -212,7 +330,9 @@
             const was = document.createElement("s");
             was.setAttribute("aria-label", "Original price");
             const price = document.createElement("strong");
-            prices.append(was, price);
+            const sale = document.createElement('small');
+            sale.className = 'bundlify-sale-badge';
+            prices.append(was, price, sale);
             const label = document.createElement("label");
             label.textContent = "Choose option";
             const select = document.createElement("select");
@@ -224,11 +344,30 @@
               select.append(option);
             }
             label.append(select);
+            if (product.variantId && variants.some(variant => String(variant.id) === product.variantId)) select.value = product.variantId;
             label.hidden =
               variants.length === 1 && variants[0].title === "Default Title";
             info.append(link, prices, label);
+            let checkbox;
+            if (bundle.custom) {
+              const choice = document.createElement('label');
+              choice.className = 'bundlify-custom-choice';
+              checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = !!bundle.review;
+              choice.hidden = !!bundle.review;
+              checkbox.setAttribute('aria-label', `Include ${details.title || product.title}`);
+              const choiceText = document.createElement('span');
+              choiceText.textContent = 'Add to bundle';
+              choice.append(checkbox, choiceText);
+              checkbox.addEventListener('change', () => {
+                choiceText.textContent = checkbox.checked ? 'Selected' : 'Add to bundle';
+              }, { signal });
+              info.prepend(choice);
+              checkbox.addEventListener('change', updatePrices, { signal });
+            }
             row.append(image, placeholder, info);
-            card.insertBefore(row, total);
+            productGrid.append(row);
             selects.push(select);
             entries.push({
               select,
@@ -238,6 +377,9 @@
               was,
               image,
               placeholder,
+              checkbox,
+              sale,
+              product,
             });
             select.addEventListener("change", updatePrices, { signal });
           }
@@ -245,14 +387,21 @@
             throw new Error(
               "This bundle needs at least two available products.",
             );
-          updatePrices();
           button.disabled = false;
+          updatePrices();
           button.textContent = buttonLabel;
           button.addEventListener(
             "click",
             async () => {
               if (button.disabled) return;
+              const selectedEntries = entries.filter(entry => !entry.checkbox || entry.checkbox.checked);
+              if (selectedEntries.length < 2) return;
+              if (bundle.onDone) {
+                bundle.onDone(selectedEntries.map(entry => ({ ...entry.product, variantId: entry.select.value })));
+                return;
+              }
               button.disabled = true;
+              entries.forEach(entry => { if (entry.checkbox) entry.checkbox.disabled = true; });
               selects.forEach((select) => {
                 select.disabled = true;
               });
@@ -275,11 +424,11 @@
                     Accept: "application/json",
                   },
                   body: JSON.stringify({
-                    items: selects.map((select) => ({
+                    items: selectedEntries.map(({ select }) => ({
                       id: select.value,
                       quantity: 1,
                       properties: {
-                        _bundlify_bundle: String(bundle.id),
+                        ...(bundle.custom ? { _bundlify_custom: 'true' } : { _bundlify_bundle: String(bundle.id) }),
                         _bundlify_group: group,
                       },
                     })),
@@ -300,6 +449,16 @@
                 button.textContent = "Added to cart";
                 cart.hidden = false;
                 // Drawer rendering is separate from adding: never retry a successful cart write.
+                if (bundle.custom) {
+                  const dialog = this.querySelector('[data-custom-dialog]');
+                  if (dialog?.open) {
+                    // Finish close/focus restoration before the cart drawer takes focus.
+                    await new Promise(resolve => {
+                      dialog.addEventListener('close', resolve, { once: true });
+                      dialog.close();
+                    });
+                  }
+                }
                 try {
                   await this.openCart(cart.href, result, drawer, sections);
                 } catch {
@@ -311,6 +470,7 @@
                 selects.forEach((select) => {
                   select.disabled = false;
                 });
+                entries.forEach(entry => { if (entry.checkbox) entry.checkbox.disabled = false; });
               } catch (error) {
                 message.textContent =
                   error.name === "TimeoutError" || error instanceof TypeError
@@ -322,6 +482,7 @@
                 selects.forEach((select) => {
                   select.disabled = false;
                 });
+                entries.forEach(entry => { if (entry.checkbox) entry.checkbox.disabled = false; });
               }
             },
             { signal },
