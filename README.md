@@ -45,9 +45,9 @@ Tests cover validation, selling-plan product associations, pagination, pricing-p
 
 ## Shopify configuration
 
-Both TOML configurations include lifecycle webhooks and product access. They target API version `2025-10`, matching `app/shopify.server.js` and GraphQL code generation. The two client IDs identify separate existing app configurations; choose the intended one when using Shopify CLI.
+Both TOML configurations include lifecycle webhooks and product access. They target API version `2025-10`, matching `app/shopify.server.js` and GraphQL code generation. Both `shopify.app.toml` and `shopify.app.bundlify.toml` target the selected Bundlify app with client ID `597fad9e0520214bdfa371cb2953e5df`.
 
-The protected `write_own_subscription_contracts` scope is enabled. Run development using the app whose subscription API access Shopify has approved, then grant the updated store permissions. Approval is specific to an app; the two client IDs do not share approval automatically. Subscription creation stays disabled until the installed session has the required scopes. See [Shopify's selling-plan requirements](https://shopify.dev/docs/apps/build/purchase-options/subscriptions/selling-plans/build-a-selling-plan).
+The protected `write_own_subscription_contracts` scope is enabled. Confirm that Shopify has approved subscription API access for the selected Bundlify app, then grant the updated store permissions. Setting the client ID does not grant or verify approval. Subscription creation stays disabled until the installed session has the required scopes. See [Shopify's selling-plan requirements](https://shopify.dev/docs/apps/build/purchase-options/subscriptions/selling-plans/build-a-selling-plan).
 
 The theme extension provides subscription selection through the existing theme Add to Cart form. A scheduled billing worker creates renewal orders for due Shopify subscription billing cycles. Customer self-service is not implemented here; handle pause/cancel and payment recovery through your subscription management workflow. Existing local-only plans are migrated to drafts rather than labeled active. Pending plans require checking the corresponding selling plans in Shopify before retrying creation.
 

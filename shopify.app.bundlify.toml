@@ -2,15 +2,18 @@
 
 client_id = "597fad9e0520214bdfa371cb2953e5df"
 name = "Bundlify"
-application_url = "https://example.com"
+application_url = "https://bundlify.imranwebstudio.me"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = true
-include_config_on_deploy = true
+automatically_update_urls_on_dev = false
 
 [webhooks]
 api_version = "2025-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/privacy"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/app/scopes_update"
@@ -25,7 +28,7 @@ api_version = "2025-10"
 scopes = "write_discounts,write_app_proxy,write_metaobject_definitions,write_metaobjects,write_products,write_own_subscription_contracts"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://bundlify.imranwebstudio.me/auth/callback" ]
 
 [app_proxy]
 url = "/api/subscription-plans"

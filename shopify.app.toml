@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "acc2005d459ae7d5b5d6fdbf450665d4"
-application_url = "https://example.com"
+client_id = "597fad9e0520214bdfa371cb2953e5df"
+application_url = "https://bundlify.imranwebstudio.me"
 embedded = true
 name = "Bundlify"
 
@@ -38,6 +38,10 @@ type = "multi_line_text_field"
 api_version = "2025-10"
 
   [[webhooks.subscriptions]]
+  uri = "/webhooks/privacy"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
   uri = "/webhooks/app/uninstalled"
   topics = [ "app/uninstalled" ]
 
@@ -46,11 +50,10 @@ api_version = "2025-10"
   topics = [ "app/scopes_update" ]
 
 [auth]
-redirect_urls = [ "https://bundlify.imranwebstudio.me/api/auth" ]
+redirect_urls = [ "https://bundlify.imranwebstudio.me/auth/callback" ]
 
 [build]
-include_config_on_deploy = true
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false
 
 [app_proxy]
 url = "https://bundlify.imranwebstudio.me/api/subscription-plans"
