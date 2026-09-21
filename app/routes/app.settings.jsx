@@ -119,27 +119,7 @@ function BlockSettings({ kind, initial }) {
               </p>
             </fieldset>
 
-            <fieldset className={styles.group}>
-              <legend>Typography</legend>
-              <label className={styles.textField}>
-                <span>Font size (px)</span>
-                <input
-                  name="fontSize"
-                  type="number"
-                  min="12"
-                  max="24"
-                  step="1"
-                  required
-                  value={values.fontSize}
-                  onChange={(event) => update("fontSize", event.target.value)}
-                />
-              </label>
-              <p className={styles.hint}>
-                Automatically matches your store’s body and heading fonts. Sizes
-                scale together from 12–24 px. This preview uses the app font;
-                your storefront uses your theme font.
-              </p>
-            </fieldset>
+
 
             <fieldset className={styles.group}>
               <legend>Brand logo</legend>

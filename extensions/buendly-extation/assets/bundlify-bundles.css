@@ -139,22 +139,23 @@ bundlify-bundles [data-custom-picker] .bundlify-product-grid { grid-template-col
 }
 bundlify-bundles [data-custom-bundle] .bundlify-product a { margin-bottom: 6px; }
 bundlify-bundles [data-custom-bundle] .bundlify-product-price { margin-bottom: 8px; }
-/* Selected products below the Custom bundle button. */
-bundlify-bundles [data-custom-result] > .bundlify-product-grid {
+/* Both bundle summaries share the same compact product list. */
+bundlify-bundles :is([data-custom-result], [data-list] > article) > .bundlify-product-grid {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
 }
-bundlify-bundles [data-custom-result] .bundlify-product {
+bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product {
   display: grid; grid-template-columns: 72px minmax(0, 1fr);
   align-items: center; gap: 12px; padding: 12px;
 }
-bundlify-bundles [data-custom-result] .bundlify-product > :is(img, .bundlify-image-placeholder) {
+bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product > :is(img, .bundlify-image-placeholder) {
   grid-column: 1; grid-row: 1; width: 72px; height: 72px;
   object-fit: contain; padding: 6px; aspect-ratio: 1;
 }
-bundlify-bundles [data-custom-result] .bundlify-product > div {
+bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product > div {
   grid-column: 2; grid-row: 1; min-width: 0;
 }
-bundlify-bundles [data-custom-result] .bundlify-product-price { margin-bottom: 0; }
+bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product a { margin-bottom: 6px; }
+bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product-price { margin-bottom: 0; }
 @media (max-width: 480px) {
   bundlify-bundles .bundlify-builder-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 12px; border-radius: 18px; }
 }

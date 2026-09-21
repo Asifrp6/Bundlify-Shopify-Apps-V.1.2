@@ -6,7 +6,8 @@ application_url = "https://bundlify.imranwebstudio.me"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = false
+# Connect the development store to the CLI tunnel so local edits are visible.
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2025-10"

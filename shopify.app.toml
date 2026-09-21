@@ -53,7 +53,8 @@ api_version = "2025-10"
 redirect_urls = [ "https://bundlify.imranwebstudio.me/auth/callback" ]
 
 [build]
-automatically_update_urls_on_dev = false
+# Connect the development store to the CLI tunnel so local edits are visible.
+automatically_update_urls_on_dev = true
 
 [app_proxy]
 url = "https://bundlify.imranwebstudio.me/api/subscription-plans"

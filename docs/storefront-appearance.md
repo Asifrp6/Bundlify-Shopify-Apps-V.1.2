@@ -1,5 +1,26 @@
 # Storefront appearance settings
 
+## Local edits do not appear in the dashboard
+
+The dashboard Settings route is `/app/settings`, rendered by `app/routes/app.settings.jsx`.
+When using `npm run dev`, Shopify must open the CLI tunnel connected to this local project.
+Both `shopify.app.toml` and `shopify.app.bundlify.toml` now set
+`[build].automatically_update_urls_on_dev = true` for this reason. Previously it was
+false, and the generated development manifest still pointed to the hosted app at
+`bundlify.imranwebstudio.me`, so local JSX edits could not appear there.
+
+After changing this configuration:
+
+1. Stop the existing development command with Ctrl+C.
+2. Run `npm.cmd run dev` again from this project (or `npm run dev` outside restricted PowerShell).
+3. Open the development preview using the link or **P** shortcut in the CLI terminal.
+4. Open **Settings** and refresh the page. Saving JSX changes should now update the local preview.
+
+The deployed app still needs a server deployment to receive code changes. `npm start`
+serves `build/server/index.js`, not live JSX source. Editing default appearance values
+also does not override a shop's already-saved settings: use **Restore defaults**, then
+**Save changes** if that is the intended result.
+
 ## Shop owner guide
 
 1. Open **Shopify admin → Apps → Bundlify → Settings** (`/app/settings`).
