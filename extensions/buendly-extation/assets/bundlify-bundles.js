@@ -18,7 +18,7 @@
         this.controller = controller;
         const hasCustom = !!this.querySelector('[data-custom-bundle]');
         this.prepareCustom(controller.signal);
-        if (hasCustom) this.hidden = false;
+        this.hidden = false;
         const timeout = setTimeout(() => controller.abort(), 10000);
         try {
           const root = (this.dataset.root || "/").replace(/\/$/, "");
@@ -48,18 +48,23 @@
               productRequests,
             );
           }
-          this.hidden = !hasCustom && !bundles.length && this.dataset.editor !== "true";
+          this.hidden = false;
           this.querySelector("[data-message]").textContent = bundles.length || hasCustom
             ? ""
-            : "Activate a bundle in Bundlify. Its products must be published and match this product page.";
+            : this.dataset.editor === "true"
+              ? "Activate a bundle in Bundlify. Its products must be published and match this product page."
+              : "No bundle offers are available for this product right now.";
           if (!bundles.length && hasCustom) {
             this.querySelector('[data-message]').textContent = 'No ready-made bundles are available right now. Create your own custom bundle.';
           }
         } catch {
           if (!this.isConnected || this.controller !== controller) return;
-          this.hidden = !hasCustom && this.dataset.editor !== "true";
+          this.hidden = false;
           this.querySelector("[data-message]").textContent =
-            hasCustom ? "" : "Unable to load bundles. Check that the app server is running and the app proxy is deployed.";
+            hasCustom ? "Ready-made bundles could not be loaded. You can still create a custom bundle."
+              : this.dataset.editor === "true"
+                ? "Unable to load bundles. Check that the app server is running and the app proxy is deployed."
+                : "Bundle offers could not be loaded. Please refresh the page to try again.";
         } finally {
           clearTimeout(timeout);
         }
@@ -242,7 +247,7 @@
             const displayedPercentage = bundle.custom && !discount
               ? (displayedOriginal > 0 ? Math.round(displayedSavings * 1000 / displayedOriginal) / 10 : 0)
               : discount;
-            if (displayedSavings > 0) {
+            if (displayedSavings > 0 || (bundle.custom && displayedOriginal > 0)) {
               const was = document.createElement("s");
               was.textContent = money(displayedOriginal);
               was.setAttribute(
@@ -251,7 +256,8 @@
               );
               const saving = document.createElement("small");
               saving.textContent = `You save ${money(displayedSavings)} (${displayedPercentage}%)`;
-              total.append(was, value, saving);
+              total.append(was, value);
+              if (displayedSavings > 0) total.append(saving);
             } else total.append(value);
             if (bundle.custom) {
               const count = entries.filter(entry => entry.checkbox.checked).length;

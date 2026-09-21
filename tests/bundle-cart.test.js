@@ -59,6 +59,21 @@ async function fixture(t, { unavailable = false, fail = false, drawer = false, b
   return { widget, posts, destination: () => destination, rendered: () => rendered };
 }
 
+test('bundle block remains visible when the proxy fails without custom products', async t => {
+  const { widget } = await fixture(t, { proxyFail: true });
+  assert.equal(widget.hidden, false);
+  assert.match(widget.querySelector('[data-message]').textContent, /could not be loaded/);
+});
+
+test('bundle block remains visible with an empty response', async t => {
+  const { widget } = await fixture(t);
+  widget.ownerDocument.defaultView.fetch = async () => Response.json({ bundles: [] });
+  await widget.load();
+  assert.equal(widget.hidden, false);
+  assert.equal(widget.querySelector('[data-list]').children.length, 0);
+  assert.match(widget.querySelector('[data-message]').textContent, /No bundle offers/);
+});
+
 test('custom bundles remain visible without proxy, require two products and submit only chosen variants', async t => {
   const { widget, posts } = await fixture(t, { custom: true, proxyFail: true });
   assert.equal(widget.hidden, false);
@@ -78,9 +93,11 @@ test('custom bundles remain visible without proxy, require two products and subm
   choices[2].checked = true; change(choices[2]);
   assert.equal(add.disabled, false);
   assert.match(picker.querySelector('.bundlify-total strong').textContent, /200\.00/);
+  assert.match(picker.querySelector('.bundlify-total s').textContent, /240\.00/);
   const selects = picker.querySelectorAll('select');
   selects[2].value = '13'; change(selects[2]);
   assert.match(picker.querySelector('.bundlify-total strong').textContent, /250\.00/);
+  assert.match(picker.querySelector('.bundlify-total s').textContent, /270\.00/);
   choices[0].checked = false; change(choices[0]);
   assert.equal(add.disabled, true);
   choices[0].checked = true; change(choices[0]);

@@ -47,6 +47,18 @@ test('owner discount is created before atomically saving settings; rejected sett
   await assert.rejects(saveCustomBundleProducts(adminFixture().admin, ids, 101), /0 to 100/);
 });
 
+test('failed discount activation never publishes the selected products', async () => {
+  const base = adminFixture();
+  const admin = { graphql: async (query, options) => {
+    if (query === CREATE_DISCOUNT) return Response.json({ data: {
+      discountAutomaticAppCreate: { userErrors: [{ message: 'Function not found' }] },
+    } });
+    return base.admin.graphql(query, options);
+  } };
+  await assert.rejects(saveCustomBundleProducts(admin, ids, 20), /Function not found/);
+  assert.equal(base.writes.length, 0);
+});
+
 test('saved product references belong to the authenticated shop and reload correctly', async () => {
   for (const shopId of ['gid://shopify/Shop/8', 'gid://shopify/Shop/9']) {
     const { admin, writes } = adminFixture({ shopId });

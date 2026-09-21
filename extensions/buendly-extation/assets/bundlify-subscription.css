@@ -264,3 +264,36 @@
  .bundlify-subscription-widget .bundlify-purchase-card { transition:none; }
  .bundlify-subscription-widget .bundlify-purchase-card:hover { transform:none; }
 }
+
+/* Matching soft sage option cards for bundle and purchase choices. */
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-title {
+  font-size: calc(16px * var(--bundlify-font-scale, 1)); font-weight: 700; color: inherit;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon { margin-bottom: 0; color: inherit; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon svg { width: 34px; height: 34px; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-cards {
+  gap: 10px; padding: 6px; border: 1px solid #e1e8e4;
+  border-radius: 22px; background: #f1f5f3;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card {
+  min-width: 0; min-height: 154px; padding: 18px 12px;
+  border: 1px solid #dfe7e2; border-radius: 16px;
+  background: #fafcfb; color: #52645b; box-shadow: none;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked) {
+  background: #e1efe6; color: #234e38; border-color: #81aa90;
+  box-shadow: inset 0 0 0 1px #81aa90, 0 3px 10px #234e380a;
+}
+@media (hover: hover) {
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):hover {
+    transform: none; background: #edf4ef; color: #2e5140; border-color: #b2cabc;
+  }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):has(input:checked):hover {
+    background: #d5e8dc; border-color: #6e9b7e; color: #234e38;
+  }
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:focus-visible) { outline: 3px solid #477d5c; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card { transition: none; }
+}

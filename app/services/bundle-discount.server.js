@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export const CREATE_DISCOUNT = `#graphql
   mutation BundleDiscountCreate($input: DiscountAutomaticAppInput!) {
     discountAutomaticAppCreate(automaticAppDiscount: $input) {
@@ -21,7 +23,7 @@ export async function removeBundleDiscount(admin, bundle) {
 export async function createBundleDiscount(admin, bundle) {
   if (!bundle.discount) return null;
   const result = await (await admin.graphql(CREATE_DISCOUNT, { variables: { input: {
-    title: `Bundlify: ${bundle.name}`,
+    title: `Bundlify: ${String(bundle.name).slice(0, 160)} (${randomUUID()})`,
     functionHandle: "bundlify-bundle-discount",
     discountClasses: ["PRODUCT"],
     startsAt: new Date().toISOString(),
@@ -33,7 +35,10 @@ export async function createBundleDiscount(admin, bundle) {
     }) }],
   } } })).json();
   const payload = result.data?.discountAutomaticAppCreate;
-  if (result.errors?.length || payload?.userErrors?.length || !payload?.automaticAppDiscount?.discountId)
-    throw new Error("Could not activate the bundle discount. Deploy the bundle discount extension and grant discount access, then try again.");
+  if (result.errors?.length || payload?.userErrors?.length || !payload?.automaticAppDiscount?.discountId) {
+    const details = [...(result.errors || []), ...(payload?.userErrors || [])]
+      .map(error => error.message).filter(Boolean).join("; ");
+    throw new Error(`Could not activate the bundle discount. ${details || "Shopify returned no discount ID. Try again."}`);
+  }
   return payload.automaticAppDiscount.discountId;
 }
