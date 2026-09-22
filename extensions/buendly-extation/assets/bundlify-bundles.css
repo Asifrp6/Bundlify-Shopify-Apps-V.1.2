@@ -9,6 +9,16 @@ bundlify-bundles label { display:block; margin-top:16px; font-size:calc(14px * v
 bundlify-bundles select { display:block; width:100%; margin:6px 0 12px; padding:10px; border:1px solid #ccd8cf; border-radius:8px; background:white; color:#20382b; font:inherit; }
 bundlify-bundles button { margin-top:20px; padding:12px 18px; border:0; border-radius:8px; background:#285c43; color:white; font:inherit; cursor:pointer; width:100%; }
 bundlify-bundles button:disabled { opacity:.6; cursor:default; }
+/* Outrank storefront resets targeting [type="button"]. */
+bundlify-bundles button.bundlify-purchase-action[type="button"] {
+  background: var(--bundlify-action-background, #285c43);
+  color: var(--bundlify-action-text, #fff);
+  border: 1px solid transparent;
+  min-height: 48px;
+  width: 100%;
+  font-weight: 600;
+}
+bundlify-bundles button.bundlify-purchase-action[type="button"]:not(:disabled):hover { filter: brightness(.94); }
 bundlify-bundles a[hidden] { display:none; }
 bundlify-bundles :is(select,button):focus-visible { outline:2px solid #285c43; outline-offset:3px; }
 
@@ -186,4 +196,55 @@ bundlify-bundles button.bundlify-mode-card[aria-pressed="true"] {
 bundlify-bundles button.bundlify-mode-card:focus-visible { outline: 3px solid #477d5c; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   bundlify-bundles button.bundlify-mode-card { transition: none; }
+}
+
+/* Keep the custom builder action visible while its product list scrolls. */
+bundlify-bundles .bundlify-builder-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  height: min(820px, calc(100dvh - 32px));
+  overflow: hidden;
+}
+bundlify-bundles .bundlify-builder-dialog > .bundlify-builder-close { flex: 0 0 auto; }
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker]:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > * { flex-shrink: 0; }
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-product-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+  padding: 4px;
+  scrollbar-gutter: stable;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-total {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #dce5de;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > button {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > [role="status"] {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+@media (max-width: 480px) {
+  bundlify-bundles .bundlify-builder-dialog[open] { height: calc(100dvh - 16px); }
+  bundlify-bundles .bundlify-builder-dialog [data-custom-picker] { padding: 12px; }
+}
+@media (max-height: 500px) {
+  bundlify-bundles .bundlify-builder-dialog[open] { overflow-y: auto; }
+  bundlify-bundles .bundlify-builder-dialog [data-custom-picker]:not([hidden]) { flex: 0 0 auto; overflow: visible; }
+  bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-product-grid { max-height: 35dvh; flex: 0 0 auto; }
 }

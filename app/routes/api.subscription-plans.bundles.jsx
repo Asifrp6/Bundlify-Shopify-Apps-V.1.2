@@ -14,17 +14,20 @@ export async function loader({ request }) {
     });
     const ids = [...new Set(bundles.flatMap(b => b.products.map(p => p.productId)))];
     const products = new Map();
+    let shopCurrency;
     for (let i = 0; i < ids.length; i += 250) {
       const response = await admin.graphql(`#graphql
         query BundleProducts($ids: [ID!]!) {
+          shop { currencyCode }
           nodes(ids: $ids) { ... on Product { id title handle status publishedAt } }
         }`, { variables: { ids: ids.slice(i, i + 250) } });
       const result = await response.json();
       if (result.errors?.length || !result.data?.nodes) throw new Error("Products unavailable");
+      shopCurrency = result.data.shop?.currencyCode;
       for (const p of result.data.nodes) if (p?.status === "ACTIVE" && p.publishedAt && new Date(p.publishedAt) <= new Date()) products.set(p.id, p);
     }
     return json({ bundles: bundles.filter(b => b.products.length >= 2 && b.products.every(p => products.has(p.productId))).map(b => ({
-      id: String(b.id), discount: b.discountNodeId ? b.discount : 0, name: b.name, products: b.products.map(p => { const product = products.get(p.productId); return { title: product.title, handle: product.handle }; }),
+      id: String(b.id), discount: b.discountNodeId && b.discountType !== "fixed" ? b.discount : 0, discountType: b.discountType, fixedDiscount: b.discountNodeId && b.discountType === "fixed" ? b.discount : 0, shopCurrency, name: b.name, products: b.products.map(p => { const product = products.get(p.productId); return { title: product.title, handle: product.handle }; }),
     })) });
   } catch (error) {
     if (error instanceof Response) throw error;

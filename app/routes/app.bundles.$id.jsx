@@ -87,6 +87,7 @@ export async function action({ request, params }) {
         discountNodeId: null,
         name: values.name,
         discount: values.discount,
+        discountType: values.discountType,
         products: {
           deleteMany: {},
           create: products.map((product) => ({

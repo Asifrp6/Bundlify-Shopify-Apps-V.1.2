@@ -53,7 +53,7 @@ export async function changeSubscription({ prisma, admin, plan, values, remove =
     if (remove) return await prisma.subscriptionPlan.deleteMany({ where: { id: plan.id, shop: plan.shop } });
     return await prisma.subscriptionPlan.update({
       where: { id: plan.id, shop: plan.shop },
-      data: { name: values.name, frequency: options[0].frequency, discount: options[0].discount,
+      data: { name: values.name, frequency: options[0].frequency, discount: options[0].discount, discountType: options[0].discountType || "percentage",
         deliveryOptions: { deleteMany: {}, create: optionRecords(options, updatedGroup) } },
     });
   } catch {

@@ -4,7 +4,7 @@ import { createBundleDiscount, removeBundleDiscount } from './bundle-discount.se
 
 export const CUSTOM_BUNDLE_QUERY = `#graphql
   query CustomBundleSettings {
-    shop { id metafield(namespace: "bundlify", key: "custom_bundle_products") { value }
+    shop { id currencyCode metafield(namespace: "bundlify", key: "custom_bundle_products") { value }
       discount: metafield(namespace: "bundlify", key: "custom_bundle_discount") { value } }
   }
 `;
@@ -30,12 +30,14 @@ export async function getCustomBundleSettings(admin) {
   const productIds = JSON.parse(shop.metafield?.value || '[]');
   if (!Array.isArray(productIds) || productIds.some(id => typeof id !== 'string')) throw new Error('Invalid custom bundle settings.');
   const discount = JSON.parse(shop.discount?.value || '{}');
-  return { shopId: shop.id, productIds, discount };
+  return { shopId: shop.id, productIds, discount, currency: shop.currencyCode };
 }
 
-export async function saveCustomBundleProducts(admin, ids, percentage = 0) {
+export async function saveCustomBundleProducts(admin, ids, percentage = 0, discountType = 'percentage') {
   validateCustomProducts(ids);
-  if (!Number.isInteger(percentage) || percentage < 0 || percentage > 100) throw new Error('Enter a whole-number discount from 0 to 100.');
+  if (!['percentage', 'fixed'].includes(discountType)) throw new Error('Choose percentage or fixed amount.');
+  if (discountType === 'percentage' && (!Number.isInteger(percentage) || percentage < 0 || percentage > 100)) throw new Error('Enter a whole-number discount from 0 to 100.');
+  if (discountType === 'fixed' && (!Number.isFinite(percentage) || percentage < 0 || percentage > 1000000 || Math.abs(percentage * 100 - Math.round(percentage * 100)) > 0.00001)) throw new Error('Enter an amount from 0 to 1,000,000 with at most two decimal places.');
   if (ids.length) {
     const products = await getProducts(admin, ids);
     if (products.length !== ids.length || ids.some(id => !products.some(product => product.id === id))) {
@@ -44,9 +46,9 @@ export async function saveCustomBundleProducts(admin, ids, percentage = 0) {
   }
   // Resolve the owner from this authenticated shop, never from submitted form data.
   const { shopId, discount: previous } = await getCustomBundleSettings(admin);
-  const config = { id: randomUUID(), percentage: ids.length ? percentage : 0, products: ids, discountNodeId: null };
-  if (config.percentage > 0) config.discountNodeId = await createBundleDiscount(admin, {
-    id: config.id, name: 'Custom bundle', custom: true, discount: config.percentage, products: ids.map(productId => ({ productId })),
+  const config = { id: randomUUID(), discountType, percentage: ids.length && discountType === 'percentage' ? percentage : 0, fixedAmount: ids.length && discountType === 'fixed' ? percentage : 0, products: ids, discountNodeId: null };
+  if (ids.length && percentage > 0) config.discountNodeId = await createBundleDiscount(admin, {
+    id: config.id, name: 'Custom bundle', custom: true, discountType, discount: percentage, products: ids.map(productId => ({ productId })),
   });
   // The shop configuration activates the new discount atomically with the eligible list.
   // Retain the node on ambiguous transport errors; it only runs if its ID was saved.

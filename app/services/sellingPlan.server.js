@@ -27,12 +27,12 @@ export class SellingPlanError extends Error {
 
 export async function createSellingPlan(
   admin,
-  { name, productId, productIds = [productId], frequency, discount, merchantCode, deliveryOptions },
+  { name, productId, productIds = [productId], frequency, discount, discountType, merchantCode, deliveryOptions },
 ) {
   if (!productIds.length || productIds.some(id => !/^gid:\/\/shopify\/Product\/\d+$/.test(id)))
     throw new SellingPlanError("Select at least one valid product.", { rejected: true });
   let inputs;
-  try { inputs = planOptions({frequency, discount, deliveryOptions}).map(option => sellingPlanInput(name, option)); }
+  try { inputs = planOptions({frequency, discount, discountType, deliveryOptions}).map(option => sellingPlanInput(name, option)); }
   catch { throw new SellingPlanError("Invalid billing frequency or discount.", { rejected: true }); }
   const response = await admin.graphql(CREATE_SELLING_PLAN, {
     variables: {

@@ -1,3 +1,4 @@
+import { discountLabel } from "../services/discounts";
 import styles from "../styles/plan-form.module.css";
 import { planOptions, schedules } from "../services/delivery-options";
 import {
@@ -46,6 +47,7 @@ export async function action({ request, params }) {
       { status: 400 },
     );
   form.set("productId", plan.productId);
+  for (const id of JSON.parse(plan.productIdsJson || "[]")) form.append("productIds", id);
   const { values, errors } = validatePlan(form);
   if (intent === "update" && Object.keys(errors).length)
     return data({ error: Object.values(errors).join(" ") }, { status: 400 });
@@ -226,9 +228,8 @@ export default function EditSubscription() {
                             ))}
                           </select>
                         </label>
-                        <label
-                          className={styles.field}
-                          htmlFor={"discount-" + index}
+                        <label className={styles.field}>Discount type<select value={option.discountType || "percentage"} onChange={event => { updateOption(index, "discountType", event.target.value); updateOption(index, "discount", 0); }}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed amount (store currency)</option></select></label>
+                        <label className={styles.field} htmlFor={"discount-" + index}
                         >
                           Customer discount
                           <div className={styles.inputSuffix}>
@@ -237,8 +238,8 @@ export default function EditSubscription() {
                               type="number"
                               required
                               min="0"
-                              max="100"
-                              step="1"
+                              max={option.discountType === "fixed" ? "1000000" : "100"}
+                              step={option.discountType === "fixed" ? "0.01" : "1"}
                               value={option.discount}
                               onChange={(event) =>
                                 updateOption(
@@ -248,7 +249,7 @@ export default function EditSubscription() {
                                 )
                               }
                             />
-                            <span aria-hidden="true">%</span>
+                            <span aria-hidden="true">{option.discountType === "fixed" ? "off" : "%"}</span>
                           </div>
                         </label>
                       </div>
@@ -264,7 +265,7 @@ export default function EditSubscription() {
                   <span aria-hidden="true">+</span> Add delivery option
                 </button>
                 <p className={styles.help}>
-                  Offer up to 5 frequencies. Set 0% to keep the regular price.
+                  Offer up to 5 frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
                 </p>
               </section>
             </div>
@@ -295,7 +296,7 @@ export default function EditSubscription() {
                         ? "Set discount"
                         : Number(option.discount) === 0
                           ? "Regular price"
-                          : option.discount + "% off"}
+                          : discountLabel(option.discount, option.discountType)}
                     </strong>
                   </li>
                 ))}

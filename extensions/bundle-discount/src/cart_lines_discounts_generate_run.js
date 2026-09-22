@@ -7,7 +7,12 @@ export function cartLinesDiscountsGenerateRun(input) {
     if (!current?.id || current.id !== config.id) return empty;
     config = current;
   }
-  if (!config || !Number.isInteger(config.percentage) || config.percentage <= 0 || config.percentage > 100 ||
+  const fixed = config?.discountType === 'fixed';
+  const rate = Number(input.presentmentCurrencyRate);
+  const validDiscount = fixed
+    ? Number.isFinite(config.fixedAmount) && config.fixedAmount > 0 && config.fixedAmount <= 1000000 && Number.isFinite(rate) && rate > 0
+    : Number.isInteger(config?.percentage) && config.percentage > 0 && config.percentage <= 100;
+  if (!config || !validDiscount ||
       !Array.isArray(config.products) || config.products.length < 2 || new Set(config.products).size !== config.products.length) return empty;
   const groups = new Map();
   for (const line of input.cart.lines) {
@@ -18,26 +23,34 @@ export function cartLinesDiscountsGenerateRun(input) {
     groups.set(line.group.value, group);
   }
   const targets = [];
+  const fixedCandidates = [];
   for (const lines of groups.values()) {
     if (custom) {
       if (new Set(lines.map(line => line.merchandise.product.id)).size >= 2) {
+        if (fixed) {
+          fixedCandidates.push({ message: 'Custom bundle savings', targets: lines.map(line => ({ cartLine: { id: line.id, quantity: line.quantity } })), value: { fixedAmount: { amount: (config.fixedAmount * rate).toFixed(2), appliesToEachItem: false } } });
+          continue;
+        }
         for (const line of lines) targets.push({ cartLine: { id: line.id, quantity: line.quantity } });
       }
       continue;
     }
     const sets = Math.min(...config.products.map(id => lines.filter(l => l.merchandise.product.id === id).reduce((sum, l) => sum + l.quantity, 0)));
     if (sets < 1) continue;
+    const groupTargets = [];
     for (const id of config.products) {
       let remaining = sets;
       for (const line of lines.filter(l => l.merchandise.product.id === id)) {
         const quantity = Math.min(remaining, line.quantity);
-        if (quantity > 0) targets.push({ cartLine: { id: line.id, quantity } });
+        if (quantity > 0) groupTargets.push({ cartLine: { id: line.id, quantity } });
         remaining -= quantity;
       }
     }
+    if (fixed) fixedCandidates.push({ message: "Bundle savings", targets: groupTargets, value: { fixedAmount: { amount: (config.fixedAmount * rate * sets).toFixed(2), appliesToEachItem: false } } });
+    else targets.push(...groupTargets);
   }
-  return targets.length ? { operations: [{ productDiscountsAdd: {
-    candidates: [{ message: `Bundle savings (${config.percentage}%)`, targets, value: { percentage: { value: config.percentage } } }],
+  return targets.length || fixedCandidates.length ? { operations: [{ productDiscountsAdd: {
+    candidates: fixed ? fixedCandidates : [{ message: `Bundle savings (${config.percentage}%)`, targets, value: { percentage: { value: config.percentage } } }],
     selectionStrategy: "ALL",
   } }] } : empty;
 }

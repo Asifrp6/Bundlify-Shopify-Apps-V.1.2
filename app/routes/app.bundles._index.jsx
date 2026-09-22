@@ -1,3 +1,4 @@
+import { discountLabel } from "../services/discounts";
 import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
 import { Banner } from "@shopify/polaris";
 import prisma from "../db.server";
@@ -76,7 +77,7 @@ export default function Bundles() {
 
     <div className={styles.info}><p>Click Activate bundle below to display it in your theme. <Link to="/app/extensions">Set up your storefront block</Link>. Active bundle discounts apply in the cart and at checkout. After deploying the discount extension, reactivate existing bundles to enable their savings.</p></div>
 
-    <div className={styles.info}><h2>Customer-created bundles</h2><p>Manage the products customers can choose when creating their own bundle.</p><Link className={styles.primary} to="/app/bundles/custom">Manage custom bundle products</Link></div>
+    <section className={styles.customSetup} aria-labelledby="custom-bundle-heading"><span className={styles.cardIcon}><BundleIcon /></span><div><h2 id="custom-bundle-heading">Customer-created bundles</h2><p>Choose the products customers can mix into their own bundle.</p></div><Link className={styles.edit} to="/app/bundles/custom">Manage products <span aria-hidden="true">→</span></Link></section>
     <section className={styles.collection} aria-labelledby="bundle-collection-title">
       <div className={styles.collectionHeader}><div><h2 id="bundle-collection-title">Your bundles <span>{bundles.length}</span></h2><p>A home for your next great product pairing.</p></div><span className={styles.productCount}>{products} unique {products === 1 ? "product" : "products"}</span></div>
       {!bundles.length ? <div className={styles.empty}>
@@ -87,10 +88,10 @@ export default function Bundles() {
         <Link className={styles.primary} to="/app/bundles/new"><span aria-hidden="true">+</span> Create your first bundle</Link>
         <span className={styles.helper}>Start with two or more products from your store.</span>
       </div> : <div className={styles.grid}>{bundles.map(bundle => <article className={styles.card} key={bundle.id}>
-        <div className={styles.cardHeading}><span className={styles.cardIcon}><BundleIcon /></span><div><Link to={`/app/bundles/${bundle.id}`}><h3>{bundle.name}</h3></Link><p>{bundle.products.length} products ? Bundle ID: {bundle.id}</p></div><span className={`${styles.badge} ${bundle.status === "ACTIVE" ? styles.activeBadge : ""}`}>{bundle.status === "ACTIVE" ? "Active" : "Draft"}</span></div>
-        <div className={styles.discount}><span>Bundle discount</span><strong>{bundle.discount}% <small>off</small></strong></div>
+        <div className={styles.cardHeading}><span className={styles.cardIcon}><BundleIcon /></span><div><Link to={`/app/bundles/${bundle.id}`}><h3>{bundle.name}</h3></Link><p>{bundle.products.length} products · Bundle ID: {bundle.id}</p></div><span className={`${styles.badge} ${bundle.status === "ACTIVE" ? styles.activeBadge : ""}`}>{bundle.status === "ACTIVE" ? "Active" : "Draft"}</span></div>
+        <div className={styles.discount}><span>Bundle discount</span><strong>{discountLabel(bundle.discount, bundle.discountType)}</strong></div>
         <div className={styles.productList}><span className={styles.label}>THE LINEUP</span><ul>{bundle.products.map(product => <li key={product.productId}>{product.productTitle}</li>)}</ul></div>
-        <BundleActivation bundle={bundle} /><footer className={styles.cardFooter}><Link className={styles.edit} to={`/app/bundles/${bundle.id}`}>Edit bundle <span aria-hidden="true">?</span></Link><Link className={styles.delete} to={`/app/bundles/${bundle.id}#delete-bundle`} aria-label={`Delete ${bundle.name}`}>Delete bundle</Link></footer>
+        <BundleActivation bundle={bundle} /><footer className={styles.cardFooter}><Link className={styles.edit} to={`/app/bundles/${bundle.id}`}>Edit bundle <span aria-hidden="true">→</span></Link><Link className={styles.delete} to={`/app/bundles/${bundle.id}#delete-bundle`} aria-label={`Delete ${bundle.name}`}>Delete bundle</Link></footer>
       </article>)}</div>}
       <div className={styles.steps}>
         <div><span>01</span><div><h3>Pick your products</h3><p>Find the perfect combination.</p></div></div>

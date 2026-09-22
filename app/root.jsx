@@ -27,11 +27,12 @@ export default function App() {
 
         <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-        <link rel="preconnect" href="https://cdn.shopify.com/" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         <link
           rel="stylesheet"
-          href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
         />
 
         <Meta />
@@ -48,7 +49,12 @@ export default function App() {
           html, body {
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: "Poppins", sans-serif;
+          }
+
+          /* Include Polaris components, dialogs, headings, and form controls. */
+          body, body * {
+            font-family: "Poppins", sans-serif !important;
           }
 
           body {

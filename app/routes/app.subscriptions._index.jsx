@@ -1,3 +1,4 @@
+import { discountLabel } from "../services/discounts";
 import { useState } from "react";
 import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
 import { setSubscriptionStatus } from "../services/subscription-status.server";
@@ -102,7 +103,7 @@ export default function Subscriptions() {
           const options = plan.deliveryOptions?.length ? plan.deliveryOptions : [{frequency:plan.frequency,discount:plan.discount}];
           return <article key={plan.id} className={styles.planCard}>
             <div className={styles.planHeading}><div className={styles.productIcon}>{plan.productImage ? <img src={plan.productImage} alt="" loading="lazy" /> : <PlanSymbol />}</div><div className={styles.planTitle}><Link to={`/app/subscriptions/${plan.id}`}><h3>{plan.name}</h3></Link><p>{plan.productId === "ALL_PRODUCTS" ? "All products" : plan.productTitle || plan.productId}</p></div><span className={`${styles.badge} ${styles[status]}`}><span aria-hidden="true" />{status === "active" ? "Active" : status === "review" ? "Needs review" : "Draft"}</span></div>
-            <div className={styles.delivery}><span className={styles.detailLabel}>DELIVERY & SAVINGS</span><div className={styles.options}>{options.map((option,index) => <div className={styles.option} key={`${option.frequency}-${index}`}><span className={styles.frequency}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg>{option.frequency}</span><span className={styles.savings}>{option.discount}% off</span></div>)}</div></div>
+            <div className={styles.delivery}><span className={styles.detailLabel}>DELIVERY & SAVINGS</span><div className={styles.options}>{options.map((option,index) => <div className={styles.option} key={`${option.frequency}-${index}`}><span className={styles.frequency}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg>{option.frequency}</span><span className={styles.savings}>{discountLabel(option.discount, option.discountType)}</span></div>)}</div></div>
             {status === "review" && <p className={styles.notice}>Review this plan in Shopify before creating another.</p>}
             {status === "draft" && <p className={styles.notice}>Saved locally. This plan is not active in Shopify.</p>}
             <PlanStatus plan={plan} />

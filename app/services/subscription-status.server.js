@@ -8,8 +8,9 @@ export async function setSubscriptionStatus({ prisma, admin, plan, status }) {
   if (plan.status === status && (status === "DRAFT" || plan.sellingPlanGroupId)) return;
   let values;
   if (status === "ACTIVE") {
-    const products = plan.productId === "ALL_PRODUCTS" ? await listProducts(admin) : await getProducts(admin, [plan.productId]);
-    if (!products.length) throw new Error("The selected products are no longer available.");
+    const selectedIds = plan.productId === "SELECTED_PRODUCTS" ? JSON.parse(plan.productIdsJson || "[]") : [plan.productId];
+    const products = plan.productId === "ALL_PRODUCTS" ? await listProducts(admin) : await getProducts(admin, selectedIds);
+    if (!products.length || (plan.productId === "SELECTED_PRODUCTS" && products.length !== selectedIds.length)) throw new Error("The selected products are no longer available.");
     values = { ...plan, productIds: products.map(p => p.id), merchantCode: `bundlify-${plan.id}` };
   }
   const lock = await prisma.subscriptionPlan.updateMany({ where: { id: plan.id, shop: plan.shop, status: plan.status }, data: { status: "PENDING" } });

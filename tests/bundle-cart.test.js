@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
 const source = await readFile(new URL('../extensions/buendly-extation/assets/bundlify-bundles.js', import.meta.url), 'utf8');
-async function fixture(t, { unavailable = false, fail = false, drawer = false, brokenDrawer = false, custom = false, proxyFail = false, customDiscount = 0, modal = false } = {}) {
+async function fixture(t, { unavailable = false, fail = false, drawer = false, brokenDrawer = false, custom = false, proxyFail = false, customDiscount = 0, modal = false, fixedDiscount = null } = {}) {
   const dom = new JSDOM('<bundlify-bundles data-currency="USD" data-root="/fr/"><div data-list></div><p data-message></p></bundlify-bundles>', { url: 'https://store.test/fr/products/a', runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window;
@@ -43,7 +43,7 @@ async function fixture(t, { unavailable = false, fail = false, drawer = false, b
     w.document.body.append(element);
   }
   w.fetch = async (url, options = {}) => {
-    if (String(url).includes('/apps/')) return proxyFail ? Response.json({}, { status: 502 }) : Response.json({ bundles: custom ? [] : [{ id: '7', discount: 10, name: 'Pair', products: [{ title: 'A', handle: 'a' }, { title: 'B', handle: 'b' }] }] });
+    if (String(url).includes('/apps/')) return proxyFail ? Response.json({}, { status: 502 }) : Response.json({ bundles: custom ? [] : [{ id: '7', discount: fixedDiscount === null ? 10 : 0, discountType: fixedDiscount === null ? 'percentage' : 'fixed', fixedDiscount, shopCurrency: 'USD', name: 'Pair', products: [{ title: 'A', handle: 'a' }, { title: 'B', handle: 'b' }] }] });
     if (String(url).endsWith('/cart/add.js')) {
       posts.push({ url, body: JSON.parse(options.body) });
       return fail ? Response.json({ description: 'Not enough inventory' }, { status: 422 }) : Response.json({ items: [], sections: { 'cart-drawer': '<div>Discounted cart</div>', 'cart-icon-bubble': '<span>2</span>' } });
@@ -281,4 +281,18 @@ test('products load concurrently and shared bundle products are fetched only onc
   }
   for (const placeholder of w.document.querySelectorAll('.bundlify-image-placeholder')) assert.equal(placeholder.hidden, true);
   for (const button of w.document.querySelectorAll('button')) assert.equal(button.disabled, false);
+});
+
+
+test('preset fixed discounts update totals, cap at subtotal and survive variant changes', async t => {
+  const { widget } = await fixture(t, { fixedDiscount: 12.5 });
+  const total = widget.querySelector('.bundlify-total');
+  assert.match(total.textContent, /187.50/);
+  assert.match(total.textContent, /12.50 off this bundle/);
+  const select = widget.querySelector('select');
+  select.value = '11';
+  select.dispatchEvent(new widget.ownerDocument.defaultView.Event('change'));
+  assert.match(total.textContent, /237.50/);
+  const capped = await fixture(t, { fixedDiscount: 500 });
+  assert.match(capped.widget.querySelector('.bundlify-total strong').textContent, /0.00/);
 });

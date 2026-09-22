@@ -1,3 +1,7 @@
+import ProductCategoryFilter from "../components/ProductCategoryFilter";
+import { categoryLabel, filterBundleProducts, selectCategoryProducts } from "../services/product-categories";
+import productStyles from "../styles/bundle-editor.module.css";
+import { discountLabel } from "../services/discounts";
 import styles from "../styles/plan-form.module.css";
 import { schedules } from "../services/delivery-options";
 import {
@@ -81,6 +85,10 @@ export async function action({ request }) {
         );
       values.productIds = catalog.map((item) => item.id);
       product = { title: "All products" };
+    } else if (values.productId === "SELECTED_PRODUCTS") {
+      const selected = await getProducts(admin, values.productIds);
+      if (selected.length !== values.productIds.length) return data({ error: "A selected product is no longer available. Select products again." }, { status: 400 });
+      product = { title: `${selected.length} selected products` };
     } else {
       [product] = await getProducts(admin, [values.productId]);
     }
@@ -141,6 +149,14 @@ export default function NewSubscription() {
 
   const [productId, setProductId] = useState("");
 
+  const [selected, setSelected] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [search, setSearch] = useState("");
+  const changeCategory = (id, checked) => {
+    setProductId("SELECTED_PRODUCTS");
+    setCategories(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
+    setSelected(current => selectCategoryProducts(products, current, id, checked));
+  };
   const selectedProduct = products.find((product) => product.id === productId);
   const updateOption = (index, key, value) =>
     setOptions((current) =>
@@ -245,6 +261,7 @@ export default function NewSubscription() {
                     Select a product
                   </option>
                   <option value="ALL_PRODUCTS">All current products</option>
+                  <option value="SELECTED_PRODUCTS">Choose products by category</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.title}
@@ -252,10 +269,23 @@ export default function NewSubscription() {
                   ))}
                 </select>
               </label>
+              {productId === "SELECTED_PRODUCTS" && <>
+                {selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
+                <ProductCategoryFilter products={products} value={categories} onChange={changeCategory} disabled={submitting} />
+                <label className={styles.field}>Search products<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
+                <div className={productStyles.list}>
+                  {filterBundleProducts(products, search, categories).map(product => <label aria-label={product.title} className={productStyles.product} key={product.id} htmlFor={`subscription-product-${product.id}`}>
+                    <input id={`subscription-product-${product.id}`} type="checkbox" checked={selected.includes(product.id)} disabled={submitting || (!selected.includes(product.id) && selected.length >= 50)} onChange={() => setSelected(current => current.includes(product.id) ? current.filter(id => id !== product.id) : [...current, product.id])} />
+                    <span><strong>{product.title}</strong><small className={productStyles.categoryLabel}>{categoryLabel(product)}</small></span>
+                  </label>)}
+                </div>
+                <p role="status">{selected.length} products selected (1?50). Products added to these categories later are not included automatically.</p>
+                <button type="button" disabled={submitting} onClick={() => { setSelected([]); setCategories([]); }}>Clear selection</button>
+              </>}
               <p className={styles.help} id="product-help">
                 {productId === "ALL_PRODUCTS"
                   ? "Includes your current catalog. Products added later aren't included automatically."
-                  : "Choose one product, or offer this plan across your current catalog."}
+                  : "Choose a product, select products by category, or include your current catalog."}
               </p>
             </section>
             <section className={styles.card} aria-labelledby="delivery-heading">
@@ -318,9 +348,8 @@ export default function NewSubscription() {
                           ))}
                         </select>
                       </label>
-                      <label
-                        className={styles.field}
-                        htmlFor={"discount-" + index}
+                      <label className={styles.field}>Discount type<select value={option.discountType || "percentage"} onChange={event => { updateOption(index, "discountType", event.target.value); updateOption(index, "discount", 0); }}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed amount (store currency)</option></select></label>
+                      <label className={styles.field} htmlFor={"discount-" + index}
                       >
                         Customer discount
                         <div className={styles.inputSuffix}>
@@ -329,8 +358,8 @@ export default function NewSubscription() {
                             type="number"
                             required
                             min="0"
-                            max="100"
-                            step="1"
+                            max={option.discountType === "fixed" ? "1000000" : "100"}
+                            step={option.discountType === "fixed" ? "0.01" : "1"}
                             value={option.discount}
                             onChange={(event) =>
                               updateOption(
@@ -340,7 +369,7 @@ export default function NewSubscription() {
                               )
                             }
                           />
-                          <span aria-hidden="true">%</span>
+                          <span aria-hidden="true">{option.discountType === "fixed" ? "off" : "%"}</span>
                         </div>
                       </label>
                     </div>
@@ -356,7 +385,7 @@ export default function NewSubscription() {
                 <span aria-hidden="true">+</span> Add delivery option
               </button>
               <p className={styles.help}>
-                Offer up to 5 frequencies. Set 0% to keep the regular price.
+                Offer up to 5 frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
               </p>
             </section>
           </div>
@@ -377,7 +406,7 @@ export default function NewSubscription() {
               <strong>
                 {productId === "ALL_PRODUCTS"
                   ? "All current products"
-                  : selectedProduct?.title || "No product selected yet"}
+                  : productId === "SELECTED_PRODUCTS" ? `${selected.length} selected products` : selectedProduct?.title || "No product selected yet"}
               </strong>
             </div>
             <p className={styles.summaryLabel}>
@@ -392,7 +421,7 @@ export default function NewSubscription() {
                       ? "Set discount"
                       : Number(option.discount) === 0
                         ? "Regular price"
-                        : option.discount + "% off"}
+                        : discountLabel(option.discount, option.discountType)}
                   </strong>
                 </li>
               ))}
@@ -414,7 +443,7 @@ export default function NewSubscription() {
             <button
               type="submit"
               className={styles.primary}
-              disabled={submitting || !products.length || !!error}
+              disabled={submitting || !products.length || !!error || (productId === "SELECTED_PRODUCTS" && (!selected.length || selected.length > 50))}
             >
               {submitting ? "Saving plan..." : status === "DRAFT" ? "Save subscription draft" : "Create active subscription"}
               <span aria-hidden="true">&rarr;</span>

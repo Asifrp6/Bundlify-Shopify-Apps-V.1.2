@@ -10,3 +10,53 @@
 .optionCards button[aria-pressed="true"]:hover{background:var(--bl-selectedHoverBackground);color:var(--bl-selectedHoverText);border-color:var(--bl-selectedHoverBorder);box-shadow:inset 0 0 0 1px var(--bl-selectedHoverBorder)}
 .optionCards button:hover svg{color:var(--bl-hoverIconColor)}.optionCards button:focus-visible{outline:3px solid var(--bl-focusColor);outline-offset:3px}
 .optionCards strong,.optionCards b{font-size:calc(13px * var(--preview-font-scale))}.optionCards small{font-size:calc(11px * var(--preview-font-scale));line-height:1.5}
+
+/* Scroll the page normally; pin each preview within its own settings block. */
+.page { max-width:1280px; margin:24px auto 40px; padding:0 20px; overflow:visible; }
+.section { overflow:clip; }
+.page h1 { font-size:26px; }
+.pageHeader { margin-bottom:20px; }
+.sectionHeader { padding:16px 20px; gap:12px; }
+.sectionHeader h2 { font-size:15px; }
+.blockIcon { width:36px; height:36px; border-radius:10px; }
+.blockIcon svg { width:26px; height:26px; }
+.layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); height:auto; align-items:start; }
+.controls { padding:20px; min-width:0; overflow:visible; }
+.group { margin-bottom:18px; }
+.group legend { margin-bottom:8px; font-size:12px; }
+.group > legend + .hint { margin:0 0 10px; }
+.hint { margin-top:6px; font-size:11px; line-height:1.5; color:#687c70; }
+.colorGrid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px 8px; }
+.colorField { display:flex; flex-direction:column; min-width:0; }
+.colorField > span { flex:1; font-size:10px; line-height:1.4; margin-bottom:5px; overflow-wrap:anywhere; }
+.colorControl { gap:5px; padding:5px; height:34px; border-radius:6px; }
+.colorControl input { width:22px; height:22px; }
+.colorControl > span { font-size:9px; min-width:0; }
+.textGrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; }
+.textField { min-width:0; }
+.textField > span { font-size:11px; margin-bottom:4px; }
+.textField input, .textField select { height:36px; padding:7px 9px; font-size:12px; border-radius:6px; }
+.previewPanel { position:sticky; top:20px; align-self:start; padding:20px; overflow:visible; }
+.previewHeader { margin-bottom:12px; }
+.previewStage { position:static; padding:0; max-width:440px; margin:0 auto; }
+.preview { padding:18px; border-radius:14px; }
+.previewNote { margin:12px 0 0; line-height:1.5; }
+.footer { padding:14px 20px; }
+.actions button { padding:8px 14px; }
+@media (min-width:761px) and (max-width:1050px) {
+  .controls, .previewPanel { padding:14px; }
+  .colorControl { flex-wrap:wrap; height:auto; min-height:48px; justify-content:center; gap:2px; }
+  .colorControl > span { width:100%; text-align:center; }
+}
+@media (max-width:760px) {
+  .layout { grid-template-columns:minmax(0,1fr); height:auto; }
+  .controls { overflow:visible; padding:16px; scrollbar-gutter:auto; }
+  .previewPanel { position:static; overflow:visible; border-left:0; border-top:1px solid #edf0ed; padding:16px; scrollbar-gutter:auto; }
+  .page { padding:0 12px; }
+}
+@media (max-width:400px) {
+  .colorGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .textGrid { grid-template-columns:minmax(0,1fr); }
+  .footer { padding:12px; }
+  .actions { flex-wrap:wrap; }
+}

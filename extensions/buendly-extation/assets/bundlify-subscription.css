@@ -297,3 +297,123 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-pu
 @media (prefers-reduced-motion: reduce) {
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card { transition: none; }
 }
+
+/* Expanded Subscribe & Save panel. Keep purchase and cart behavior unchanged. */
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #dfe7e2;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px #234e3805;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies]:not([hidden]) {
+  animation: bundlify-frequency-reveal 220ms ease-out both;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-eyebrow {
+  margin: 0 0 14px;
+  font-size: calc(11px * var(--bundlify-font-scale, 1));
+  font-weight: 650;
+  letter-spacing: .12em;
+  line-height: 1.5;
+  color: #53695c;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e0e7e2;
+  border-radius: 12px;
+  background: #fbfcfb;
+  color: #354d3e;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option + .bundlify-option { margin-top: 10px; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:has(input:checked) {
+  background: var(--bl-selectedBackground, #e1efe6);
+  border-color: var(--bl-selectedBorder, #81aa90);
+  color: var(--bl-selectedText, #234e38);
+  box-shadow: inset 0 0 0 1px var(--bl-selectedBorder, #81aa90);
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--bl-selectedText, #234e38);
+  cursor: pointer;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:has(input:focus-visible) {
+  outline: 2px solid var(--bl-selectedBorder, #81aa90);
+  outline-offset: 3px;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-plan-copy {
+  min-width: 0;
+  line-height: 1.5;
+  font-size: calc(13px * var(--bundlify-font-scale, 1));
+  font-weight: 550;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-plan-copy small {
+  display: table;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 20px;
+  font-size: calc(10px * var(--bundlify-font-scale, 1));
+  line-height: 1.5;
+  font-weight: 600;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-price {
+  width: auto;
+  margin: 0;
+  text-align: right;
+  color: inherit;
+  font-size: calc(15px * var(--bundlify-font-scale, 1));
+  line-height: 1.4;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-price small {
+  margin-top: 3px;
+  font-size: calc(10px * var(--bundlify-font-scale, 1));
+  font-weight: 400;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] details {
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #e8ede9;
+  color: #53695c;
+  font-size: calc(12px * var(--bundlify-font-scale, 1));
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] summary {
+  padding: 4px 0;
+  font-weight: 550;
+  line-height: 1.5;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] details p {
+  margin: 10px 0 0;
+  line-height: 1.8;
+}
+@media (hover: hover) {
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:not(:has(input:checked)):hover {
+    background: #f2f6f3;
+    border-color: #b7cbbb;
+  }
+}
+@keyframes bundlify-frequency-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 480px) {
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] { padding: 14px; border-radius: 14px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option { grid-template-columns: 18px minmax(0, 1fr); gap: 8px 10px; padding: 14px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-price { grid-column: 2; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-price small { display: inline; margin-left: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies]:not([hidden]) { animation: none; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option { transition: none; }
+}

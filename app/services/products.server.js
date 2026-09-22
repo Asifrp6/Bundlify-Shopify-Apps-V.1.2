@@ -1,7 +1,7 @@
 export const PRODUCTS_QUERY = `#graphql
   query BundlifyProducts($after: String) {
     products(first: 100, after: $after, sortKey: TITLE) {
-      nodes { id title featuredImage { url } }
+      nodes { id title featuredImage { url } category { id fullName } }
       pageInfo { hasNextPage endCursor }
     }
   }

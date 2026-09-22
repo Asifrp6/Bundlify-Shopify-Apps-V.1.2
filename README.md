@@ -6,13 +6,21 @@ Embedded Shopify app built with React Router, Polaris, and Prisma/SQLite.
 
 - `/app`: dashboard showing store-specific bundle and subscription counts.
 - `/app/subscriptions`: saved subscription plans and their actual local creation status.
-- `/app/subscriptions/new`: creates a Shopify selling plan with matching billing and delivery intervals, associates the selected product or the entire current catalog (in batches of 250), and saves the Shopify group ID. Rejected requests show errors; interrupted requests retain a recovery record. A failed local save attempts to roll back the newly created Shopify group.
+- `/app/subscriptions/new`: creates a Shopify selling plan with matching billing and delivery intervals, associates selected products or the entire current catalog (in batches of 250), and saves the Shopify group ID. Rejected requests show errors; interrupted requests retain a recovery record. A failed local save attempts to roll back the newly created Shopify group.
 - `/app/bundles`: saved bundle drafts.
 - `/app/bundles/:id`: edits a draft's products, name, and planned discount, or deletes it after confirmation. Reads and writes are scoped to the authenticated shop.
-- `/app/bundles/new`: selects real Shopify products and saves a draft with a planned percentage discount. Drafts do not create Shopify bundle products or apply checkout discounts.
+- `/app/bundles/new`: selects real Shopify products by category or individually and saves a draft with a percentage or fixed-amount discount. Activate saved bundles to enable checkout discounts.
 - `/api/products`: authenticated product listing with pagination through the Shopify catalog.
 
 The previous `/bundles` and `/bundles/new` URLs redirect to the embedded app routes.
+
+## Product categories and discount types
+
+Bundle creation/editing and subscription creation support selecting multiple product categories, then excluding individual products (up to 50 selected products). Category selections are snapshots; products added later are not included automatically. Subscription drafts retain their selected product IDs for activation. Existing subscription editing keeps its assigned products.
+
+Preset bundles and subscription delivery options support Percentage or Fixed amount, matching custom bundle settings. Fixed amount means an amount **off**, in store currency: per complete preset bundle, or per subscription item on each delivery. Amounts accept up to two decimal places. Existing records retain percentage discounts.
+
+Run `npm run setup` when deploying to apply the discount-type migration. Deploy the updated bundle discount function and theme extension with the server before activating fixed-amount bundles. Restart the local dev server after migration/client generation. Live checkout remains a required deployment check.
 
 ## Local setup and checks
 

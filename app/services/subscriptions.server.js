@@ -8,7 +8,7 @@ export async function createSubscription({
   values,
   product,
 }) {
-  const baseValues = { name: values.name, frequency: values.frequency, discount: values.discount, productId: values.productId };
+  const baseValues = { name: values.name, frequency: values.frequency, discount: values.discount, discountType: values.discountType || "percentage", productIdsJson: JSON.stringify(values.productIds || []), productId: values.productId };
   const options = planOptions(values);
   const plan = await prisma.subscriptionPlan.create({
     data: {

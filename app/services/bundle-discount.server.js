@@ -29,7 +29,8 @@ export async function createBundleDiscount(admin, bundle) {
     startsAt: new Date().toISOString(),
     combinesWith: { orderDiscounts: false, productDiscounts: false, shippingDiscounts: true },
     metafields: [{ namespace: "$app:bundlify", key: "bundle", type: "json", value: JSON.stringify({
-      id: String(bundle.id), percentage: bundle.discount,
+      id: String(bundle.id), percentage: bundle.discountType === 'fixed' ? 0 : bundle.discount,
+      ...(bundle.discountType === 'fixed' ? { discountType: 'fixed', fixedAmount: bundle.discount } : {}),
       ...(bundle.custom ? { custom: true } : {}),
       products: bundle.products.map(p => p.productId),
     }) }],

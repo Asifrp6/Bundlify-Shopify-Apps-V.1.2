@@ -132,6 +132,11 @@
           prepared = true;
           const products = Array.from(this.querySelectorAll('[data-custom-products] [data-handle]'), node => ({ handle: node.dataset.handle, title: node.dataset.title }));
           const discount = Number(this.querySelector('[data-custom-bundle]')?.dataset.customDiscount || 0);
+          const config = this.querySelector('[data-custom-bundle]')?.dataset || {};
+          const fixed = config.discountType === 'fixed';
+          const rate = this.dataset.currency === config.shopCurrency ? 1 : Number(window.Shopify?.currency?.rate);
+          const fixedAmount = fixed && Number.isFinite(rate) && rate > 0 ? Math.round(Number(config.fixedAmount || 0) * rate * 100) : 0;
+          const fixedEstimate = fixed && this.dataset.currency !== config.shopCurrency;
           const onDone = dialog ? (selectedProducts) => {
             resultController?.abort();
             resultController = new AbortController();
@@ -146,12 +151,12 @@
             result.append(heading, edit);
             hasResult = true;
             result.hidden = false;
-            this.preparePurchase(result, { custom: true, review: true, discount, products: selectedProducts },
+            this.preparePurchase(result, { custom: true, review: true, discount, fixed, fixedAmount, fixedEstimate, products: selectedProducts },
               (this.dataset.root || '/').replace(/\/$/, ''), resultController.signal);
             dialog.addEventListener('close', () => { heading.focus(); result.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }, { once: true });
             dialog.close();
           } : null;
-          this.preparePurchase(card, { custom: true, discount, products, onDone },
+          this.preparePurchase(card, { custom: true, discount, fixed, fixedAmount, fixedEstimate, products, onDone },
             (this.dataset.root || '/').replace(/\/$/, ''), signal);
         }, { signal });
       }
@@ -165,6 +170,7 @@
         const buttonLabel = bundle.onDone ? 'Done' : bundle.custom ? "Add custom bundle to cart" : this.dataset.buttonText || "Add bundle to cart";
         const button = document.createElement("button");
         button.type = "button";
+        button.className = "bundlify-purchase-action";
         button.textContent = "Loading purchase options…";
         button.disabled = true;
         const message = document.createElement("p");
@@ -195,6 +201,12 @@
             { style: "currency", currency, currencyDisplay: "code" },
           );
           const money = (cents) => formatter.format(cents / 100);
+          if (!bundle.custom && bundle.discountType === 'fixed') {
+            const rate = currency === bundle.shopCurrency ? 1 : Number(window.Shopify?.currency?.rate);
+            bundle.fixed = true;
+            bundle.fixedAmount = Number.isFinite(rate) && rate > 0 ? Math.round(Number(bundle.fixedDiscount || 0) * rate * 100) : 0;
+            bundle.fixedEstimate = currency !== bundle.shopCurrency;
+          }
           const discount =
             Number.isInteger(bundle.discount) &&
             bundle.discount >= 0 &&
@@ -236,15 +248,19 @@
               entry.placeholder.hidden = !!source;
               if (source) entry.image.src = source;
             }
+            if (bundle.fixed) {
+              const count = entries.filter(entry => !entry.checkbox || entry.checkbox.checked).length;
+              savings = count >= 2 ? Math.min(subtotal, Math.max(0, bundle.fixedAmount || 0)) : 0;
+            }
             total.replaceChildren();
             const label = document.createElement("span");
             label.textContent = "Bundle total";
             const value = document.createElement("strong");
             value.textContent = money(subtotal - savings);
             total.append(label);
-            const displayedOriginal = bundle.custom && !discount ? originalTotal : subtotal;
+            const displayedOriginal = bundle.custom && !discount && !bundle.fixed ? originalTotal : subtotal;
             const displayedSavings = displayedOriginal - (subtotal - savings);
-            const displayedPercentage = bundle.custom && !discount
+            const displayedPercentage = bundle.custom && !discount && !bundle.fixed
               ? (displayedOriginal > 0 ? Math.round(displayedSavings * 1000 / displayedOriginal) / 10 : 0)
               : discount;
             if (displayedSavings > 0 || (bundle.custom && displayedOriginal > 0)) {
@@ -255,9 +271,10 @@
                 `Original total ${money(displayedOriginal)}`,
               );
               const saving = document.createElement("small");
-              saving.textContent = `You save ${money(displayedSavings)} (${displayedPercentage}%)`;
+              saving.textContent = bundle.fixed ? `${bundle.fixedEstimate ? 'Estimated savings' : 'You save'} ${money(displayedSavings)} off this bundle` : `You save ${money(displayedSavings)} (${displayedPercentage}%)`; 
               total.append(was, value);
               if (displayedSavings > 0) total.append(saving);
+              if (bundle.fixedEstimate) { const note = document.createElement('small'); note.textContent = 'Final discount and currency conversion are calculated at checkout.'; total.append(note); }
             } else total.append(value);
             if (bundle.custom) {
               const count = entries.filter(entry => entry.checkbox.checked).length;

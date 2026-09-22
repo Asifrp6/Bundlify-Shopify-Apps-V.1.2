@@ -21,7 +21,7 @@
   <p data-message role="status">Loading bundle offers…</p>
   </div>
   {% if custom_bundle_products.count >= 2 %}
-    <div data-custom-bundle data-custom-discount="{{ shop.metafields.bundlify.custom_bundle_discount.value.percentage | default: 0 }}">
+    <div data-custom-bundle data-discount-type="{{ shop.metafields.bundlify.custom_bundle_discount.value.discountType | default: 'percentage' | escape }}" data-fixed-amount="{{ shop.metafields.bundlify.custom_bundle_discount.value.fixedAmount | default: 0 }}" data-shop-currency="{{ shop.currency }}" data-custom-discount="{{ shop.metafields.bundlify.custom_bundle_discount.value.percentage | default: 0 }}">
       <dialog id="bundlify-custom-{{ block.id }}" class="bundlify-builder-dialog" data-custom-dialog aria-labelledby="bundlify-custom-title-{{ block.id }}">
         <button type="button" class="bundlify-builder-close" data-custom-close aria-label="Close custom bundle" autofocus>Close <span aria-hidden="true">×</span></button>
       <article data-custom-picker hidden>

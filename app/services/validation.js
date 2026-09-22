@@ -1,3 +1,4 @@
+import { validDiscount } from "./discounts.js";
 import { schedules } from "./delivery-options.js";
 export const frequencies = Object.keys(schedules);
 const productIdPattern = /^gid:\/\/shopify\/Product\/\d+$/;
@@ -9,14 +10,15 @@ export function validatePlan(formData) {
       const raw = JSON.parse(String(formData.get("deliveryOptions")));
       if (!Array.isArray(raw) || !raw.length || raw.length > 5) throw new Error();
       deliveryOptions = raw.map(option => {
-        if (!option || !Object.hasOwn(schedules, option.frequency) || !["string", "number"].includes(typeof option.discount) || String(option.discount).trim() === "" || !Number.isInteger(Number(option.discount)) || Number(option.discount) < 0 || Number(option.discount) > 100) throw new Error();
-        return { frequency: option.frequency, discount: Number(option.discount), ...schedules[option.frequency] };
+        if (!option || !Object.hasOwn(schedules, option.frequency) || !validDiscount(option.discount, option.discountType || "percentage")) throw new Error();
+        return { frequency: option.frequency, discount: Number(option.discount), discountType: option.discountType || "percentage", ...schedules[option.frequency] };
       });
       if (new Set(deliveryOptions.map(o => o.frequency)).size !== deliveryOptions.length) throw new Error();
       formData.set("frequency", deliveryOptions[0].frequency);
       formData.set("discount", String(deliveryOptions[0].discount));
+      formData.set("discountType", deliveryOptions[0].discountType);
     } catch {
-      return { values: {}, errors: { deliveryOptions: "Choose 1–5 distinct delivery frequencies with whole-number discounts from 0 to 100." } };
+      return { values: {}, errors: { deliveryOptions: "Choose 1–5 distinct delivery frequencies with valid percentage (0 to 100) or fixed-amount discounts (up to 1,000,000, at most two decimals)." } };
     }
   }
   const name = String(formData.get("name") ?? "").trim();
@@ -24,21 +26,17 @@ export function validatePlan(formData) {
   const productId = String(formData.get("productId") ?? "");
   const rawDiscount = String(formData.get("discount") ?? "").trim();
   const discount = Number(rawDiscount);
+  const discountType = String(formData.get("discountType") || "percentage");
+  const productIds = [...new Set(formData.getAll("productIds").map(String))];
   const errors = {};
   if (!name || name.length > 120)
     errors.name = "Enter a name of 1–120 characters.";
   if (!frequencies.includes(frequency))
     errors.frequency = "Select a billing frequency.";
-  if (productId !== "ALL_PRODUCTS" && !productIdPattern.test(productId)) errors.productId = "Select a product.";
-  if (
-    !rawDiscount ||
-    !Number.isInteger(discount) ||
-    discount < 0 ||
-    discount > 100
-  ) {
-    errors.discount = "Enter a whole-number discount between 0 and 100.";
-  }
-  return { values: { name, frequency, productId, discount, ...(deliveryOptions ? { deliveryOptions } : {}) }, errors };
+  if (productId !== "ALL_PRODUCTS" && productId !== "SELECTED_PRODUCTS" && !productIdPattern.test(productId)) errors.productId = "Select a product.";
+  if (productId === "SELECTED_PRODUCTS" && (!productIds.length || productIds.length > 50 || productIds.some(id => !productIdPattern.test(id)))) errors.productId = "Select between 1 and 50 products.";
+  if (!validDiscount(rawDiscount, discountType)) errors.discount = "Enter a whole percentage from 0 to 100 or a fixed amount from 0 to 1,000,000 with at most two decimals.";
+  return { values: { name, frequency, productId, discount, discountType, ...(productId === "SELECTED_PRODUCTS" ? { productIds } : {}), ...(deliveryOptions ? { deliveryOptions } : {}) }, errors };
 }
 
 export function validateBundle(formData) {
@@ -54,7 +52,7 @@ export function validateBundle(formData) {
     errors.productIds = "Select between 2 and 50 different products.";
   }
   return {
-    values: { name: values.name, discount: values.discount, productIds },
+    values: { name: values.name, discount: values.discount, discountType: values.discountType, productIds },
     errors,
   };
 }

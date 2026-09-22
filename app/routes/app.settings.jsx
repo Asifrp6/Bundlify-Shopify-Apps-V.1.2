@@ -75,7 +75,7 @@ function BlockSettings({ kind, initial }) {
       <Form method="post">
         <input type="hidden" name="kind" value={kind} />
         <div className={styles.layout}>
-          <div className={styles.controls}>
+          <div className={styles.controls} role="region" aria-label={title + " design controls"}>
             <fieldset className={styles.group}>
               <legend>Colors</legend>
               <p className={styles.hint}>A palette that feels like</p>
@@ -113,9 +113,8 @@ function BlockSettings({ kind, initial }) {
                 />
               </label>
               <p className={styles.hint}>
-                Automatically matches your store’s body and heading fonts. Sizes
-                scale together from 12–24 px. This preview uses the app font;
-                your storefront uses your theme font.
+                Uses Poppins for headings, body text, and controls in both the
+                preview and storefront widgets. Sizes scale together from 12–24 px.
               </p>
             </fieldset>
 
