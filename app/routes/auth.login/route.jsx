@@ -1,16 +1,18 @@
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { useState } from "react";
-import { Form, useActionData, useLoaderData } from "react-router";
+import { Form, redirect, useActionData, useLoaderData } from "react-router";
 import { login } from "../../shopify.server";
 import { loginErrorMessage } from "./error.server";
 
 export const loader = async ({ request }) => {
+  if (process.env.NODE_ENV === "production" && !new URL(request.url).searchParams.get("shop")) throw redirect("/");
   const errors = loginErrorMessage(await login(request));
 
   return { errors };
 };
 
 export const action = async ({ request }) => {
+  if (process.env.NODE_ENV === "production") throw redirect("/");
   const errors = loginErrorMessage(await login(request));
 
   return {

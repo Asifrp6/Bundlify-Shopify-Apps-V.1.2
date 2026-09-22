@@ -5,7 +5,7 @@ import { billContract, billingKey, CYCLES, CONTRACT_STATUS, BILL_CYCLE } from ".
 const contract = { id: "gid://shopify/SubscriptionContract/1", status: "ACTIVE", createdAt: "2026-01-31T10:00:00Z" };
 const now = new Date("2026-03-01T10:00:00Z");
 const cycle = { cycleIndex: 2, billingAttemptExpectedDate: "2026-02-28T10:00:00Z", status: "UNBILLED", skipped: false, billingAttempts: { nodes: [] } };
-function mock(cycles, { status = "ACTIVE", attempt = { id: "attempt-1", ready: true }, fail = false } = {}) {
+function mock(cycles, { status = "ACTIVE", attempt = { id: "attempt-1", state: { __typename: "SubscriptionBillingAttemptSuccessState" } }, fail = false } = {}) {
   const calls = [];
   return { calls, graphql: async (doc, { variables }) => {
     calls.push({ doc, variables });
@@ -34,7 +34,7 @@ test("paid, future, skipped and inactive subscriptions are not charged", async (
   const admin = mock([
     { ...cycle, status: "BILLED" }, { ...cycle, skipped: true },
     { ...cycle, billingAttemptExpectedDate: "2026-04-01T10:00:00Z" },
-    { ...cycle, billingAttempts: { nodes: [{ id: "paid", ready: true }] } },
+    { ...cycle, billingAttempts: { nodes: [{ id: "paid", state: { __typename: "SubscriptionBillingAttemptSuccessState" } }] } },
   ]);
   assert.equal((await run(admin)).status, "not_due");
   assert.equal(admin.calls.length, 1);
@@ -50,9 +50,9 @@ test("a contract cancelled during the run is not charged", async () => {
   assert.ok(!admin.calls.some(call => call.doc === BILL_CYCLE));
 });
 test("pending and failed attempts block further automatic charges", async () => {
-  for (const attempt of [{ id: "pending", ready: false }, { id: "failed", ready: true, errorCode: "PAYMENT_METHOD_DECLINED" }]) {
+  for (const attempt of [{ id: "pending", state: { __typename: "SubscriptionBillingAttemptPendingState" } }, { id: "failed", state: { __typename: "SubscriptionBillingAttemptFailedState" } }]) {
     const admin = mock([{ ...cycle, billingAttempts: { nodes: [attempt] } }, { ...cycle, cycleIndex: 3 }]);
-    assert.equal((await run(admin)).status, attempt.errorCode ? "failed" : "pending");
+    assert.equal((await run(admin)).status, attempt.id === "failed" ? "failed" : "pending");
     assert.ok(!admin.calls.some(call => call.doc === BILL_CYCLE));
   }
 });

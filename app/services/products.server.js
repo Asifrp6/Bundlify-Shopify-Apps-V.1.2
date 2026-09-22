@@ -1,7 +1,7 @@
 export const PRODUCTS_QUERY = `#graphql
   query BundlifyProducts($after: String) {
     products(first: 100, after: $after, sortKey: TITLE) {
-      nodes { id title featuredImage { url } category { id fullName } }
+      nodes { id title featuredMedia { preview { image { url } } } category { id fullName } }
       pageInfo { hasNextPage endCursor }
     }
   }
@@ -10,7 +10,7 @@ export const PRODUCTS_QUERY = `#graphql
 export const SELECTED_PRODUCTS_QUERY = `#graphql
   query BundlifySelectedProducts($ids: [ID!]!) {
     nodes(ids: $ids) {
-      ... on Product { id title featuredImage { url } }
+      ... on Product { id title featuredMedia { preview { image { url } } } }
     }
   }
 `;
@@ -58,7 +58,7 @@ export async function listProducts(admin) {
     const connection = result.products;
     if (!Array.isArray(connection?.nodes) || !connection.pageInfo)
       throw new Error("Invalid product response.");
-    products.push(...connection.nodes);
+    products.push(...connection.nodes.map(productImage));
     if (!connection.pageInfo.hasNextPage) return products;
     const next = connection.pageInfo.endCursor;
     if (!next || seen.has(next)) throw new Error("Invalid product pagination.");
@@ -72,5 +72,9 @@ export async function getProducts(admin, ids) {
   const result = await query(admin, SELECTED_PRODUCTS_QUERY, { ids });
   if (!Array.isArray(result.nodes))
     throw new Error("Invalid product response.");
-  return result.nodes.filter((product) => product?.id && product?.title);
+  return result.nodes.filter((product) => product?.id && product?.title).map(productImage);
+}
+
+function productImage(product) {
+  return { ...product, featuredImage: product.featuredMedia?.preview?.image || null };
 }

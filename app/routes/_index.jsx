@@ -6,7 +6,7 @@ export async function loader({ request }) {
   const url = new URL(request.url);
   if (url.searchParams.get("shop"))
     throw redirect(`/app?${url.searchParams.toString()}`);
-  return { showForm: Boolean(login) };
+  return { showForm: process.env.NODE_ENV !== "production" && Boolean(login) };
 }
 
 export default function Landing() {
@@ -36,6 +36,7 @@ export default function Landing() {
             </button>
           </Form>
         )}
+        {!showForm && <p className={styles.text}>Open Bundlify from the Apps section of your Shopify admin. New installations start on Shopify.</p>}
       </div>
     </div>
   );

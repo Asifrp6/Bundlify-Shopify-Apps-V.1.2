@@ -13,7 +13,7 @@ query BundlifyBillingCycles($id: ID!, $after: String, $start: DateTime!, $end: D
     billingCyclesDateRangeSelector: {startDate: $start, endDate: $end}) {
     nodes {
       cycleIndex billingAttemptExpectedDate skipped status
-      billingAttempts(first: 1, reverse: true) { nodes { id ready errorCode nextActionUrl } }
+      billingAttempts(first: 1, reverse: true) { nodes { id state { __typename } } }
     }
     pageInfo { hasNextPage endCursor }
   }
@@ -24,7 +24,7 @@ query BundlifyContractStatus($id: ID!) { subscriptionContract(id: $id) { id stat
 export const BILL_CYCLE = `#graphql
 mutation BundlifyBillCycle($id: ID!, $input: SubscriptionBillingAttemptInput!) {
   subscriptionBillingAttemptCreate(subscriptionContractId: $id, subscriptionBillingAttemptInput: $input) {
-    subscriptionBillingAttempt { id ready errorCode nextActionUrl }
+    subscriptionBillingAttempt { id state { __typename } }
     userErrors { field message }
   }
 }`;
@@ -62,9 +62,9 @@ export async function billContract({ admin, shop, contract, now }) {
     for (const cycle of connection.nodes) {
       if (cycle.skipped || cycle.status !== "UNBILLED" || new Date(cycle.billingAttemptExpectedDate) > now) continue;
       const previous = cycle.billingAttempts.nodes[0];
-      if (previous?.ready && !previous.errorCode && !previous.nextActionUrl) continue;
+      if (previous && attemptStatus(previous) === "billed") continue;
       // Failed payments require merchant/customer attention, not repeated automatic charges.
-      if (previous) return { status: previous.errorCode ? "failed" : previous.nextActionUrl ? "action_required" : "pending", attemptId: previous.id, errorCode: previous.errorCode };
+      if (previous) return { status: attemptStatus(previous), attemptId: previous.id };
       const { subscriptionContract: current } = await query(admin, CONTRACT_STATUS, { id: contract.id });
       if (current?.status !== "ACTIVE") return { status: "inactive" };
       const { subscriptionBillingAttemptCreate: payload } = await query(admin, BILL_CYCLE, {
@@ -79,7 +79,7 @@ export async function billContract({ admin, shop, contract, now }) {
         throw new Error(payload?.userErrors?.map(error => error.message).join(" ") || "Shopify did not confirm the billing attempt.");
       const attempt = payload.subscriptionBillingAttempt;
       // Process at most one overdue cycle per contract per run, waiting for its outcome.
-      return { status: attempt.errorCode ? "failed" : attempt.nextActionUrl ? "action_required" : attempt.ready ? "billed" : "pending", attemptId: attempt.id, errorCode: attempt.errorCode };
+      return { status: attemptStatus(attempt), attemptId: attempt.id };
     }
     after = next;
   } while (after);
@@ -101,4 +101,13 @@ export async function runRecurringBilling({ admin, shop, now = new Date() }) {
     after = next;
   } while (after);
   return results;
+}
+
+function attemptStatus(attempt) {
+  switch (attempt.state?.__typename) {
+    case "SubscriptionBillingAttemptSuccessState": return "billed";
+    case "SubscriptionBillingAttemptFailedState": return "failed";
+    case "SubscriptionBillingAttemptActionRequiredState": return "action_required";
+    default: return "pending";
+  }
 }

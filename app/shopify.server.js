@@ -9,13 +9,14 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 
 import prisma from "./db.server";
+import { reconcileSavedResources } from "./services/reinstall.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
 
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
 
-  apiVersion: ApiVersion.October25,
+  apiVersion: ApiVersion.July26,
 
   scopes: process.env.SCOPES?.split(","),
 
@@ -25,7 +26,19 @@ const shopify = shopifyApp({
 
   sessionStorage: new PrismaSessionStorage(prisma),
 
-  distribution: AppDistribution.SingleMerchant,
+  distribution: AppDistribution.AppStore,
+
+  hooks: {
+    afterAuth: async ({ session, admin }) => {
+      try {
+        await reconcileSavedResources({ db: prisma, admin, shop: session.shop });
+      } catch (error) {
+        // Retry reconciliation on the next authentication.
+        await prisma.session.deleteMany({ where: { id: session.id, accessToken: session.accessToken } });
+        throw error;
+      }
+    },
+  },
 
   future: {
     expiringOfflineAccessTokens: true,
@@ -34,7 +47,7 @@ const shopify = shopifyApp({
 
 export default shopify;
 
-export const apiVersion = ApiVersion.October25;
+export const apiVersion = ApiVersion.July26;
 
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
 
