@@ -26,9 +26,14 @@ export async function loader({ request }) {
       shopCurrency = result.data.shop?.currencyCode;
       for (const p of result.data.nodes) if (p?.status === "ACTIVE" && p.publishedAt && new Date(p.publishedAt) <= new Date()) products.set(p.id, p);
     }
-    return json({ bundles: bundles.filter(b => b.products.length >= 2 && b.products.every(p => products.has(p.productId))).map(b => ({
-      id: String(b.id), discount: b.discountNodeId && b.discountType !== "fixed" ? b.discount : 0, discountType: b.discountType, fixedDiscount: b.discountNodeId && b.discountType === "fixed" ? b.discount : 0, shopCurrency, name: b.name, products: b.products.map(p => { const product = products.get(p.productId); return { title: product.title, handle: product.handle }; }),
-    })) });
+    return json({ bundles: bundles.flatMap(b => {
+      const visible = b.products.filter(p => products.has(p.productId));
+      if (visible.length < 2) return [];
+      return [{
+        id: String(b.id), discount: b.discountNodeId && b.discountType !== "fixed" ? b.discount : 0, discountType: b.discountType, fixedDiscount: b.discountNodeId && b.discountType === "fixed" ? b.discount : 0, shopCurrency, name: b.name,
+        products: visible.map(p => { const product = products.get(p.productId); return { title: product.title, handle: product.handle }; }),
+      }];
+    }) });
   } catch (error) {
     if (error instanceof Response) throw error;
     return json({ bundles: [] }, 502);

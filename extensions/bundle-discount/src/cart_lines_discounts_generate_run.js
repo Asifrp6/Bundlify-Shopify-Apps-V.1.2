@@ -35,10 +35,12 @@ export function cartLinesDiscountsGenerateRun(input) {
       }
       continue;
     }
-    const sets = Math.min(...config.products.map(id => lines.filter(l => l.merchandise.product.id === id).reduce((sum, l) => sum + l.quantity, 0)));
+    const presentIds = [...new Set(lines.map(line => line.merchandise.product.id))];
+    if (presentIds.length < 2) continue;
+    const sets = Math.min(...presentIds.map(id => lines.filter(l => l.merchandise.product.id === id).reduce((sum, l) => sum + l.quantity, 0)));
     if (sets < 1) continue;
     const groupTargets = [];
-    for (const id of config.products) {
+    for (const id of presentIds) {
       let remaining = sets;
       for (const line of lines.filter(l => l.merchandise.product.id === id)) {
         const quantity = Math.min(remaining, line.quantity);

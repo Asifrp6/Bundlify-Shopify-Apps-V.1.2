@@ -14,11 +14,11 @@ export const CUSTOM_BUNDLE_SAVE = `#graphql
   }
 `;
 
-export function validateCustomProducts(ids) {
-  if (!Array.isArray(ids) || ids.length > 50 || ids.length === 1 ||
+export function validateCustomProducts(ids, maxProducts = 50) {
+  if (!Array.isArray(ids) || ids.length > maxProducts || ids.length === 1 ||
       ids.some(id => typeof id !== 'string' || !/^gid:\/\/shopify\/Product\/\d+$/.test(id)) ||
       new Set(ids).size !== ids.length) {
-    throw new Error('Select 2–50 different products, or clear the selection to disable custom bundles.');
+    throw new Error(`Select 2–${maxProducts} different products, or clear the selection to disable custom bundles.`);
   }
   return ids;
 }
@@ -33,8 +33,8 @@ export async function getCustomBundleSettings(admin) {
   return { shopId: shop.id, productIds, discount, currency: shop.currencyCode };
 }
 
-export async function saveCustomBundleProducts(admin, ids, percentage = 0, discountType = 'percentage') {
-  validateCustomProducts(ids);
+export async function saveCustomBundleProducts(admin, ids, percentage = 0, discountType = 'percentage', maxProducts = 50) {
+  validateCustomProducts(ids, maxProducts);
   if (!['percentage', 'fixed'].includes(discountType)) throw new Error('Choose percentage or fixed amount.');
   if (discountType === 'percentage' && (!Number.isInteger(percentage) || percentage < 0 || percentage > 100)) throw new Error('Enter a whole-number discount from 0 to 100.');
   if (discountType === 'fixed' && (!Number.isFinite(percentage) || percentage < 0 || percentage > 1000000 || Math.abs(percentage * 100 - Math.round(percentage * 100)) > 0.00001)) throw new Error('Enter an amount from 0 to 1,000,000 with at most two decimal places.');

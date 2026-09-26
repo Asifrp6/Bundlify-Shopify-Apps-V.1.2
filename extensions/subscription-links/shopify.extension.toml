@@ -1,0 +1,18 @@
+api_version = "2025-10"
+
+[[extensions]]
+name = "t:name"
+handle = "subscription-links"
+type = "ui_extension"
+uid = "9a2e6c44-1d70-4b8f-8e33-6c5d0a9b7e12"
+
+[[extensions.targeting]]
+module = "./src/OrderStatus.jsx"
+target = "customer-account.order-status.block.render"
+
+[[extensions.targeting]]
+module = "./src/Profile.jsx"
+target = "customer-account.profile.block.render"
+
+[extensions.capabilities]
+api_access = true

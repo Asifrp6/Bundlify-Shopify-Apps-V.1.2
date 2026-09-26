@@ -1,0 +1,15 @@
+api_version = "2025-10"
+
+[[extensions]]
+name = "t:name"
+handle = "product-plans"
+type = "ui_extension"
+uid = "5c7b2d18-4e91-4a6f-b0c3-8f1a6d2e9c40"
+
+[[extensions.targeting]]
+module = "./src/BlockExtension.jsx"
+target = "admin.product-details.block.render"
+
+[extensions.capabilities]
+api_access = true
+network_access = true

@@ -42,7 +42,7 @@
 .preview { padding:18px; border-radius:14px; }
 .previewNote { margin:12px 0 0; line-height:1.5; }
 .footer { padding:14px 20px; }
-.actions button { padding:8px 14px; }
+.actions button { min-height: 40px; padding: 8px 14px; line-height: 1.2; }
 @media (min-width:761px) and (max-width:1050px) {
   .controls, .previewPanel { padding:14px; }
   .colorControl { flex-wrap:wrap; height:auto; min-height:48px; justify-content:center; gap:2px; }

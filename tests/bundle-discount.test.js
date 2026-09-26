@@ -25,6 +25,12 @@ test("only complete bundle quantities receive the configured discount", () => {
   assert.deepEqual(candidate.targets, [{ cartLine: { id: "a", quantity: 2 } }, { cartLine: { id: "b", quantity: 2 } }]);
   assert.equal(candidate.value.percentage.value, 10);
 });
+test("published bundle products still receive the discount when another configured product is absent", () => {
+  const partial = input([line("a", "a"), line("b", "b")]);
+  partial.discount.metafield.jsonValue.products = ["a", "b", "hidden"];
+  const result = run(partial);
+  assert.deepEqual(result.operations[0].productDiscountsAdd.candidates[0].targets.map(target => target.cartLine.id), ["a", "b"]);
+});
 test("incomplete bundles and separate purchase groups do not receive a discount", () => {
   assert.deepEqual(run(input([line("a", "a")])), { operations: [] });
   assert.deepEqual(run(input([line("a", "a", 1, "one"), line("b", "b", 1, "two")])), { operations: [] });

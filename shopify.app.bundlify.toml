@@ -26,7 +26,7 @@ api_version = "2026-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_discounts,write_app_proxy,write_metaobject_definitions,write_metaobjects,write_products,write_own_subscription_contracts"
+scopes = "write_discounts,write_app_proxy,write_products,read_own_subscription_contracts,write_own_subscription_contracts,write_customers"
 
 [auth]
 redirect_urls = [ "https://bundlify.imranwebstudio.me/auth/callback" ]

@@ -32,10 +32,13 @@ async function findPlan(id, shop) {
 }
 export async function loader({ request, params }) {
   const { session } = await authenticate.admin(request);
-  return { plan: await findPlan(params.id, session.shop) };
+  const limits = await (await import("../services/app-billing.server")).shopLimits(session.shop);
+  return { plan: await findPlan(params.id, session.shop), maxOptions: limits?.maxOptions ?? 2 };
 }
 export async function action({ request, params }) {
   const { admin, session, redirect } = await authenticate.admin(request);
+  const limits = await (await import("../services/app-billing.server")).shopLimits(session.shop);
+  if (!limits) throw redirect("/app/pricing");
   const plan = await findPlan(params.id, session.shop);
   const form = await request.formData();
   const intent = form.get("intent");
@@ -48,7 +51,7 @@ export async function action({ request, params }) {
     );
   form.set("productId", plan.productId);
   for (const id of JSON.parse(plan.productIdsJson || "[]")) form.append("productIds", id);
-  const { values, errors } = validatePlan(form);
+  const { values, errors } = validatePlan(form, limits);
   if (intent === "update" && Object.keys(errors).length)
     return data({ error: Object.values(errors).join(" ") }, { status: 400 });
   try {
@@ -71,7 +74,7 @@ export async function action({ request, params }) {
   );
 }
 export default function EditSubscription() {
-  const { plan } = useLoaderData();
+  const { plan, maxOptions = 2 } = useLoaderData();
   const result = useActionData();
   const navigation = useNavigation();
   const busy = navigation.state !== "idle";
@@ -259,13 +262,13 @@ export default function EditSubscription() {
                 <button
                   className={styles.add}
                   type="button"
-                  disabled={busy || options.length >= 5}
+                  disabled={busy || options.length >= maxOptions}
                   onClick={addOption}
                 >
                   <span aria-hidden="true">+</span> Add delivery option
                 </button>
                 <p className={styles.help}>
-                  Offer up to 5 frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
+                  Offer up to {maxOptions} frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
                 </p>
               </section>
             </div>

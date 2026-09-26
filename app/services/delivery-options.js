@@ -4,6 +4,8 @@ export const schedules = {
   Weekly: { interval: "WEEK", intervalCount: 1 },
   "Every 2 weeks": { interval: "WEEK", intervalCount: 2 },
   Monthly: { interval: "MONTH", intervalCount: 1 },
+  "Every 2 months": { interval: "MONTH", intervalCount: 2 },
+  "Every 3 months": { interval: "MONTH", intervalCount: 3 },
   Yearly: { interval: "YEAR", intervalCount: 1 },
 };
 export function planOptions(plan) {

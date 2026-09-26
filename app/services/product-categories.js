@@ -20,6 +20,13 @@ export function filterBundleProducts(products, search, category) {
 }
 
 // Only apply the changed category, preserving individual exclusions in others.
+export function capProductSelection(current, next, max) {
+  if (next.length <= max) return next;
+  const kept = current.filter((id) => next.includes(id));
+  const added = next.filter((id) => !current.includes(id)).slice(0, Math.max(0, max - kept.length));
+  return [...kept, ...added];
+}
+
 export function selectCategoryProducts(products, selected, category, checked) {
   const ids = new Set(products.filter(product => !product.missing && categoryKey(product) === category).map(product => product.id));
   return checked ? [...new Set([...selected, ...ids])] : selected.filter(id => !ids.has(id));

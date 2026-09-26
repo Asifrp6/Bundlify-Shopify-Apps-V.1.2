@@ -4,7 +4,6 @@ import prisma from "../db.server";
 import { getProducts, listProducts } from "../services/products.server";
 import { validateBundle } from "../services/validation";
 
-import { removeBundleDiscount } from "../services/bundle-discount.server";
 
 export { default } from "./app.bundles.new";
 
@@ -25,19 +24,23 @@ async function findBundle(id, shop) {
 export async function loader({ request, params }) {
   const { admin, session } = await authenticate.admin(request);
   const bundle = await findBundle(params.id, session.shop);
+  const limits = await (await import("../services/app-billing.server")).shopLimits(session.shop);
   try {
-    return { bundle, products: await listProducts(admin), error: null };
+    return { bundle, products: await listProducts(admin), error: null, maxProducts: limits?.maxProducts ?? 5 };
   } catch (error) {
     if (error instanceof Response) throw error;
     return {
       bundle,
       products: [],
       error: "Products could not be loaded. Refresh the page to try again.",
+      maxProducts: limits?.maxProducts ?? 5,
     };
   }
 }
 export async function action({ request, params }) {
   const { admin, session, redirect } = await authenticate.admin(request);
+  const limits = await (await import("../services/app-billing.server")).shopLimits(session.shop);
+  if (!limits) throw redirect("/app/pricing");
   const bundle = await findBundle(params.id, session.shop);
   const form = await request.formData();
   const intent = form.get("intent");
@@ -49,6 +52,7 @@ export async function action({ request, params }) {
         { error: "Confirm deletion before continuing." },
         { status: 400 },
       );
+    const { removeBundleDiscount } = await import("../services/bundle-discount.server");
     try { await removeBundleDiscount(admin, bundle); }
     catch (error) { return data({ error: error.message }, { status: 502 }); }
     await prisma.bundle.deleteMany({
@@ -56,7 +60,10 @@ export async function action({ request, params }) {
     });
     return redirect("/app/bundles?deleted=1");
   }
-  const { values, errors } = validateBundle(form);
+  const publish = form.get("status") === "ACTIVE";
+  if (!["ACTIVE", "DRAFT"].includes(String(form.get("status"))))
+    return data({ error: "Choose draft or active before saving." }, { status: 400 });
+  const { values, errors } = validateBundle(form, limits);
   if (Object.keys(errors).length) return data({ errors }, { status: 400 });
   let products;
   try {
@@ -78,9 +85,11 @@ export async function action({ request, params }) {
       },
       { status: 400 },
     );
+  const { createBundleDiscount, removeBundleDiscount } = await import("../services/bundle-discount.server");
+  let updated;
   try {
     await removeBundleDiscount(admin, bundle);
-    await prisma.bundle.update({
+    updated = await prisma.bundle.update({
       where: { id: bundle.id, shop: session.shop },
       data: {
         status: "DRAFT",
@@ -96,12 +105,21 @@ export async function action({ request, params }) {
           })),
         },
       },
+      include: { products: true },
     });
   } catch {
     return data(
-      { error: "The bundle draft could not be saved. Please try again." },
+      { error: "The bundle could not be saved. Please try again." },
       { status: 500 },
     );
+  }
+  if (publish) {
+    try {
+      const discountNodeId = await createBundleDiscount(admin, updated);
+      await prisma.bundle.update({ where: { id: updated.id }, data: { status: "ACTIVE", discountNodeId } });
+    } catch (error) {
+      return data({ error: `${error.message || "Could not activate this bundle."} It was saved as a draft.` }, { status: 502 });
+    }
   }
   return redirect("/app/bundles?updated=1");
 }

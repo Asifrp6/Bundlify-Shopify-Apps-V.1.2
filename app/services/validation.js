@@ -3,12 +3,14 @@ import { schedules } from "./delivery-options.js";
 export const frequencies = Object.keys(schedules);
 const productIdPattern = /^gid:\/\/shopify\/Product\/\d+$/;
 
-export function validatePlan(formData) {
+export function validatePlan(formData, limits = { maxProducts: 50, maxOptions: 7 }) {
+  const maxProducts = limits.maxProducts ?? 50;
+  const maxOptions = limits.maxOptions ?? 7;
   let deliveryOptions;
   if (formData.has("deliveryOptions")) {
     try {
       const raw = JSON.parse(String(formData.get("deliveryOptions")));
-      if (!Array.isArray(raw) || !raw.length || raw.length > 5) throw new Error();
+      if (!Array.isArray(raw) || !raw.length || raw.length > maxOptions) throw new Error();
       deliveryOptions = raw.map(option => {
         if (!option || !Object.hasOwn(schedules, option.frequency) || !validDiscount(option.discount, option.discountType || "percentage")) throw new Error();
         return { frequency: option.frequency, discount: Number(option.discount), discountType: option.discountType || "percentage", ...schedules[option.frequency] };
@@ -18,7 +20,7 @@ export function validatePlan(formData) {
       formData.set("discount", String(deliveryOptions[0].discount));
       formData.set("discountType", deliveryOptions[0].discountType);
     } catch {
-      return { values: {}, errors: { deliveryOptions: "Choose 1–5 distinct delivery frequencies with valid percentage (0 to 100) or fixed-amount discounts (up to 1,000,000, at most two decimals)." } };
+      return { values: {}, errors: { deliveryOptions: `Choose 1–${maxOptions} distinct delivery frequencies with valid percentage (0 to 100) or fixed-amount discounts (up to 1,000,000, at most two decimals).` } };
     }
   }
   const name = String(formData.get("name") ?? "").trim();
@@ -34,22 +36,23 @@ export function validatePlan(formData) {
   if (!frequencies.includes(frequency))
     errors.frequency = "Select a billing frequency.";
   if (productId !== "ALL_PRODUCTS" && productId !== "SELECTED_PRODUCTS" && !productIdPattern.test(productId)) errors.productId = "Select a product.";
-  if (productId === "SELECTED_PRODUCTS" && (!productIds.length || productIds.length > 50 || productIds.some(id => !productIdPattern.test(id)))) errors.productId = "Select between 1 and 50 products.";
+  if (productId === "SELECTED_PRODUCTS" && (!productIds.length || productIds.length > maxProducts || productIds.some(id => !productIdPattern.test(id)))) errors.productId = `Select between 1 and ${maxProducts} products.`;
   if (!validDiscount(rawDiscount, discountType)) errors.discount = "Enter a whole percentage from 0 to 100 or a fixed amount from 0 to 1,000,000 with at most two decimals.";
   return { values: { name, frequency, productId, discount, discountType, ...(productId === "SELECTED_PRODUCTS" ? { productIds } : {}), ...(deliveryOptions ? { deliveryOptions } : {}) }, errors };
 }
 
-export function validateBundle(formData) {
-  const { values, errors } = validatePlan(formData);
+export function validateBundle(formData, limits = { maxProducts: 50, maxOptions: 7 }) {
+  const maxProducts = limits.maxProducts ?? 50;
+  const { values, errors } = validatePlan(formData, limits);
   delete errors.frequency;
   delete errors.productId;
   const productIds = [...new Set(formData.getAll("productIds").map(String))];
   if (
     productIds.length < 2 ||
-    productIds.length > 50 ||
+    productIds.length > maxProducts ||
     productIds.some((id) => !productIdPattern.test(id))
   ) {
-    errors.productIds = "Select between 2 and 50 different products.";
+    errors.productIds = `Select between 2 and ${maxProducts} different products.`;
   }
   return {
     values: { name: values.name, discount: values.discount, discountType: values.discountType, productIds },

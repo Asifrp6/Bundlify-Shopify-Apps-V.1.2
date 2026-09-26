@@ -1,4 +1,4 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "react-router";
 
 import { AppProvider } from "@shopify/polaris";
 
@@ -13,19 +13,24 @@ import planFormCss from "./styles/plan-form.module.css?inline";
 import landingCss from "./styles/landing.module.css?inline";
 import bundleEditorCss from "./styles/bundle-editor.module.css?inline";
 import settingsCss from "./styles/settings.module.css?inline";
+import pricingCss from "./styles/pricing.module.css?inline";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
-  { rel: "icon", type: "image/png", href: "/tranferent%20logo.png" },
+  { rel: "icon", type: "image/png", href: "/bundlify-icon.png?v=3" },
 ];
 
+export const loader = () => ({ apiKey: process.env.SHOPIFY_API_KEY || "" });
+
 export default function App() {
+  const { apiKey } = useLoaderData();
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-
         <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="shopify-api-key" content={apiKey} />
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -39,7 +44,7 @@ export default function App() {
 
         <Links />
         {/* Deliver scoped app styles with the HTML, including before hydration. */}
-        <style data-bundlify-styles>{[headerCss, dashboardCss, bundlesCss, subscriptionsCss, landingCss, planFormCss, bundleEditorCss, settingsCss].join("\n")}</style>
+        <style data-bundlify-styles>{[headerCss, dashboardCss, bundlesCss, subscriptionsCss, landingCss, planFormCss, bundleEditorCss, settingsCss, pricingCss].join("\n")}</style>
 
         <style>{`
           * {
@@ -69,21 +74,23 @@ export default function App() {
             }
           }
 
-          /* Ensure proper spacing on all pages */
           main {
             max-width: 100%;
-            overflow-x: hidden;
+            min-width: 0;
           }
 
-          /* Better button responsiveness */
+          button, input, select, textarea {
+            font: inherit;
+            letter-spacing: inherit;
+          }
+
           button {
-            font-family: inherit;
+            margin: 0;
+            vertical-align: middle;
           }
 
-          /* Responsive image sizes */
           img {
             max-width: 100%;
-            height: auto;
           }
 
           /* Fix for card padding on mobile */
@@ -93,9 +100,8 @@ export default function App() {
             }
           }
 
-          /* Smooth transitions */
           a, button, input, select, textarea {
-            transition: all 0.2s ease;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
           }
         `}</style>
       </head>

@@ -27,8 +27,11 @@ export class SellingPlanError extends Error {
 
 export async function createSellingPlan(
   admin,
-  { name, productId, productIds = [productId], frequency, discount, discountType, merchantCode, deliveryOptions },
+  { name, productId, productIds = [productId], productVariantIds = [], frequency, discount, discountType, merchantCode, deliveryOptions },
 ) {
+  const variants = productVariantIds.filter(Boolean);
+  if (variants.some(id => !/^gid:\/\/shopify\/ProductVariant\/\d+$/.test(id)))
+    throw new SellingPlanError("Select valid product variants.", { rejected: true });
   if (!productIds.length || productIds.some(id => !/^gid:\/\/shopify\/Product\/\d+$/.test(id)))
     throw new SellingPlanError("Select at least one valid product.", { rejected: true });
   let inputs;
@@ -42,7 +45,9 @@ export async function createSellingPlan(
         options: ["Delivery frequency"],
         sellingPlansToCreate: inputs,
       },
-      resources: { productIds: productIds.slice(0, 250) },
+      resources: variants.length
+        ? { productVariantIds: variants.slice(0, 250) }
+        : { productIds: productIds.slice(0, 250) },
     },
   });
   const result = await response.json();
@@ -92,6 +97,21 @@ export async function addPlanProducts(admin, id, productIds) {
   const payload = result.data?.sellingPlanGroupAddProducts;
   if (result.errors?.length || payload?.userErrors?.length || payload?.sellingPlanGroup?.id !== id)
     throw new Error("Could not assign products to the selling plan.");
+}
+
+export const REMOVE_PLAN_PRODUCTS = `#graphql
+mutation BundlifyRemovePlanProducts($id: ID!, $productIds: [ID!]!) {
+  sellingPlanGroupRemoveProducts(id: $id, productIds: $productIds) {
+    removedProductIds
+    userErrors { field message }
+  }
+}`;
+export async function removePlanProducts(admin, id, productIds) {
+  const response = await admin.graphql(REMOVE_PLAN_PRODUCTS, { variables: { id, productIds } });
+  const result = await response.json();
+  const payload = result.data?.sellingPlanGroupRemoveProducts;
+  if (result.errors?.length || payload?.userErrors?.length)
+    throw new Error(payload?.userErrors?.map(error => error.message).join(" ") || "Could not remove the product from this plan.");
 }
 
 export async function deleteSellingPlan(admin, id) {

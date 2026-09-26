@@ -1,9 +1,9 @@
-.page { font-size: 18px; line-height: 1.5; max-width: 1120px; margin: 0 auto; padding: 38px 24px 44px; color: #233c34; display: flex; flex-direction: column; gap: 24px; }
+.page { font-size: 15px; line-height: 1.5; max-width: 1120px; margin: 0 auto; padding: 28px 24px 44px; color: #233c34; display: flex; flex-direction: column; gap: 20px; }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 1.6px; color: #637b71; }
 .header h1 { margin: 8px 0; font-size: clamp(25px, 3vw, 32px); font-weight: 650; letter-spacing: -1px; line-height: 1.2; }
-.header p, .collectionHeading p { margin: 0; color: #75817b; font-size: 18px; line-height: 1.6; }
-.primaryButton { display: inline-flex; gap: 9px; align-items: center; justify-content: center; background: #285c43; color: white; border: 1px solid #285c43; text-decoration: none; border-radius: 9px; padding: 12px 17px; font-weight: 600; font-size: 18px; white-space: nowrap; box-shadow: 0 3px 7px #234c4217; }
+.header p, .collectionHeading p { margin: 0; color: #75817b; font-size: 14px; line-height: 1.6; }
+.primaryButton { display: inline-flex; gap: 8px; align-items: center; justify-content: center; min-height: 44px; background: #285c43; color: white; border: 1px solid #285c43; text-decoration: none; border-radius: 9px; padding: 10px 16px; font-weight: 600; font-size: 14px; line-height: 1.2; white-space: nowrap; box-shadow: 0 3px 7px #234c4217; }
 .primaryButton:hover { background: #1b4933; }
 .primaryButton > span { font-size: 19px; font-weight: 400; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -23,7 +23,7 @@
 .collectionHeading h2 span { padding: 1px 7px; font-size: 14px; background: #eef2ee; border-radius: 5px; color: #65796b; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px 20px; border-bottom: 1px solid #eaf0eb; }
 .filters { display: flex; flex-wrap: wrap; gap: 4px; }
-.filter, .selectedFilter { display: inline-flex; gap: 6px; align-items: center; padding: 8px 10px; border: 0; border-radius: 7px; background: transparent; color: #737d77; cursor: pointer; font-size: 16px; font-weight: 550; }
+.filter, .selectedFilter { display: inline-flex; gap: 6px; align-items: center; min-height: 36px; padding: 6px 10px; border: 0; border-radius: 7px; background: transparent; color: #737d77; cursor: pointer; font-size: 14px; font-weight: 550; line-height: 1.2; }
 .selectedFilter { background: #eaf2ec; color: #285c43; }
 .filter:hover { background: #f5f7f5; }
 .filters button span { font-size: 13px; opacity: .8; }
@@ -52,10 +52,10 @@
 .option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: #f7f9f5; border-radius: 7px; }
 .frequency { display: flex; align-items: center; gap: 8px; font-size: 16px; color: #596e5d; }
 .savings { font-size: 14px; font-weight: 650; color: #35633e; white-space: nowrap; }
-.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px; border-top: 1px solid #edf0eb; }
+.cardFooter { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 20px; border-top: 1px solid #edf0eb; }
 .cardFooter > span { font-size: 13px; color: #818b83; }
 .cardFooter > div { display: flex; align-items: center; gap: 8px; }
-.editButton { display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 7px 10px; border: 1px solid #dfe6df; border-radius: 6px; font-size: 14px; font-weight: 600; background: #fff; color: #3e5c47; text-decoration: none; cursor: pointer; }
+.editButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 7px 12px; border: 1px solid #dfe6df; border-radius: 6px; font-size: 14px; font-weight: 600; line-height: 1.2; background: #fff; color: #3e5c47; text-decoration: none; cursor: pointer; }
 .editButton:hover { background: #edf5ee; }
 .deleteButton { display: inline-flex; align-items: center; justify-content: center; width: 31px; height: 31px; color: #859087; border: 1px solid transparent; border-radius: 6px; }
 .deleteButton:hover { color: #b44848; background: #fff2f2; border-color: #f3dede; }

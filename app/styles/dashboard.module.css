@@ -1,4 +1,4 @@
-.page { max-width: 1120px; margin: 0 auto; padding: 38px 24px 44px; display: flex; flex-direction: column; gap: 30px; color: #233c34; font-size: 18px; line-height: 1.5; }
+.page { max-width: 1120px; margin: 0 auto; padding: 28px 24px 44px; display: flex; flex-direction: column; gap: 24px; color: #233c34; font-size: 15px; line-height: 1.5; }
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .eyebrow { color: #687e6e; font-size: 12px; letter-spacing: 1.6px; font-weight: 650; }
 .heading h1 { font-size: 32px; line-height: 1.2; letter-spacing: -1px; font-weight: 650; margin: 7px 0 0; }
@@ -7,9 +7,9 @@
 .heroCopy { position: relative; z-index: 1; flex: 1; min-width: 0; }
 .heroEyebrow { font-size: 11px; color: #d0e2b6; letter-spacing: 1.8px; font-weight: 600; }
 .hero h2 { font-size: clamp(30px, 4vw, 42px); font-weight: 550; line-height: 1.15; letter-spacing: -1.1px; margin: 15px 0; }
-.hero p { max-width: 530px; font-size: 18px; line-height: 1.65; color: #d1dfd5; margin: 0; }
+.hero p { max-width: 530px; font-size: 15px; line-height: 1.65; color: #d1dfd5; margin: 0; }
 .heroActions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
-.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 11px 16px; border-radius: 8px; font-size: 18px; font-weight: 550; text-decoration: none; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; line-height: 1.2; text-decoration: none; }
 .primary { background: #e4edc9; color: #284a33; border: 1px solid #e4edc9; }
 .primary:hover { background: #f0f5df; }
 .secondary { color: #edf4ed; border: 1px solid #6a8d74; background: #ffffff05; }

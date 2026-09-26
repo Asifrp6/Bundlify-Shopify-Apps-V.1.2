@@ -1,29 +1,49 @@
 import { useLoaderData, Link } from "react-router";
 import { authenticate } from "../shopify.server";
 import styles from "../styles/bundles.module.css";
+function themeBlock(shop, handle) {
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const editor = `https://${shop}/admin/themes/current/editor?template=product`;
+  if (!apiKey) return editor;
+  return `${editor}&addAppBlockId=${apiKey}/${handle}&target=mainSection`;
+}
+
 export async function loader({ request }) {
   const { session } = await authenticate.admin(request);
-  return { editor: `https://${session.shop}/admin/themes/current/editor` };
+  return {
+    bundles: themeBlock(session.shop, "star_rating"),
+    subscriptions: themeBlock(session.shop, "subscription_selector"),
+  };
 }
 export default function Extensions() {
-  const { editor } = useLoaderData();
+  const { bundles, subscriptions } = useLoaderData();
   return <div className={styles.page}>
     <h1>Storefront blocks</h1>
     <section className={styles.collection}>
-    <div className={styles.collectionHeader}><div><h2>Bundles</h2><p>Display your active product bundles in a separate section.</p></div></div>
+    <div className={styles.collectionHeader}><div><h2>Bundles</h2><p>Show active bundles as named choices on the product page.</p></div></div>
     <ol>
-      <li><Link to="/app/bundles">Open Bundles</Link> and click Activate bundle.</li>
-      <li>Open your theme editor and choose the page template.</li>
-      <li>Select Add section → Apps → Bundlify bundles, then save the theme.</li>
+      <li><Link to="/app/bundles">Open Bundles</Link> and save a bundle as active.</li>
+      <li>Add the Bundle offers app block to the product template.</li>
+      <li>Save the theme. Buyers choose a bundle name, then see its products and discount.</li>
     </ol>
     </section>
     <section className={styles.collection}>
-      <div className={styles.collectionHeader}><div><h2>Subscriptions</h2><p>Keep the previous purchase cards and delivery-frequency design.</p></div></div>
-      <p>Add the Subscription Selector app block to your product template. This contains the one-time purchase and Subscribe &amp; Save options. It operates separately from the Bundlify bundles block.</p>
-      <p>Use Subscription Selector for subscriptions. Bundle offers (the former duplicate block) and Bundlify bundles display active bundles independently.</p>
+      <div className={styles.collectionHeader}><div><h2>Subscriptions</h2><p>Offer one-time purchase and Subscribe &amp; Save on the same product.</p></div></div>
+      <p>Add the Subscription app block to the product template. It is separate from Bundle offers.</p>
     </section>
-    <a href={editor} target="_blank" rel="noreferrer" className={styles.primary}>Open theme editor</a>
-    <p>All pages show active bundles, up to 12. Enable ?Only show bundles containing this product? in the block settings if you want product-specific offers. Bundle products must be active and published to the Online Store.</p>
-    <p>If the block is missing, start the development preview or deploy the extension and reload the editor. Planned discounts are not applied at checkout.</p>
+    <div className={styles.actions}>
+      <a href={bundles} target="_top" className={styles.primary}>Add bundle block</a>
+      <a href={subscriptions} target="_top" className={styles.primary}>Add subscription block</a>
+    </div>
+    <p>Active bundles appear for products that are active and published to the Online Store. A bundle stays visible when at least two of its products are published. Turn on “Only show bundles containing this product” in the block settings for product-specific offers.</p>
+    <p>An active bundle discount is applied automatically at checkout.</p>
+    <section className={styles.collection}>
+      <div className={styles.collectionHeader}><div><h2>Customer accounts</h2><p>Buyers manage subscriptions from the same login as their orders.</p></div></div>
+      <ol>
+        <li>In the checkout and accounts editor, add the Subscriptions page, the order status block, and the profile block.</li>
+        <li>Order confirmation emails open the order status page, where Manage subscription links to that page.</li>
+        <li>On the product page in Shopify admin, pin Bundlify subscriptions to create a plan for selected variants.</li>
+      </ol>
+    </section>
   </div>;
 }

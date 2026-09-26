@@ -1,4 +1,5 @@
 import { discountLabel } from "../services/discounts";
+import { creationBlocked } from "../services/app-plans";
 import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
 import { Banner } from "@shopify/polaris";
 import prisma from "../db.server";
@@ -6,19 +7,62 @@ import { authenticate } from "../shopify.server";
 import { createBundleDiscount, removeBundleDiscount } from "../services/bundle-discount.server";
 import styles from "../styles/bundles.module.css";
 
-export async function loader({ request }) {
-  const { session } = await authenticate.admin(request);
-  return {
-    bundles: await prisma.bundle.findMany({
-      where: { shop: session.shop },
-      include: { products: true },
-      orderBy: { createdAt: "desc" },
+function storefrontBlock(product) {
+  if (!product) return "removed from your store";
+  if (product.status === "ARCHIVED") return "archived";
+  if (product.status !== "ACTIVE") return "a draft";
+  if (!product.publishedAt || new Date(product.publishedAt) > new Date()) return "not published to the Online Store";
+  return null;
+}
+
+async function blockedProducts(admin, bundles) {
+  const ids = [...new Set(bundles.flatMap((bundle) => bundle.products.map((product) => product.productId)))];
+  const states = new Map();
+  for (let index = 0; index < ids.length; index += 250) {
+    const response = await admin.graphql(
+      `#graphql
+        query BundleStorefrontProducts($ids: [ID!]!) {
+          nodes(ids: $ids) { ... on Product { id status publishedAt } }
+        }`,
+      { variables: { ids: ids.slice(index, index + 250) } },
+    );
+    const result = await response.json();
+    if (result.errors?.length || !result.data?.nodes) return null;
+    for (const product of result.data.nodes) if (product?.id) states.set(product.id, product);
+  }
+  return bundles.map((bundle) =>
+    bundle.products.flatMap((product) => {
+      const reason = storefrontBlock(states.get(product.productId));
+      return reason ? [`${product.productTitle} is ${reason}`] : [];
     }),
+  );
+}
+
+export async function loader({ request }) {
+  const { admin, session } = await authenticate.admin(request);
+  const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
+  const bundles = await prisma.bundle.findMany({
+    where: { shop: session.shop },
+    include: { products: true },
+    orderBy: { createdAt: "desc" },
+  });
+  let blocked = bundles.map(() => []);
+  try {
+    blocked = (await blockedProducts(admin, bundles)) || blocked;
+  } catch {
+    blocked = bundles.map(() => []);
+  }
+  return {
+    bundles: bundles.map((bundle, index) => ({ ...bundle, blocked: blocked[index] })),
+    bundleLimit: creationBlocked(usage, "bundle", usage?.bundles ?? 0),
+    planName: usage?.name || null,
+    maxBundles: usage?.maxBundles ?? null,
   };
 }
 
 export async function action({ request }) {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin, session, redirect } = await authenticate.admin(request);
+  if (!await (await import("../services/app-billing.server")).shopLimits(session.shop)) throw redirect("/app/pricing");
   const form = await request.formData();
   const id = Number(form.get("bundleId"));
   const status = form.get("status");
@@ -51,7 +95,8 @@ function BundleActivation({ bundle }) {
       </button>
     </fetcher.Form>
     {fetcher.data?.error && <p role="alert">{fetcher.data.error}</p>}
-    <p>{needsDiscount ? "This bundle is visible, but its discount has not been enabled yet." : active ? "Active — add the Bundlify bundles block to your theme to show it." : "Draft — hidden from your website."}</p>
+    <p>{needsDiscount ? "This bundle is visible, but its discount has not been enabled yet." : bundle.blocked?.length && bundle.products.length - bundle.blocked.length < 2 ? "Hidden on your store. At least two products must be active and published to the Online Store." : bundle.blocked?.length ? "Shown on your store. Draft, archived, or unpublished products are left out." : active ? "Active — add the Bundle offers block to your theme to show it." : "Draft — hidden from your website."}</p>
+    {!!bundle.blocked?.length && <p role="status">{bundle.blocked.join(". ")}.</p>}
     <Link to="/app/extensions">Show on website</Link>
   </div>;
 }
@@ -62,20 +107,21 @@ function BundleIcon() {
 }
 
 export default function Bundles() {
-  const { bundles } = useLoaderData();
+  const { bundles, bundleLimit, planName, maxBundles } = useLoaderData();
   const [params] = useSearchParams();
   const products = new Set(bundles.flatMap(bundle => bundle.products.map(product => product.productId))).size;
 
   return <div className={styles.page}>
     <header className={styles.header}>
       <div><span className={styles.eyebrow}>BETTER TOGETHER</span><h1>Bundles</h1><p>Bring great products together. Create an offer worth coming back for.</p></div>
-      <Link className={styles.primary} to="/app/bundles/new"><span aria-hidden="true">+</span> Create bundle</Link>
+      {bundleLimit ? <Link className={styles.primary} to="/app/pricing">Upgrade plan</Link> : <Link className={styles.primary} to="/app/bundles/new"><span aria-hidden="true">+</span> Create bundle</Link>}
     </header>
     {params.get("updated") === "1" && <Banner tone="success">Bundle updated successfully.</Banner>}
     {params.get("deleted") === "1" && <Banner tone="success">Bundle deleted successfully.</Banner>}
     {params.get("created") === "1" && <Banner tone="success">Bundle created successfully.</Banner>}
 
-    <div className={styles.info}><p>Click Activate bundle below to display it in your theme. <Link to="/app/extensions">Set up your storefront block</Link>. Active bundle discounts apply in the cart and at checkout. After deploying the discount extension, reactivate existing bundles to enable their savings.</p></div>
+    {bundleLimit && <Banner tone="warning">{bundleLimit}</Banner>}
+    <div className={styles.info}><p>{planName ? `${planName} plan${maxBundles == null ? " includes unlimited bundles" : `: ${bundles.length} of ${maxBundles} bundles`}. ` : ""}Click Activate bundle below to display it in your theme. <Link to="/app/extensions">Set up your storefront block</Link>. Active bundle discounts apply in the cart and at checkout. After deploying the discount extension, reactivate existing bundles to enable their savings.</p></div>
 
     <section className={styles.customSetup} aria-labelledby="custom-bundle-heading"><span className={styles.cardIcon}><BundleIcon /></span><div><h2 id="custom-bundle-heading">Customer-created bundles</h2><p>Choose the products customers can mix into their own bundle.</p></div><Link className={styles.edit} to="/app/bundles/custom">Manage products <span aria-hidden="true">→</span></Link></section>
     <section className={styles.collection} aria-labelledby="bundle-collection-title">
@@ -85,7 +131,7 @@ export default function Bundles() {
         <span className={styles.eyebrow}>YOUR FIRST BUNDLE STARTS HERE</span>
         <h2>Great products. Even better together.</h2>
         <p>Pair your favorites, choose a planned discount, and save your next offer as a draft.</p>
-        <Link className={styles.primary} to="/app/bundles/new"><span aria-hidden="true">+</span> Create your first bundle</Link>
+        {bundleLimit ? <Link className={styles.primary} to="/app/pricing">Upgrade plan</Link> : <Link className={styles.primary} to="/app/bundles/new"><span aria-hidden="true">+</span> Create your first bundle</Link>}
         <span className={styles.helper}>Start with two or more products from your store.</span>
       </div> : <div className={styles.grid}>{bundles.map(bundle => <article className={styles.card} key={bundle.id}>
         <div className={styles.cardHeading}><span className={styles.cardIcon}><BundleIcon /></span><div><Link to={`/app/bundles/${bundle.id}`}><h3>{bundle.name}</h3></Link><p>{bundle.products.length} products · Bundle ID: {bundle.id}</p></div><span className={`${styles.badge} ${bundle.status === "ACTIVE" ? styles.activeBadge : ""}`}>{bundle.status === "ACTIVE" ? "Active" : "Draft"}</span></div>

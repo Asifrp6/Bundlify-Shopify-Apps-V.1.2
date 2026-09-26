@@ -1,5 +1,6 @@
 import ProductCategoryFilter from "../components/ProductCategoryFilter";
-import { categoryLabel, filterBundleProducts, selectCategoryProducts } from "../services/product-categories";
+import { capProductSelection, categoryLabel, filterBundleProducts, selectCategoryProducts } from "../services/product-categories";
+import { creationBlocked } from "../services/app-plans";
 import productStyles from "../styles/bundle-editor.module.css";
 import { discountLabel } from "../services/discounts";
 import styles from "../styles/plan-form.module.css";
@@ -34,7 +35,9 @@ import prisma from "../db.server";
 // ==========================
 
 export async function loader({ request }) {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
+  const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
+  const limits = usage;
 
   try {
     const products = await listProducts(admin);
@@ -42,6 +45,9 @@ export async function loader({ request }) {
     return data({
       products,
       error: null,
+      maxOptions: limits?.maxOptions ?? 2,
+      maxProducts: limits?.maxProducts ?? 5,
+      planLimit: creationBlocked(usage, "plan", usage?.plans ?? 0),
     });
   } catch (error) {
     // Authentication recovery responses must reach the router unchanged.
@@ -55,6 +61,9 @@ export async function loader({ request }) {
     return data({
       products: [],
       error: `${failure.message} (${failure.code})`,
+      maxOptions: limits?.maxOptions ?? 2,
+      maxProducts: limits?.maxProducts ?? 5,
+      planLimit: creationBlocked(usage, "plan", usage?.plans ?? 0),
     });
   }
 }
@@ -66,10 +75,15 @@ export async function loader({ request }) {
 export async function action({ request }) {
   // Authentication may throw a redirect; let React Router handle it.
   const { admin, session, redirect } = await authenticate.admin(request);
+  const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
+  if (!usage) throw redirect("/app/pricing");
+  const blocked = creationBlocked(usage, "plan", usage.plans);
+  if (blocked) return data({ error: blocked }, { status: 403 });
+  const limits = usage;
   const form = await request.formData();
   const status = form.get("status") || "ACTIVE";
   if (!["DRAFT", "ACTIVE"].includes(status)) return data({ error: "Choose Draft or Active." }, { status: 400 });
-  const { values, errors } = validatePlan(form);
+  const { values, errors } = validatePlan(form, limits);
   values.status = status;
   if (Object.keys(errors).length) {
     return data({ error: Object.values(errors).join(" ") }, { status: 400 });
@@ -131,7 +145,7 @@ export async function action({ request }) {
 // ==========================
 
 export default function NewSubscription() {
-  const { products, error } = useLoaderData();
+  const { products, error, maxOptions = 2, maxProducts = 5, planLimit } = useLoaderData();
 
   const result = useActionData();
 
@@ -155,7 +169,7 @@ export default function NewSubscription() {
   const changeCategory = (id, checked) => {
     setProductId("SELECTED_PRODUCTS");
     setCategories(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
-    setSelected(current => selectCategoryProducts(products, current, id, checked));
+    setSelected(current => capProductSelection(current, selectCategoryProducts(products, current, id, checked), maxProducts));
   };
   const selectedProduct = products.find((product) => product.id === productId);
   const updateOption = (index, key, value) =>
@@ -189,6 +203,7 @@ export default function NewSubscription() {
         </div>
         <span className={styles.tag}>New plan</span>
       </header>
+      {planLimit && <Banner tone="warning">{planLimit} <Link to="/app/pricing">View plans</Link></Banner>}
       <Form method="post" className={styles.form} aria-busy={submitting}>
         {error && (
           <Banner
@@ -275,11 +290,11 @@ export default function NewSubscription() {
                 <label className={styles.field}>Search products<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
                 <div className={productStyles.list}>
                   {filterBundleProducts(products, search, categories).map(product => <label aria-label={product.title} className={productStyles.product} key={product.id} htmlFor={`subscription-product-${product.id}`}>
-                    <input id={`subscription-product-${product.id}`} type="checkbox" checked={selected.includes(product.id)} disabled={submitting || (!selected.includes(product.id) && selected.length >= 50)} onChange={() => setSelected(current => current.includes(product.id) ? current.filter(id => id !== product.id) : [...current, product.id])} />
+                    <input id={`subscription-product-${product.id}`} type="checkbox" checked={selected.includes(product.id)} disabled={submitting || (!selected.includes(product.id) && selected.length >= maxProducts)} onChange={() => setSelected(current => current.includes(product.id) ? current.filter(id => id !== product.id) : [...current, product.id])} />
                     <span><strong>{product.title}</strong><small className={productStyles.categoryLabel}>{categoryLabel(product)}</small></span>
                   </label>)}
                 </div>
-                <p role="status">{selected.length} products selected (1?50). Products added to these categories later are not included automatically.</p>
+                <p role="status">{selected.length} products selected (1–{maxProducts}). Products added to these categories later are not included automatically.</p>
                 <button type="button" disabled={submitting} onClick={() => { setSelected([]); setCategories([]); }}>Clear selection</button>
               </>}
               <p className={styles.help} id="product-help">
@@ -379,13 +394,13 @@ export default function NewSubscription() {
               <button
                 className={styles.add}
                 type="button"
-                disabled={submitting || options.length >= 5}
+                disabled={submitting || options.length >= maxOptions}
                 onClick={addOption}
               >
                 <span aria-hidden="true">+</span> Add delivery option
               </button>
               <p className={styles.help}>
-                Offer up to 5 frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
+                Offer up to {maxOptions} frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
               </p>
             </section>
           </div>
@@ -443,7 +458,7 @@ export default function NewSubscription() {
             <button
               type="submit"
               className={styles.primary}
-              disabled={submitting || !products.length || !!error || (productId === "SELECTED_PRODUCTS" && (!selected.length || selected.length > 50))}
+              disabled={submitting || !products.length || !!error || (productId === "SELECTED_PRODUCTS" && (!selected.length || selected.length > maxProducts)) || !!planLimit}
             >
               {submitting ? "Saving plan..." : status === "DRAFT" ? "Save subscription draft" : "Create active subscription"}
               <span aria-hidden="true">&rarr;</span>

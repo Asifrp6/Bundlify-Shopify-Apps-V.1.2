@@ -10,6 +10,7 @@
       }
       disconnectedCallback() {
         this.querySelector('[data-custom-dialog]')?.close();
+        this.bundleView?.abort();
         this.controller?.abort();
       }
       async load() {
@@ -32,21 +33,58 @@
           if (!this.isConnected || this.controller !== controller) return;
           const list = this.querySelector("[data-list]");
           list.replaceChildren();
+          list.parentElement?.querySelector("[data-bundle-options]")?.remove();
           // Share requests between bundles in this load, without caching stale prices.
           const productRequests = new Map();
-          for (const bundle of bundles) {
+          const renderBundle = (bundle) => {
+            this.bundleView?.abort();
+            const view = new AbortController();
+            this.bundleView = view;
+            controller.signal.addEventListener("abort", () => view.abort(), { once: true });
             const card = document.createElement("article");
             const title = document.createElement("h3");
             title.textContent = bundle.name;
             card.append(title);
-            list.append(card);
-            this.preparePurchase(
-              card,
-              bundle,
-              root,
-              controller.signal,
-              productRequests,
-            );
+            list.replaceChildren(card);
+            this.preparePurchase(card, bundle, root, view.signal, productRequests);
+          };
+          if (bundles.length) {
+            const options = document.createElement("div");
+            options.className = "bundlify-bundle-options";
+            options.dataset.bundleOptions = "";
+            options.setAttribute("role", "group");
+            options.setAttribute("aria-label", "Choose a bundle");
+            for (const bundle of bundles) {
+              const choice = document.createElement("button");
+              choice.type = "button";
+              choice.className = "bundlify-bundle-option";
+              const count = Array.isArray(bundle.products) ? bundle.products.length : 0;
+              const save = Number.isInteger(bundle.discount) && bundle.discount > 0 ? `Save ${bundle.discount}%` : "";
+              const mark = document.createElement("span");
+              mark.className = "bundlify-bundle-option-mark";
+              mark.setAttribute("aria-hidden", "true");
+              mark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 7.5 12 12 4 7.5 12 3Z"/><path d="M20 7.5V16.5L12 21 4 16.5V7.5"/><path d="M12 12v9"/></svg>';
+              const copy = document.createElement("span");
+              copy.className = "bundlify-bundle-option-copy";
+              const name = document.createElement("strong");
+              name.textContent = bundle.name || "Bundle";
+              const meta = document.createElement("small");
+              meta.textContent = [count ? `${count} product${count === 1 ? "" : "s"}` : "Bundle offer", save].filter(Boolean).join(" · ");
+              copy.append(name, meta);
+              const radio = document.createElement("span");
+              radio.className = "bundlify-bundle-option-radio";
+              radio.setAttribute("aria-hidden", "true");
+              choice.append(mark, copy, radio);
+              choice.setAttribute("aria-pressed", "false");
+              choice.addEventListener("click", () => {
+                if (choice.getAttribute("aria-pressed") === "true") return;
+                for (const node of options.querySelectorAll("button")) node.setAttribute("aria-pressed", "false");
+                choice.setAttribute("aria-pressed", "true");
+                renderBundle(bundle);
+              }, { signal: controller.signal });
+              options.append(choice);
+            }
+            list.before(options);
           }
           this.hidden = false;
           this.querySelector("[data-message]").textContent = bundles.length || hasCustom
@@ -146,6 +184,7 @@
             heading.tabIndex = -1;
             const edit = document.createElement('button');
             edit.type = 'button';
+            edit.className = 'bundlify-edit-action';
             edit.textContent = 'Edit products';
             edit.addEventListener('click', () => toggle.click(), { signal: resultController.signal });
             result.append(heading, edit);
@@ -290,7 +329,7 @@
                   url,
                   fetch(url, {
                     signal: AbortSignal.any([
-                      signal,
+                      this.controller?.signal || signal,
                       AbortSignal.timeout(10000),
                     ]),
                   }).then((response) => {
@@ -305,7 +344,7 @@
               return bundle.custom ? productRequests.get(url).catch(() => null) : productRequests.get(url);
             }),
           );
-          if (signal.aborted || !this.isConnected) return;
+          if (signal.aborted || !card.isConnected || !this.isConnected) return;
           for (const [index, product] of bundle.products.entries()) {
             const details = products[index];
             if (bundle.custom && !details) continue;

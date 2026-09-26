@@ -1,0 +1,217 @@
+.page {
+  max-width: 1120px;
+  min-height: calc(100vh - 96px);
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.intro {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.eyebrow {
+  display: inline-block;
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #3b6fd8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.intro h1 {
+  margin: 0;
+  color: #172033;
+  font-size: 34px;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+.intro p {
+  margin: 0;
+  color: #667085;
+  font-size: 16px;
+  letter-spacing: 0.01em;
+}
+.grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  padding-top: 20px;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 18px 18px;
+  border: 1px solid #e6ebf2;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 10px 30px #17315c0d;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-6px);
+  border-color: #c9d7ee;
+  box-shadow: 0 18px 40px #17315c1f;
+}
+.growth:hover {
+  border-color: #2563eb;
+}
+.free { background: #fff; }
+.starter { background: #f3fbf6; }
+.growth {
+  background: #f4f8ff;
+  border: 2px solid #3b82f6;
+}
+.unlimited { background: #fff8ee; }
+.badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.icon {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.freeIcon { background: #e8f1ff; color: #3b82f6; }
+.starterIcon { background: #e5f6ea; color: #16a34a; }
+.growthIcon { background: #e7f0ff; color: #3b82f6; }
+.unlimitedIcon { background: #fff1d6; color: #f59e0b; }
+.card h2 {
+  margin: 0;
+  text-align: center;
+  color: #172033;
+  font-size: 26px;
+}
+.tagline {
+  margin: -8px 0 0;
+  text-align: center;
+  color: #98a2b3;
+  font-size: 14px;
+}
+.price {
+  margin: 0;
+  text-align: center;
+  color: #172033;
+  font-size: 36px;
+  font-weight: 800;
+}
+.price span {
+  color: #98a2b3;
+  font-size: 16px;
+  font-weight: 600;
+}
+.features {
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
+  border-top: 1px solid #e6ebf2;
+  display: grid;
+  gap: 10px;
+}
+.features li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #344054;
+  font-size: 14px;
+}
+.features li span {
+  font-weight: 800;
+}
+.free .features li span { color: #3b82f6; }
+.starter .features li span { color: #16a34a; }
+.growth .features li span { color: #3b82f6; }
+.unlimited .features li span { color: #f59e0b; }
+.button {
+  margin-top: auto;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px #17315c24;
+}
+.freeButton {
+  background: #fff;
+  color: #3b82f6;
+  border: 1.5px solid #93c5fd;
+}
+.freeButton:not(:disabled):hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+.starterButton {
+  background: #16a34a;
+  color: #fff;
+  border: 0;
+}
+.starterButton:not(:disabled):hover {
+  background: #15803d;
+}
+.growthButton {
+  background: #2563eb;
+  color: #fff;
+  border: 0;
+}
+.growthButton:not(:disabled):hover {
+  background: #1d4ed8;
+}
+.unlimitedButton {
+  background: #f59e0b;
+  color: #fff;
+  border: 0;
+}
+.unlimitedButton:not(:disabled):hover {
+  background: #d97706;
+}
+.current {
+  background: #eef2f6;
+  color: #475467;
+  border: 0;
+}
+.message {
+  width: 100%;
+  margin: 0 0 16px;
+}
+@media (max-width: 980px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+  .intro h1 { font-size: 28px; }
+}

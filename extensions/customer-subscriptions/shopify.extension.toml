@@ -1,0 +1,15 @@
+api_version = "2025-10"
+
+[[extensions]]
+name = "t:name"
+handle = "customer-subscriptions"
+type = "ui_extension"
+uid = "3f8c1a20-7b14-4e2a-9c55-1d6e8a0b4f21"
+
+[[extensions.targeting]]
+module = "./src/SubscriptionsPage.jsx"
+target = "customer-account.page.render"
+
+[extensions.capabilities]
+api_access = true
+network_access = true

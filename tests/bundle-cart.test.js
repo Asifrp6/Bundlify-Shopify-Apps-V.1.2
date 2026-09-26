@@ -54,6 +54,11 @@ async function fixture(t, { unavailable = false, fail = false, drawer = false, b
   w.eval(source);
   await new Promise(resolve => setTimeout(resolve, 20));
   const widget = w.document.querySelector('bundlify-bundles');
+  const choice = widget.querySelector('[data-bundle-options] button');
+  if (choice) {
+    choice.click();
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
   let destination;
   if (!drawer) widget.openCart = url => { destination = url; };
   return { widget, posts, destination: () => destination, rendered: () => rendered };
@@ -188,7 +193,7 @@ test('bundle mode buttons preserve custom selections and display the owner disco
 test('bundle button adds selected variants together once and opens localized cart', async t => {
   const { widget, posts, destination } = await fixture(t);
   widget.querySelector('select').value = '11';
-  const button = widget.querySelector('button');
+  const button = widget.querySelector('.bundlify-purchase-action');
   button.click(); button.click();
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(posts.length, 1);
@@ -200,7 +205,7 @@ test('bundle button adds selected variants together once and opens localized car
 });
 test('unavailable products prevent bundle purchase', async t => {
   const { widget, posts } = await fixture(t, { unavailable: true });
-  assert.equal(widget.querySelector('button').disabled, true);
+  assert.equal(widget.querySelector('.bundlify-purchase-action').disabled, true);
   assert.match(widget.textContent, /unavailable/);
   assert.equal(posts.length, 0);
 });
@@ -222,16 +227,16 @@ test('product images, original prices, sale prices and totals follow variant sel
 });
 test('cart failure displays Shopify error and allows retry without claiming success', async t => {
   const { widget, destination } = await fixture(t, { fail: true });
-  widget.querySelector('button').click();
+  widget.querySelector('.bundlify-purchase-action').click();
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.match(widget.textContent, /Not enough inventory/);
-  assert.equal(widget.querySelector('button').disabled, false);
+  assert.equal(widget.querySelector('.bundlify-purchase-action').disabled, false);
   assert.equal(destination(), undefined);
 });
 
 test('bundle add refreshes the theme drawer using Shopify sections', async t => {
   const { widget, posts, rendered } = await fixture(t, { drawer: true });
-  widget.querySelector('button').click();
+  widget.querySelector('.bundlify-purchase-action').click();
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(posts[0].body.sections, ['cart-drawer', 'cart-icon-bubble']);
   assert.equal(posts[0].body.sections_url, '/fr/products/a');
@@ -241,11 +246,11 @@ test('bundle add refreshes the theme drawer using Shopify sections', async t => 
 
 test('drawer rendering failure does not add the items again or report a cart-write failure', async t => {
   const { widget, posts } = await fixture(t, { drawer: true, brokenDrawer: true });
-  widget.querySelector('button').click();
+  widget.querySelector('.bundlify-purchase-action').click();
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(posts.length, 1);
   assert.match(widget.textContent, /Bundle added. Open your cart/);
-  assert.equal(widget.querySelector('button').disabled, false);
+  assert.equal(widget.querySelector('.bundlify-purchase-action').disabled, false);
 });
 
 test('products load concurrently and shared bundle products are fetched only once', async t => {
@@ -261,7 +266,7 @@ test('products load concurrently and shared bundle products are fetched only onc
   const gate = new Promise(resolve => { release = resolve; });
   const bundle = { id: '7', name: 'Pair', discount: 10, products: [{ handle: 'a' }, { handle: 'b' }] };
   w.fetch = async url => {
-    if (String(url).includes('/apps/')) return Response.json({ bundles: [bundle, { ...bundle, id: '8' }] });
+    if (String(url).includes('/apps/')) return Response.json({ bundles: [bundle, { ...bundle, id: '8', name: 'Second' }] });
     requests.push(url);
     await gate;
     return Response.json({ title: 'Product', featured_image: 'https://cdn.shopify.com/product.jpg',
@@ -269,12 +274,23 @@ test('products load concurrently and shared bundle products are fetched only onc
   };
   w.eval(source);
   await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(requests.length, 0);
+  assert.equal(w.document.querySelectorAll('[data-bundle-options] button').length, 2);
+  w.document.querySelector('[data-bundle-options] button').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
   // Both requests must start before either resolves, even with overlapping bundles.
   assert.deepEqual(requests, ['/products/a.js', '/products/b.js']);
   assert.equal(w.document.querySelectorAll('.bundlify-product').length, 0);
   release();
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(w.document.querySelectorAll('.bundlify-product').length, 4);
+  assert.equal(w.document.querySelector('[data-list] h3').textContent, 'Pair');
+  assert.equal(w.document.querySelectorAll('.bundlify-product').length, 2);
+  w.document.querySelectorAll('[data-bundle-options] button')[1].click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(requests, ['/products/a.js', '/products/b.js']);
+  assert.equal(w.document.querySelector('[data-list] h3').textContent, 'Second');
+  assert.equal(w.document.querySelector('[data-bundle-options] button[aria-pressed="true"] strong').textContent, 'Second');
+  assert.equal(w.document.querySelectorAll('.bundlify-product').length, 2);
   for (const img of w.document.querySelectorAll('.bundlify-product img')) {
     assert.equal(img.hidden, false);
     assert.equal(img.getAttribute('src'), 'https://cdn.shopify.com/product.jpg');

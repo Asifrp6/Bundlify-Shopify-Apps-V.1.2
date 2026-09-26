@@ -1,4 +1,5 @@
 import { discountLabel } from "../services/discounts";
+import { creationBlocked } from "../services/app-plans";
 import { useState } from "react";
 import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
 import { setSubscriptionStatus } from "../services/subscription-status.server";
@@ -10,19 +11,32 @@ import styles from "../styles/subscriptions.module.css";
 
 export async function loader({ request }) {
   let session;
+  let admin;
   try {
-    ({ session } = await authenticate.admin(request));
+    ({ session, admin } = await authenticate.admin(request));
   } catch (error) {
     reportRouteFailure(error, "subscription-list authentication");
     throw error;
   }
   try {
+    const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
+    const subscriptions = await prisma.subscriptionPlan.findMany({
+      where: { shop: session.shop },
+      orderBy: { createdAt: "desc" },
+      include: { deliveryOptions: true },
+    });
+    let contracts = [];
+    try {
+      contracts = await (await import("../services/subscription-portal.server")).listSubscriberContracts(admin, session.shop);
+    } catch {
+      contracts = [];
+    }
     return {
-      subscriptions: await prisma.subscriptionPlan.findMany({
-        where: { shop: session.shop },
-        orderBy: { createdAt: "desc" },
-        include: { deliveryOptions: true },
-      }),
+      subscriptions,
+      contracts,
+      planLimit: creationBlocked(usage, "plan", usage?.plans ?? subscriptions.length),
+      planName: usage?.name || null,
+      maxPlans: usage?.maxPlans ?? null,
     };
   } catch (error) {
     reportRouteFailure(error, "subscription-list database");
@@ -31,7 +45,8 @@ export async function loader({ request }) {
 }
 
 export async function action({ request }) {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin, session, redirect } = await authenticate.admin(request);
+  if (!await (await import("../services/app-billing.server")).shopLimits(session.shop)) throw redirect("/app/pricing");
   const form = await request.formData();
   const id = Number(form.get("planId"));
   const status = form.get("status");
@@ -67,7 +82,7 @@ function PlanSymbol() {
 const statusOf = plan => plan.status === "ACTIVE" && plan.sellingPlanGroupId ? "active" : plan.status === "PENDING" ? "review" : "draft";
 
 export default function Subscriptions() {
-  const { subscriptions } = useLoaderData();
+  const { subscriptions, contracts, planLimit, planName, maxPlans } = useLoaderData();
   const [params] = useSearchParams();
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
@@ -79,16 +94,35 @@ export default function Subscriptions() {
   return <div className={styles.page}>
     <header className={styles.header}>
       <div><span className={styles.eyebrow}>RECURRING PURCHASES</span><h1>Subscription plans</h1><p>Thoughtful plans. More reasons for customers to come back.</p></div>
-      <Link className={styles.primaryButton} to="/app/subscriptions/new"><span aria-hidden="true">+</span> Create subscription</Link>
+      {planLimit ? <Link className={styles.primaryButton} to="/app/pricing">Upgrade plan</Link> : <Link className={styles.primaryButton} to="/app/subscriptions/new"><span aria-hidden="true">+</span> Create subscription</Link>}
     </header>
     {params.get("created") === "1" && <Banner tone="success">Subscription plan saved successfully.</Banner>}
     {params.get("updated") === "1" && <Banner tone="success">Subscription plan updated successfully.</Banner>}
     {params.get("deleted") === "1" && <Banner tone="success">Subscription plan deleted successfully.</Banner>}
+    {planLimit && <Banner tone="warning">{planLimit}</Banner>}
+    {planName && <p>{maxPlans == null ? `${planName} plan includes unlimited subscription plans.` : `${planName} plan: ${subscriptions.length} of ${maxPlans} subscription plans.`}</p>}
 
     <section className={styles.stats} aria-label="Plan overview">
       <div className={styles.stat}><div className={styles.statTop}><span>Total plans</span><span className={styles.miniIcon}><PlanSymbol /></span></div><strong>{subscriptions.length}</strong><p>Your subscription collection</p></div>
       <div className={`${styles.stat} ${styles.activeStat}`}><div className={styles.statTop}><span>Active plans</span><span className={styles.liveDot} aria-hidden="true" /></div><strong>{activeCount}</strong><p>Available for recurring purchases</p></div>
       <div className={styles.stat}><div className={styles.statTop}><span>Needs review</span><span className={styles.reviewIcon} aria-hidden="true">!</span></div><strong>{reviewCount}</strong><p>{reviewCount ? "Check interrupted plan creation" : "No plans waiting for review"}</p></div>
+    </section>
+
+    <section className={styles.collection} aria-label="Subscriber contracts">
+      <div className={styles.collectionHeading}><div><h2>Subscribers <span>{contracts.length}</span></h2><p>Each purchase links to the customer and the Shopify order.</p></div></div>
+      <div className={styles.cards}>
+        {contracts.length ? contracts.map(contract => <article key={contract.id} className={styles.planCard}>
+          <div className={styles.planHeading}><div className={styles.planTitle}><h3>{contract.customerName}</h3><p>{contract.frequency} · {contract.status}</p></div></div>
+          <p className={styles.notice}>{contract.lines.map(line => `${line.quantity} × ${line.title}${line.amount ? ` · ${line.amount} ${line.currencyCode}` : ""}`).join(", ") || "No products on this contract."}{contract.nextBillingDate ? ` Next charge ${new Date(contract.nextBillingDate).toLocaleDateString()}.` : ""}</p>
+          <footer className={styles.cardFooter}>
+            <span>{contract.orderName || "No order yet"}</span>
+            <div>
+              {contract.customerUrl && <a className={styles.editButton} href={contract.customerUrl} target="_top">Customer</a>}
+              {contract.orderUrl && <a className={styles.editButton} href={contract.orderUrl} target="_top">{contract.orderName || "Order"}</a>}
+            </div>
+          </footer>
+        </article>) : <p className={styles.notice}>No subscription purchases yet. New contracts appear here after a customer subscribes.</p>}
+      </div>
     </section>
 
     <section className={styles.collection} aria-label="Your subscription plans">
@@ -110,7 +144,7 @@ export default function Subscriptions() {
             <footer className={styles.cardFooter}><span>{options.length} delivery {options.length === 1 ? "option" : "options"}</span><div><Link className={styles.editButton} to={`/app/subscriptions/${plan.id}`} aria-label={`Edit ${plan.name}`}>Edit plan <span aria-hidden="true">?</span></Link><Link className={styles.deleteButton} to={`/app/subscriptions/${plan.id}#delete-plan`} aria-label={`Delete ${plan.name}`} title="Delete plan"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/></svg></Link></div></footer>
           </article>;
         })}
-        {!filtered.length && <div className={styles.empty}><span className={styles.productIcon}><PlanSymbol /></span><h3>{subscriptions.length ? "No matching plans" : "Start something recurring"}</h3><p>{subscriptions.length ? "Try another search or status to find your plan." : "Create your first subscription plan and give customers a reason to return."}</p>{subscriptions.length ? <button className={styles.editButton} onClick={() => {setQuery("");setFilter("all");}}>Clear filters</button> : <Link className={styles.primaryButton} to="/app/subscriptions/new">Create your first plan</Link>}</div>}
+        {!filtered.length && <div className={styles.empty}><span className={styles.productIcon}><PlanSymbol /></span><h3>{subscriptions.length ? "No matching plans" : "Start something recurring"}</h3><p>{subscriptions.length ? "Try another search or status to find your plan." : "Create your first subscription plan and give customers a reason to return."}</p>{subscriptions.length ? <button className={styles.editButton} onClick={() => {setQuery("");setFilter("all");}}>Clear filters</button> : planLimit ? <Link className={styles.primaryButton} to="/app/pricing">Upgrade plan</Link> : <Link className={styles.primaryButton} to="/app/subscriptions/new">Create your first plan</Link>}</div>}
       </div>
       <div className={styles.collectionFooter} role="status">Showing {filtered.length} of {subscriptions.length} plans</div>
     </section>

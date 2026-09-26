@@ -7,12 +7,27 @@ import { addDocumentResponseHeaders } from "./shopify.server";
 
 export const streamTimeout = 5000;
 
+function httpsRedirect(request) {
+  if (process.env.NODE_ENV !== "production") return null;
+  if (request.headers.get("x-forwarded-proto") !== "http") return null;
+  const url = new URL(request.url);
+  url.protocol = "https:";
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (host) url.host = host.split(",")[0].trim();
+  return new Response(null, {
+    status: 308,
+    headers: { Location: url.toString(), "Cache-Control": "no-store" },
+  });
+}
+
 export default async function handleRequest(
   request,
   responseStatusCode,
   responseHeaders,
   reactRouterContext,
 ) {
+  const redirected = httpsRedirect(request);
+  if (redirected) return redirected;
   addDocumentResponseHeaders(request, responseHeaders);
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";

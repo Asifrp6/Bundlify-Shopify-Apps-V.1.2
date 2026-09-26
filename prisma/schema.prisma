@@ -89,6 +89,14 @@ model Bundle {
   @@index([shop, createdAt])
 }
 
+model ShopPlan {
+  shop           String   @id
+  handle         String
+  subscriptionId String?
+  status         String   @default("active")
+  updatedAt      DateTime @updatedAt
+}
+
 model BundleProduct {
   id           Int    @id @default(autoincrement())
   bundleId     Int

@@ -45,7 +45,7 @@
 .products li:last-child { border:0; }
 .productMark { display:grid; place-items:center; width:24px; height:24px; flex-shrink:0; background:#edf5ef; border-radius:7px; color:#347651; font-size:12px; }
 .summary>.description { padding-top:16px; border-top:1px solid #e7ede8; font-size:11px; }
-.apply { display:block; width:100%; min-height:46px; padding:12px 16px; border:1px solid #285c43; border-radius:10px; background:#285c43; color:#fff; font:inherit; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 3px 8px #234e3814; }
+.apply { display:flex; align-items:center; justify-content:center; width:100%; min-height:44px; padding:12px 16px; border:1px solid #285c43; border-radius:10px; background:#285c43; color:#fff; font:inherit; font-size:14px; font-weight:600; line-height:1.2; cursor:pointer; box-shadow:0 3px 8px #234e3814; }
 .apply:hover:not(:disabled) { background:#1d4933; }
 .back { display:block; width:100%; margin-top:8px; min-height:40px; padding:10px; background:transparent; border:0; border-radius:8px; color:#526e5c; font:inherit; font-size:12px; cursor:pointer; }
 .back:hover:not(:disabled) { background:#f4f7f4; }

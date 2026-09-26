@@ -1,0 +1,10 @@
+{
+  "name": "product-plans",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@preact/signals": "^2.3.0",
+    "@shopify/ui-extensions": "2025.10.11",
+    "preact": "^10.26.0"
+  }
+}

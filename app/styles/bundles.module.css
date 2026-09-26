@@ -3,7 +3,8 @@
 .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 1.7px; color: #617c69; }
 .header h1 { margin: 7px 0 8px; font-size: 28px; font-weight: 650; letter-spacing: -1px; line-height: 1.2; }
 .header p { max-width: 620px; margin: 0; color: #687c70; font-size: 14px; }
-.primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; padding: 10px 16px; min-height: 40px; background: #285c43; color: #fff; border: 1px solid #285c43; border-radius: 9px; font-size: 14px; font-weight: 550; text-decoration: none; box-shadow: 0 3px 7px #234c4217; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 16px; }
+.primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; padding: 10px 16px; min-height: 44px; background: #285c43; color: #fff; border: 1px solid #285c43; border-radius: 9px; font-size: 14px; font-weight: 600; line-height: 1.2; text-decoration: none; box-shadow: 0 3px 7px #234c4217; cursor: pointer; }
 .primary:hover { background: #1c4833; }
 .primary > span { font-size: 18px; font-weight: 400; }
 .info { display: flex; gap: 13px; align-items: flex-start; padding: 17px 20px; border: 1px solid #dce7de; border-radius: 10px; background: #eff5ee; }
@@ -50,8 +51,8 @@
 .label { font-size: 11px; letter-spacing: 1px; font-weight: 600; color: #768873; }
 .productList ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .productList li { padding: 5px 9px; border: 1px solid #e7ece3; border-radius: 6px; font-size: 12px; color: #52634e; overflow-wrap: anywhere; max-width: 100%; }
-.cardFooter { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid #edf1e9; }
-.edit { padding: 7px 12px; border: 1px solid #dce5d5; border-radius: 7px; font-size: 13px; font-weight: 550; color: #3e6240; text-decoration: none; }
+.cardFooter { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid #edf1e9; }
+.edit { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border: 1px solid #dce5d5; border-radius: 7px; font-size: 13px; font-weight: 550; line-height: 1.2; color: #3e6240; text-decoration: none; }
 .edit span { margin-left: 10px; }
 .edit:hover { background: #f0f5eb; }
 .delete { font-size: 13px; color: #866b64; text-decoration: none; padding: 7px; }
@@ -66,7 +67,8 @@
 
 .activation { padding: 0 20px 20px; }
 .activation p { font-size: 13px; margin: 10px 0; }
-.activation button { cursor:pointer; font-size:13px; font-weight:500; width:100%; }
+.activation form { margin: 0; }
+.activation button { cursor: pointer; width: 100%; }
 .activation button:disabled { opacity:.6; cursor:wait; }
 
 /* Compact setup panel and consistent action hierarchy. */

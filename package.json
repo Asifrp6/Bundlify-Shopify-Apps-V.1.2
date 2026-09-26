@@ -17,7 +17,7 @@
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
-    "typecheck": "react-router typegen && tsc --noEmit && tsc --noEmit -p extensions/bundlify/tsconfig.json && tsc --noEmit -p extensions/admin-block/tsconfig.json",
+    "typecheck": "react-router typegen && tsc --noEmit",
     "test": "node --test tests/*.test.js",
     "billing:worker": "node scripts/billing-worker.mjs"
   },
