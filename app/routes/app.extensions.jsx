@@ -11,7 +11,7 @@ function themeBlock(shop, handle) {
 export async function loader({ request }) {
   const { session } = await authenticate.admin(request);
   return {
-    bundles: themeBlock(session.shop, "star_rating"),
+    bundles: themeBlock(session.shop, "bundle_selection"),
     subscriptions: themeBlock(session.shop, "subscription_selector"),
   };
 }
