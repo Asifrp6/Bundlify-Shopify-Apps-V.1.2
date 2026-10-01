@@ -7,11 +7,12 @@ export default async () => {
 };
 
 function Extension() {
-  const [show, setShow] = useState(false);
+  const subscriptionLine = (shopify.lines?.value || []).some((line) => line.merchandise?.sellingPlan);
+  const [show, setShow] = useState(subscriptionLine);
 
   useEffect(() => {
     const orderId = shopify.order?.value?.id;
-    if (!orderId) return;
+    if (subscriptionLine || !orderId) return;
     fetch("shopify://customer-account/api/2026-07/graphql.json", {
       method: "POST",
       headers: {"Content-Type": "application/json"},

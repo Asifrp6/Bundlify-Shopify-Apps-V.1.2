@@ -1,5 +1,12 @@
-export const categoryLabel = product => product.missing ? "Unavailable product" : product.category?.fullName || "Uncategorized";
-const categoryKey = product => product.missing ? "unavailable" : product.category?.id || "uncategorized";
+// Products without a Shopify taxonomy category fall back to the merchant's product type.
+const productType = product => product.productType?.trim() || "";
+export const categoryLabel = product => product.missing ? "Unavailable product" : product.category?.fullName || productType(product) || "Uncategorized";
+const categoryKey = product => {
+  if (product.missing) return "unavailable";
+  if (product.category?.id) return product.category.id;
+  const type = productType(product);
+  return type ? `type:${type.toLowerCase()}` : "uncategorized";
+};
 
 export function productCategories(products) {
   const categories = new Map();

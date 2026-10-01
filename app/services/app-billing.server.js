@@ -1,5 +1,5 @@
 import prisma from "../db.server";
-import { limitsFor, planByHandle, planFromSubscriptionName, plans } from "./app-plans.js";
+import { APP_NAME, limitsFor, planByHandle, planFromSubscriptionName, plans } from "./app-plans.js";
 
 export const CURRENT_SUBSCRIPTIONS = `#graphql
   query CurrentAppSubscriptions {
@@ -32,18 +32,23 @@ async function shopify(admin, document, variables) {
 }
 
 export async function syncShopPlan(admin, shop) {
-  const data = await shopify(admin, CURRENT_SUBSCRIPTIONS);
+  const [data, local] = await Promise.all([
+    shopify(admin, CURRENT_SUBSCRIPTIONS),
+    prisma.shopPlan.findUnique({ where: { shop } }),
+  ]);
   const active = data?.currentAppInstallation?.activeSubscriptions || [];
   const match = active.map((subscription) => ({ subscription, plan: planFromSubscriptionName(subscription.name) })).find((item) => item.plan);
   if (match) {
-    await prisma.shopPlan.upsert({
-      where: { shop },
-      create: { shop, handle: match.plan.handle, subscriptionId: match.subscription.id, status: "active" },
-      update: { handle: match.plan.handle, subscriptionId: match.subscription.id, status: "active" },
-    });
+    const current = local?.status === "active" && local.handle === match.plan.handle && local.subscriptionId === match.subscription.id;
+    if (!current) {
+      await prisma.shopPlan.upsert({
+        where: { shop },
+        create: { shop, handle: match.plan.handle, subscriptionId: match.subscription.id, status: "active" },
+        update: { handle: match.plan.handle, subscriptionId: match.subscription.id, status: "active" },
+      });
+    }
     return match.plan.handle;
   }
-  const local = await prisma.shopPlan.findUnique({ where: { shop } });
   if (local?.status === "active" && local.handle !== "free" && local.subscriptionId) {
     await prisma.shopPlan.update({ where: { shop }, data: { status: "inactive", subscriptionId: null } });
     return null;
@@ -53,7 +58,7 @@ export async function syncShopPlan(admin, shop) {
 
 export async function chooseShopPlan({ admin, shop, handle, returnUrl, test }) {
   const plan = planByHandle(handle);
-  if (!plan) throw new Error("Choose a Bundlify plan.");
+  if (!plan) throw new Error(`Choose a ${APP_NAME} plan.`);
   const local = await prisma.shopPlan.findUnique({ where: { shop } });
   if (plan.price === 0) {
     if (local?.subscriptionId && local.status === "active" && local.handle !== "free") {
@@ -71,7 +76,7 @@ export async function chooseShopPlan({ admin, shop, handle, returnUrl, test }) {
     return { handle: "free" };
   }
   const created = await shopify(admin, CREATE_SUBSCRIPTION, {
-    name: `Bundlify ${plan.name}`,
+    name: `${APP_NAME} ${plan.name}`,
     returnUrl,
     test,
     replacementBehavior: "APPLY_IMMEDIATELY",
@@ -82,6 +87,11 @@ export async function chooseShopPlan({ admin, shop, handle, returnUrl, test }) {
     throw new Error(payload?.userErrors?.map((error) => error.message).filter(Boolean).join(" ") || "Shopify did not start the plan charge.");
   }
   return { confirmationUrl: payload.confirmationUrl };
+}
+
+export async function activeSubscriptionId(shop) {
+  const local = await prisma.shopPlan.findUnique({ where: { shop } });
+  return local?.status === "active" ? local.subscriptionId : null;
 }
 
 export function billingTestMode() {

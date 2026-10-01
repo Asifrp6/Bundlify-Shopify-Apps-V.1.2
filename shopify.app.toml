@@ -3,11 +3,11 @@
 client_id = "597fad9e0520214bdfa371cb2953e5df"
 application_url = "https://bundlify.imranwebstudio.me"
 embedded = true
-name = "Bundlify"
+name = "Bundle Base"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_discounts,write_app_proxy,write_products,read_own_subscription_contracts,write_own_subscription_contracts,write_customers"
+scopes = "write_discounts,write_app_proxy,write_products,read_publications,write_publications,read_own_subscription_contracts,write_own_subscription_contracts,write_customers,read_customer_payment_methods"
 # The selected Shopify app must have approved subscription API access.
 
 [webhooks]
@@ -24,6 +24,10 @@ api_version = "2026-07"
   [[webhooks.subscriptions]]
   uri = "/webhooks/app/scopes_update"
   topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/subscription_contracts/create"
+  topics = [ "subscription_contracts/create" ]
 
 [auth]
 redirect_urls = [ "https://bundlify.imranwebstudio.me/auth/callback" ]

@@ -35,14 +35,14 @@ export default function Extensions() {
       <a href={bundles} target="_top" className={styles.primary}>Add bundle block</a>
       <a href={subscriptions} target="_top" className={styles.primary}>Add subscription block</a>
     </div>
-    <p>Active bundles appear for products that are active and published to the Online Store. A bundle stays visible when at least two of its products are published. Turn on “Only show bundles containing this product” in the block settings for product-specific offers.</p>
+    <p>Active bundles appear for products that are active and published to the Online Store. A bundle stays visible when at least two of its products are published. On a product page, the block shows only active bundles that include that product.</p>
     <p>An active bundle discount is applied automatically at checkout.</p>
     <section className={styles.collection}>
       <div className={styles.collectionHeader}><div><h2>Customer accounts</h2><p>Buyers manage subscriptions from the same login as their orders.</p></div></div>
       <ol>
         <li>In the checkout and accounts editor, add the Subscriptions page, the order status block, and the profile block.</li>
-        <li>Order confirmation emails open the order status page, where Manage subscription links to that page.</li>
-        <li>On the product page in Shopify admin, pin Bundlify subscriptions to create a plan for selected variants.</li>
+        <li>The order confirmation email links to the order status page. On orders that include a subscription, the order status block shows Manage subscription, which opens the Subscriptions page after the buyer signs in.</li>
+        <li>On the product page in Shopify admin, pin Bundle Base subscriptions to create a plan for selected variants.</li>
       </ol>
     </section>
   </div>;

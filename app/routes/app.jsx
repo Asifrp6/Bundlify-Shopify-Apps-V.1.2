@@ -51,6 +51,16 @@ export const loader = async ({ request }) => {
   }
 };
 
+// The plan check calls Shopify's billing API. Re-run it after mutations, billing
+// returns, and when leaving Pricing (where shops without a plan are held), not on
+// every in-app navigation.
+export const shouldRevalidate = ({ currentUrl, nextUrl, formMethod, defaultShouldRevalidate }) => {
+  if (formMethod && formMethod !== "GET") return defaultShouldRevalidate;
+  if (nextUrl.searchParams.has("charge_id")) return true;
+  if (currentUrl.pathname === "/app/pricing" && nextUrl.pathname !== "/app/pricing") return true;
+  return false;
+};
+
 // ==========================
 // APP LAYOUT
 // ==========================
@@ -86,13 +96,13 @@ export default function App() {
     <AppProvider embedded apiKey={apiKey}>
       <header className={styles.header}>
         <div className={styles.inner}>
-          <Link to="/app" className={styles.brand} aria-label="Bundlify home">
+          <Link to="/app" className={styles.brand} aria-label="Bundle Base home">
             <span className={styles.logo}>
-              <img src="/bundlify-icon.png?v=3" alt="" width="637" height="637" />
+              <img src="/bundle-base-mark.png" alt="" width="512" height="512" />
             </span>
             <span className={styles.brandCopy}>
-              <strong>Bundlify</strong>
-              <span>Bundles &amp; subscriptions</span>
+              <strong>Bundle <span>Base</span></strong>
+              <span>Smart Bundle &amp; subscriptions</span>
             </span>
           </Link>
           <nav className={styles.navigation} aria-label="Main navigation">

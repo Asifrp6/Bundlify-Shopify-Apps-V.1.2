@@ -64,7 +64,7 @@ function Extension() {
   if (!productId) return <s-text>Open a product to manage its subscription.</s-text>;
 
   return (
-    <s-admin-block heading="Bundlify subscriptions">
+    <s-admin-block heading="Bundle Base subscriptions">
       <s-stack direction="block" gap="base">
         {message ? <s-banner tone="info">{message}</s-banner> : null}
         <s-text type="strong">Variants on the new plan</s-text>

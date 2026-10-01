@@ -61,7 +61,7 @@ export default function Dashboard() {
           <span className={styles.eyebrow}>YOUR STORE, AT A GLANCE</span>
           <h1>Dashboard</h1>
         </div>
-        <span className={styles.workspace}>Bundlify workspace</span>
+        <span className={styles.workspace}>Bundle Base workspace</span>
       </header>
       <section className={styles.hero} aria-labelledby="welcome-title">
         <div className={styles.heroCopy}>
@@ -72,7 +72,7 @@ export default function Dashboard() {
             Lasting connections.
           </h2>
           <p>
-            Welcome to Bundlify. Bring products together and give customers more
+            Welcome to Bundle Base. Bring products together and give customers more
             reasons to come back.
           </p>
           <div className={styles.heroActions}>
@@ -81,7 +81,7 @@ export default function Dashboard() {
               <span aria-hidden="true">+</span> Create subscription
             </Link>
             <Link className={styles.secondary} to="/app/bundles/new">
-              Create bundle <span aria-hidden="true">?</span>
+              Create bundle <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function Dashboard() {
           <div className={styles.artRepeat}>
             <RepeatSymbol />
           </div>
-          <span className={styles.spark}>?</span>
+          <span className={styles.spark}>✦</span>
           <span className={styles.dot} />
         </div>
       </section>
@@ -111,7 +111,7 @@ export default function Dashboard() {
                 <PackageSymbol />
               </span>
               <span className={styles.arrow} aria-hidden="true">
-                ?
+                →
               </span>
             </div>
             <strong>{counts.bundles}</strong>
@@ -124,7 +124,7 @@ export default function Dashboard() {
                 <RepeatSymbol />
               </span>
               <span className={styles.arrow} aria-hidden="true">
-                ?
+                →
               </span>
             </div>
             <strong>{counts.subscriptions}</strong>
@@ -174,7 +174,7 @@ export default function Dashboard() {
               <h3>Manage subscriptions</h3>
               <p>Fine-tune delivery schedules and subscriber savings.</p>
               <span className={styles.actionLink}>
-                View subscription plans <span aria-hidden="true">?</span>
+                View subscription plans <span aria-hidden="true">→</span>
               </span>
             </div>
           </Link>
@@ -187,7 +187,7 @@ export default function Dashboard() {
               <h3>Explore your bundles</h3>
               <p>Organize product combinations and plan your next offer.</p>
               <span className={styles.actionLink}>
-                View bundles <span aria-hidden="true">?</span>
+                View bundles <span aria-hidden="true">→</span>
               </span>
             </div>
           </Link>

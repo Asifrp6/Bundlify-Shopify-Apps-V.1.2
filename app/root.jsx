@@ -17,7 +17,10 @@ import pricingCss from "./styles/pricing.module.css?inline";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
-  { rel: "icon", type: "image/png", href: "/bundlify-icon.png?v=3" },
+  { rel: "icon", href: "/favicon.ico", sizes: "any" },
+  { rel: "icon", type: "image/png", sizes: "32x32", href: "/bundle-base-icon-32.png" },
+  { rel: "icon", type: "image/png", sizes: "192x192", href: "/bundle-base-icon-192.png" },
+  { rel: "apple-touch-icon", href: "/bundle-base-apple-touch-icon.png" },
 ];
 
 export const loader = () => ({ apiKey: process.env.SHOPIFY_API_KEY || "" });
@@ -29,6 +32,7 @@ export default function App() {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="theme-color" content="#0a6ff0" />
         <meta name="shopify-api-key" content={apiKey} />
         <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 

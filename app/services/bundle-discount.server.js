@@ -23,7 +23,7 @@ export async function removeBundleDiscount(admin, bundle) {
 export async function createBundleDiscount(admin, bundle) {
   if (!bundle.discount) return null;
   const result = await (await admin.graphql(CREATE_DISCOUNT, { variables: { input: {
-    title: `Bundlify: ${String(bundle.name).slice(0, 160)} (${randomUUID()})`,
+    title: `Bundle Base: ${String(bundle.name).slice(0, 160)} (${randomUUID()})`,
     functionHandle: "bundlify-bundle-discount",
     discountClasses: ["PRODUCT"],
     startsAt: new Date().toISOString(),

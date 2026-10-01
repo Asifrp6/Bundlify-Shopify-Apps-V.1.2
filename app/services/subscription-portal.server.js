@@ -7,6 +7,7 @@ query BundlifySubscriberContracts($after: String) {
       nextBillingDate
       customer { id displayName }
       deliveryPolicy { interval intervalCount }
+      billingPolicy { maxCycles }
       lines(first: 8) { nodes { title quantity currentPrice { amount currencyCode } } }
       orders(first: 1, reverse: true) { nodes { id name } }
     }
@@ -40,6 +41,7 @@ export function presentContract(shop, contract) {
   const order = contract.orders?.nodes?.[0];
   const every = contract.deliveryPolicy?.intervalCount;
   const interval = String(contract.deliveryPolicy?.interval || "").toLowerCase();
+  const maxCycles = contract.billingPolicy?.maxCycles;
   return {
     id: contract.id,
     status: contract.status,
@@ -49,6 +51,7 @@ export function presentContract(shop, contract) {
     orderName: order?.name || null,
     orderUrl: adminLink(shop, "orders", order?.id),
     frequency: every && interval ? `Every ${every} ${interval}${every === 1 ? "" : "s"}`.replace("Every 1 ", "Every ") : "Scheduled delivery",
+    cycleLimit: maxCycles ? `${maxCycles} ${maxCycles === 1 ? "order" : "orders"} total` : "Unlimited",
     lines: (contract.lines?.nodes || []).map(line => ({
       title: line.title,
       quantity: line.quantity,

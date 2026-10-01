@@ -3,10 +3,20 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
 const source = await readFile(new URL('../extensions/buendly-extation/assets/bundlify-bundles.js', import.meta.url), 'utf8');
-async function fixture(t, { unavailable = false, fail = false, drawer = false, brokenDrawer = false, custom = false, proxyFail = false, customDiscount = 0, modal = false, fixedDiscount = null } = {}) {
+// jsdom does not implement native dialog methods.
+function polyfillDialog(w) {
+  w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  w.HTMLDialogElement.prototype.close = function () { if (!this.open) return; this.open = false; this.dispatchEvent(new w.Event('close')); };
+}
+const GIFTS = {
+  packages: [{ id: '1', name: 'Kraft box', price: '5.00', variantId: '901' }, { id: '2', name: 'Velvet box', price: '12.50', variantId: '902' }],
+  wraps: [{ id: '3', name: 'Red ribbon', price: '2.50', variantId: '903' }],
+};
+async function fixture(t, { unavailable = false, fail = false, drawer = false, brokenDrawer = false, custom = false, proxyFail = false, customDiscount = 0, modal = false, fixedDiscount = null, giftOptions = GIFTS, giftEnabled } = {}) {
   const dom = new JSDOM('<bundlify-bundles data-currency="USD" data-root="/fr/"><div data-list></div><p data-message></p></bundlify-bundles>', { url: 'https://store.test/fr/products/a', runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window;
+  polyfillDialog(w);
   if (custom) w.document.querySelector('bundlify-bundles').insertAdjacentHTML('beforeend', '<div data-custom-bundle><button data-custom-toggle type="button">Create custom bundle</button><article data-custom-picker hidden><h3>Create your bundle</h3><p>Choose at least 2.</p></article><div data-custom-products hidden><span data-handle="a" data-title="A"></span><span data-handle="b" data-title="B"></span><span data-handle="c" data-title="C"></span></div></div>');
   w.AbortSignal.any = () => undefined;
   if (custom) {
@@ -43,7 +53,7 @@ async function fixture(t, { unavailable = false, fail = false, drawer = false, b
     w.document.body.append(element);
   }
   w.fetch = async (url, options = {}) => {
-    if (String(url).includes('/apps/')) return proxyFail ? Response.json({}, { status: 502 }) : Response.json({ bundles: custom ? [] : [{ id: '7', discount: fixedDiscount === null ? 10 : 0, discountType: fixedDiscount === null ? 'percentage' : 'fixed', fixedDiscount, shopCurrency: 'USD', name: 'Pair', products: [{ title: 'A', handle: 'a' }, { title: 'B', handle: 'b' }] }] });
+    if (String(url).includes('/apps/')) return proxyFail ? Response.json({}, { status: 502 }) : Response.json({ giftOptions, giftEnabled, bundles: custom ? [] : [{ id: '7', discount: fixedDiscount === null ? 10 : 0, discountType: fixedDiscount === null ? 'percentage' : 'fixed', fixedDiscount, shopCurrency: 'USD', name: 'Pair', products: [{ title: 'A', handle: 'a' }, { title: 'B', handle: 'b' }] }] });
     if (String(url).endsWith('/cart/add.js')) {
       posts.push({ url, body: JSON.parse(options.body) });
       return fail ? Response.json({ description: 'Not enough inventory' }, { status: 422 }) : Response.json({ items: [], sections: { 'cart-drawer': '<div>Discounted cart</div>', 'cart-icon-bubble': '<span>2</span>' } });
@@ -225,6 +235,20 @@ test('product images, original prices, sale prices and totals follow variant sel
   assert.match(widget.querySelector('.bundlify-total strong').textContent, /225\.00/);
   assert.match(widget.querySelector('.bundlify-total small').textContent, /25\.00/);
 });
+test('selected bundle renders the compact detail markup with accessible variant selects', async t => {
+  const { widget } = await fixture(t);
+  assert.equal(widget.querySelector('[data-list]').children.length, 0);
+  const card = widget.querySelector('[data-gift-dialog] > article.bundlify-bundle-detail');
+  assert.ok(card);
+  assert.equal(card.querySelectorAll('.bundlify-product').length, 2);
+  for (const label of card.querySelectorAll('.bundlify-product label')) {
+    assert.equal(label.querySelector('.bundlify-variant-label').textContent, 'Choose option');
+    assert.ok(label.querySelector('select'));
+  }
+  assert.equal(card.querySelector('.bundlify-total-label').textContent, 'Bundle total');
+  assert.match(card.querySelector('.bundlify-total-save').textContent, /^Save 10% · .*20\.00$/);
+  assert.ok(card.querySelector('button.bundlify-purchase-action'));
+});
 test('cart failure displays Shopify error and allows retry without claiming success', async t => {
   const { widget, destination } = await fixture(t, { fail: true });
   widget.querySelector('.bundlify-purchase-action').click();
@@ -283,12 +307,12 @@ test('products load concurrently and shared bundle products are fetched only onc
   assert.equal(w.document.querySelectorAll('.bundlify-product').length, 0);
   release();
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(w.document.querySelector('[data-list] h3').textContent, 'Pair');
+  assert.equal(w.document.querySelector('[data-gift-dialog] h3').textContent, 'Pair');
   assert.equal(w.document.querySelectorAll('.bundlify-product').length, 2);
   w.document.querySelectorAll('[data-bundle-options] button')[1].click();
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(requests, ['/products/a.js', '/products/b.js']);
-  assert.equal(w.document.querySelector('[data-list] h3').textContent, 'Second');
+  assert.equal(w.document.querySelector('[data-gift-dialog] h3').textContent, 'Second');
   assert.equal(w.document.querySelector('[data-bundle-options] button[aria-pressed="true"] strong').textContent, 'Second');
   assert.equal(w.document.querySelectorAll('.bundlify-product').length, 2);
   for (const img of w.document.querySelectorAll('.bundlify-product img')) {
@@ -311,4 +335,261 @@ test('preset fixed discounts update totals, cap at subtotal and survive variant 
   assert.match(total.textContent, /237.50/);
   const capped = await fixture(t, { fixedDiscount: 500 });
   assert.match(capped.widget.querySelector('.bundlify-total strong').textContent, /0.00/);
+});
+
+// Gift box popup: products → package → wrap → summary.
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+const giftCard = widget => widget.querySelector('[data-gift-dialog] > .bundlify-bundle-detail');
+const giftButton = (widget, label) => Array.from(giftCard(widget).querySelectorAll('button')).find(button => button.textContent === label && !button.closest('[hidden]'));
+const visibleStep = widget => giftCard(widget).dataset.giftCurrent;
+const summaryRows = widget => Array.from(giftCard(widget).querySelectorAll('.bundlify-gift-summary > div'), row => [row.querySelector('dt').firstChild.textContent, row.querySelector('dd').textContent.replace(/[^\d.]/g, '')]);
+const choosePackage = (widget, name) => {
+  const input = Array.from(giftCard(widget).querySelectorAll('.bundlify-gift-choice')).find(label => label.textContent.includes(name)).querySelector('input');
+  input.checked = true;
+  input.dispatchEvent(new widget.ownerDocument.defaultView.Event('change', { bubbles: true }));
+};
+
+test('selecting a bundle row opens one popup; step 1 offers Gift Box and Skip instead of Add to cart', async t => {
+  const { widget } = await fixture(t);
+  const dialog = widget.querySelector('[data-gift-dialog]');
+  assert.equal(dialog.open, true);
+  assert.equal(widget.ownerDocument.activeElement, giftCard(widget).querySelector('h3'));
+  assert.equal(visibleStep(widget), 'products');
+  assert.equal(giftCard(widget).querySelectorAll('.bundlify-product').length, 2);
+  assert.ok(giftButton(widget, 'Gift Box'));
+  assert.ok(giftButton(widget, 'Skip'));
+  assert.equal(giftButton(widget, 'Add to cart'), undefined);
+  assert.equal(giftCard(widget).querySelector('.bundlify-gift-back').hidden, true);
+  assert.match(giftCard(widget).querySelector('.bundlify-gift-progress').textContent, /Step 1 of 4/);
+  dialog.querySelector('button[aria-label="Close"]').click();
+  assert.equal(dialog.open, false);
+  assert.equal(widget.ownerDocument.activeElement, widget.querySelector('[data-bundle-options] button'));
+  widget.querySelector('[data-bundle-options] button').click();
+  assert.equal(dialog.open, true);
+  assert.equal(giftCard(widget).querySelectorAll('.bundlify-product').length, 2);
+});
+
+for (const giftEnabled of [true, undefined]) test(`gift switch ${giftEnabled === undefined ? 'missing (older response)' : 'on'} keeps Gift Box and Skip on step 1`, async t => {
+  const { widget } = await fixture(t, { giftEnabled });
+  assert.equal(visibleStep(widget), 'products');
+  assert.ok(giftButton(widget, 'Gift Box'));
+  assert.ok(giftButton(widget, 'Skip'));
+  assert.equal(giftButton(widget, 'Add to cart'), undefined);
+  assert.ok(giftCard(widget).querySelector('[data-gift-step="package"]'));
+});
+
+test('gift switch off opens the popup with products and only Add to cart, no package or wrap steps', async t => {
+  const { widget, posts, destination } = await fixture(t, { giftEnabled: false });
+  const dialog = widget.querySelector('[data-gift-dialog]');
+  assert.equal(dialog.open, true);
+  const card = giftCard(widget);
+  assert.equal(card.querySelectorAll('.bundlify-product').length, 2);
+  assert.match(card.querySelector('.bundlify-total strong').textContent, /180\.00/);
+  assert.equal(giftButton(widget, 'Gift Box'), undefined);
+  assert.equal(giftButton(widget, 'Skip'), undefined);
+  assert.equal(card.querySelector('[data-gift-step]'), null);
+  assert.equal(card.querySelector('.bundlify-gift-nav'), null);
+  assert.doesNotMatch(card.textContent, /Gift Box|Choose a package|Wrap/);
+  const add = giftButton(widget, 'Add to cart');
+  assert.ok(add);
+  assert.equal(add.disabled, false);
+  add.click();
+  await tick(); await tick();
+  assert.equal(posts.length, 1);
+  assert.deepEqual(posts[0].body.items.map(item => item.id), ['1', '2']);
+  assert.ok(posts[0].body.items.every(item => item.properties._bundlify_bundle === '7'));
+  assert.equal(dialog.open, false);
+  assert.equal(destination(), 'https://store.test/fr/cart');
+});
+
+test('Skip on step 1 goes to the summary with no package or wrap and adds only the bundle', async t => {
+  const { widget, posts } = await fixture(t);
+  giftButton(widget, 'Skip').click();
+  assert.equal(visibleStep(widget), 'summary');
+  assert.deepEqual(summaryRows(widget), [['Product price', '180.00'], ['Box price', '0.00'], ['Total', '180.00']]);
+  giftButton(widget, 'Add to cart').click();
+  await tick();
+  assert.equal(posts.length, 1);
+  assert.deepEqual(posts[0].body.items.map(item => item.id), ['1', '2']);
+  assert.equal(widget.querySelector('[data-gift-dialog]').open, false);
+});
+
+test('package Skip keeps the chosen package, adds its price and charges its variant', async t => {
+  const { widget, posts } = await fixture(t);
+  giftButton(widget, 'Gift Box').click();
+  assert.equal(visibleStep(widget), 'package');
+  assert.equal(giftCard(widget).querySelector('.bundlify-product-grid').hidden, true);
+  assert.match(giftCard(widget).textContent, /Kraft box.*5\.00.*Velvet box.*12\.50/);
+  choosePackage(widget, 'Velvet box');
+  giftButton(widget, 'Skip').click();
+  assert.deepEqual(summaryRows(widget), [['Product price', '180.00'], ['Box price', '12.50'], ['Total', '192.50']]);
+  giftButton(widget, 'Add to cart').click();
+  await tick();
+  const items = posts[0].body.items;
+  assert.deepEqual(items.map(item => item.id), ['1', '2', '902']);
+  assert.equal(items[2].properties['Gift box'], 'Velvet box');
+  assert.equal(items[2].properties._bundlify_gift_for, items[0].properties._bundlify_group);
+  assert.equal(items[2].properties._bundlify_bundle, undefined);
+});
+
+test('Gift Box → package → Wrap a Box → Continue totals products + package + wrap; Back keeps the product list', async t => {
+  const { widget, posts } = await fixture(t);
+  giftButton(widget, 'Gift Box').click();
+  choosePackage(widget, 'Kraft box');
+  giftButton(widget, 'Wrap a Box').click();
+  assert.equal(visibleStep(widget), 'wrap');
+  assert.equal(giftCard(widget).querySelector('[data-gift-step="wrap"] h4').textContent, 'Wrap Your Gift Box');
+  const wrapStep = giftCard(widget).querySelector('[data-gift-step="wrap"]');
+  assert.equal(wrapStep.querySelector('select'), null);
+  assert.equal(wrapStep.querySelector('.bundlify-gift-choices').getAttribute('role'), 'radiogroup');
+  const wrapCards = Array.from(wrapStep.querySelectorAll('label.bundlify-gift-choice'));
+  assert.deepEqual(wrapCards.map(card => [card.querySelector('.bundlify-gift-choice-name').textContent, card.querySelector('.bundlify-gift-choice-price').textContent.replace(/[^\d.]/g, '')]), [['No wrap', '0.00'], ['Red ribbon', '2.50']]);
+  assert.equal(wrapCards[0].querySelector('input').checked, true);
+  choosePackage(widget, 'Red ribbon');
+  giftButton(widget, 'Continue').click();
+  assert.deepEqual(summaryRows(widget), [['Product price', '180.00'], ['Box price', '5.00'], ['Wrap price', '2.50'], ['Total', '187.50']]);
+  const back = giftCard(widget).querySelector('.bundlify-gift-back');
+  back.click();
+  assert.equal(visibleStep(widget), 'wrap');
+  back.click();
+  back.click();
+  assert.equal(visibleStep(widget), 'products');
+  assert.equal(giftCard(widget).querySelectorAll('.bundlify-product').length, 2);
+  const variant = giftCard(widget).querySelector('.bundlify-product select');
+  variant.value = '11';
+  variant.dispatchEvent(new widget.ownerDocument.defaultView.Event('change'));
+  giftButton(widget, 'Gift Box').click();
+  assert.equal(giftCard(widget).querySelector('.bundlify-gift-choice input').checked, true);
+  giftButton(widget, 'Wrap a Box').click();
+  giftButton(widget, 'Continue').click();
+  assert.deepEqual(summaryRows(widget), [['Product price', '225.00'], ['Box price', '5.00'], ['Wrap price', '2.50'], ['Total', '232.50']]);
+  giftButton(widget, 'Add to cart').click();
+  await tick();
+  assert.deepEqual(posts[0].body.items.map(item => item.id), ['11', '2', '901', '903']);
+  assert.equal(posts[0].body.items[3].properties['Gift wrap'], 'Red ribbon');
+});
+
+test('package and wrap cards show the uploaded image, and a missing or broken image leaves the card usable', async t => {
+  const image = 'https://cdn.shopify.com/s/files/1/box.jpg';
+  const wrapImage = 'https://cdn.shopify.com/s/files/1/ribbon.webp?v=2';
+  const { widget } = await fixture(t, { giftOptions: {
+    packages: [
+      { id: '1', name: 'Kraft box', price: '5.00', variantId: '901', imageUrl: image },
+      { id: '2', name: 'Velvet box', price: '12.50', variantId: '902', imageUrl: 'javascript:alert(1)' },
+    ],
+    wraps: [{ id: '3', name: 'Red ribbon', price: '2.50', variantId: '903', imageUrl: wrapImage }],
+  } });
+  giftButton(widget, 'Gift Box').click();
+  const packageCards = Array.from(giftCard(widget).querySelectorAll('[data-gift-step="package"] label.bundlify-gift-choice'));
+  const photo = packageCards[0].querySelector('img');
+  const view = window => window.querySelector('.bundlify-gift-choice-view');
+  assert.equal(photo.getAttribute('src'), image);
+  assert.equal(photo.alt, '');
+  assert.equal(photo.closest('label'), packageCards[0]);
+  assert.equal(photo.closest('button').type, 'button');
+  assert.equal(packageCards[0].classList.contains('bundlify-gift-choice-with-image'), true);
+  assert.equal(view(packageCards[0]).textContent, 'View');
+  assert.equal(packageCards[1].querySelector('img'), null);
+  assert.equal(view(packageCards[1]), null);
+  assert.equal(packageCards[1].querySelector('.bundlify-gift-choice-name').textContent, 'Velvet box');
+  assert.equal(packageCards[1].querySelector('input').type, 'radio');
+  packageCards[0].querySelector('.bundlify-gift-choice-name').click();
+  assert.equal(packageCards[0].querySelector('input').checked, true);
+  const w = widget.ownerDocument.defaultView;
+  const giftDialog = widget.querySelector('[data-gift-dialog]');
+  photo.click();
+  let preview = widget.querySelector('dialog.bundlify-gift-preview');
+  assert.equal(preview?.open, true);
+  assert.notEqual(preview, giftDialog);
+  assert.equal(giftDialog.open, true);
+  assert.equal(visibleStep(widget), 'package');
+  assert.equal(preview.querySelector('img').getAttribute('src'), image);
+  assert.equal([...preview.children].every(node => node.matches('img, button.bundlify-builder-close')), true);
+  assert.equal(packageCards[0].querySelector('input').checked, true);
+  preview.querySelector('img').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+  assert.equal(preview.open, true);
+  preview.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  assert.equal(widget.querySelector('dialog.bundlify-gift-preview'), null);
+  assert.equal(giftDialog.open, true);
+  assert.equal(visibleStep(widget), 'package');
+  assert.equal(packageCards[0].querySelector('input').checked, true);
+  view(packageCards[0]).click();
+  preview = widget.querySelector('dialog.bundlify-gift-preview');
+  assert.equal(preview.open, true);
+  assert.equal(preview.querySelector('img').getAttribute('src'), image);
+  assert.equal(packageCards[0].querySelector('input').checked, true);
+  preview.querySelector('button.bundlify-builder-close').click();
+  assert.equal(widget.querySelector('dialog.bundlify-gift-preview'), null);
+  assert.equal(packageCards[0].querySelector('input').checked, true);
+  photo.dispatchEvent(new w.Event('error'));
+  assert.equal(packageCards[0].querySelector('img'), null);
+  assert.equal(view(packageCards[0]), null);
+  assert.equal(packageCards[0].classList.contains('bundlify-gift-choice-with-image'), false);
+  assert.equal(packageCards[0].querySelector('.bundlify-gift-choice-name').textContent, 'Kraft box');
+  assert.equal(packageCards[0].querySelector('input').checked, true);
+  giftButton(widget, 'Wrap a Box').click();
+  const wrapCards = Array.from(giftCard(widget).querySelectorAll('[data-gift-step="wrap"] label.bundlify-gift-choice'));
+  assert.equal(wrapCards[0].querySelector('.bundlify-gift-choice-name').textContent, 'No wrap');
+  assert.equal(wrapCards[0].querySelector('img'), null);
+  assert.equal(view(wrapCards[0]), null);
+  assert.equal(wrapCards[1].querySelector('img').getAttribute('src'), wrapImage);
+  assert.equal(wrapCards[1].querySelector('img').closest('label'), wrapCards[1]);
+  assert.equal(view(wrapCards[1]).textContent, 'View');
+  assert.equal(wrapCards[0].querySelector('input').checked, true);
+  wrapCards[1].querySelector('img').click();
+  preview = widget.querySelector('dialog.bundlify-gift-preview');
+  assert.equal(preview.open, true);
+  assert.equal(preview.querySelector('img').getAttribute('src'), wrapImage);
+  assert.equal(wrapCards[0].querySelector('input').checked, true);
+  assert.equal(wrapCards[1].querySelector('input').checked, false);
+  assert.equal(visibleStep(widget), 'wrap');
+  preview.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+  assert.equal(widget.querySelector('dialog.bundlify-gift-preview'), null);
+  assert.equal(giftDialog.open, true);
+  assert.equal(visibleStep(widget), 'wrap');
+  assert.equal(wrapCards[0].querySelector('input').checked, true);
+  const css = await readFile(new URL('../extensions/buendly-extation/assets/bundlify-bundles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.bundlify-gift-choice-image\s*\{[^}]*width:\s*64px/);
+  assert.match(css, /border-radius:\s*10px/);
+  assert.match(css, /\.bundlify-gift-preview img\s*\{[^}]*max-width:\s*90vw/);
+  assert.match(css, /\.bundlify-gift-preview img\s*\{[^}]*max-height:\s*80vh/);
+  assert.match(css, /\.bundlify-gift-preview img\s*\{[^}]*object-fit:\s*contain/);
+  assert.match(css, /@media \(hover: none\)/);
+});
+
+test('Wrap a Box without a package still opens the wrap step with a box price of 0', async t => {
+  const { widget } = await fixture(t);
+  giftButton(widget, 'Gift Box').click();
+  giftButton(widget, 'Wrap a Box').click();
+  assert.equal(visibleStep(widget), 'wrap');
+  giftButton(widget, 'Continue').click();
+  assert.deepEqual(summaryRows(widget), [['Product price', '180.00'], ['Box price', '0.00'], ['Total', '180.00']]);
+});
+
+test('empty package and wrap lists say none are set up and Skip / Continue still reach the summary', async t => {
+  const { widget, posts } = await fixture(t, { giftOptions: null });
+  giftButton(widget, 'Gift Box').click();
+  assert.match(giftCard(widget).querySelector('[data-gift-step="package"]').textContent, /No packages are set up yet/);
+  giftButton(widget, 'Wrap a Box').click();
+  assert.match(giftCard(widget).querySelector('[data-gift-step="wrap"]').textContent, /No wraps are set up yet/);
+  assert.equal(giftCard(widget).querySelector('[data-gift-step="wrap"] .bundlify-gift-choice'), null);
+  giftButton(widget, 'Continue').click();
+  assert.deepEqual(summaryRows(widget), [['Product price', '180.00'], ['Box price', '0.00'], ['Total', '180.00']]);
+  giftButton(widget, 'Add to cart').click();
+  await tick();
+  assert.deepEqual(posts[0].body.items.map(item => item.id), ['1', '2']);
+});
+
+test('a failed cart add with a package keeps the popup open, shows the error and never claims the fee was added', async t => {
+  const { widget, destination } = await fixture(t, { fail: true });
+  giftButton(widget, 'Gift Box').click();
+  choosePackage(widget, 'Kraft box');
+  giftButton(widget, 'Skip').click();
+  giftButton(widget, 'Add to cart').click();
+  await tick();
+  assert.equal(widget.querySelector('[data-gift-dialog]').open, true);
+  assert.match(giftCard(widget).textContent, /Not enough inventory/);
+  assert.doesNotMatch(giftCard(widget).textContent, /added to your cart/);
+  assert.equal(destination(), undefined);
+  assert.equal(giftCard(widget).querySelector('.bundlify-gift-back').disabled, false);
 });

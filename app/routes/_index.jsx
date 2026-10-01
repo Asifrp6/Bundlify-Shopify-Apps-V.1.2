@@ -12,16 +12,15 @@ export default function Landing() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <span className={styles.logo}>
-          <img src="/bundlify-icon.png?v=3" alt="" width="637" height="637" />
-        </span>
-        <h1 className={styles.heading}>Bundlify</h1>
+        <h1 className={styles.heading}>
+          <img className={styles.lockup} src="/bundle-base-logo.png" alt="Bundle Base" width="696" height="570" />
+        </h1>
         <p className={styles.text}>
           Manage product subscription plans and organize bundle drafts for your
           Shopify store.
         </p>
         <p className={styles.note}>
-          Open Bundlify from the Apps section of your Shopify admin. New
+          Open Bundle Base from the Apps section of your Shopify admin. New
           installations start on Shopify.
         </p>
         <Link className={styles.link} to="/privacy">Privacy policy</Link>

@@ -1,5 +1,5 @@
 import { validDiscount } from "./discounts.js";
-import { schedules } from "./delivery-options.js";
+import { scheduleFor, schedules, UNLIMITED } from "./delivery-options.js";
 export const frequencies = Object.keys(schedules);
 const productIdPattern = /^gid:\/\/shopify\/Product\/\d+$/;
 
@@ -12,8 +12,8 @@ export function validatePlan(formData, limits = { maxProducts: 50, maxOptions: 7
       const raw = JSON.parse(String(formData.get("deliveryOptions")));
       if (!Array.isArray(raw) || !raw.length || raw.length > maxOptions) throw new Error();
       deliveryOptions = raw.map(option => {
-        if (!option || !Object.hasOwn(schedules, option.frequency) || !validDiscount(option.discount, option.discountType || "percentage")) throw new Error();
-        return { frequency: option.frequency, discount: Number(option.discount), discountType: option.discountType || "percentage", ...schedules[option.frequency] };
+        if (!option || !scheduleFor(option.frequency) || !validDiscount(option.discount, option.discountType || "percentage")) throw new Error();
+        return { frequency: option.frequency, discount: Number(option.discount), discountType: option.discountType || "percentage", ...scheduleFor(option.frequency) };
       });
       if (new Set(deliveryOptions.map(o => o.frequency)).size !== deliveryOptions.length) throw new Error();
       formData.set("frequency", deliveryOptions[0].frequency);
@@ -33,12 +33,20 @@ export function validatePlan(formData, limits = { maxProducts: 50, maxOptions: 7
   const errors = {};
   if (!name || name.length > 120)
     errors.name = "Enter a name of 1–120 characters.";
-  if (!frequencies.includes(frequency))
+  if (!scheduleFor(frequency))
     errors.frequency = "Select a billing frequency.";
   if (productId !== "ALL_PRODUCTS" && productId !== "SELECTED_PRODUCTS" && !productIdPattern.test(productId)) errors.productId = "Select a product.";
   if (productId === "SELECTED_PRODUCTS" && (!productIds.length || productIds.length > maxProducts || productIds.some(id => !productIdPattern.test(id)))) errors.productId = `Select between 1 and ${maxProducts} products.`;
   if (!validDiscount(rawDiscount, discountType)) errors.discount = "Enter a whole percentage from 0 to 100 or a fixed amount from 0 to 1,000,000 with at most two decimals.";
-  return { values: { name, frequency, productId, discount, discountType, ...(productId === "SELECTED_PRODUCTS" ? { productIds } : {}), ...(deliveryOptions ? { deliveryOptions } : {}) }, errors };
+  const length = formData.has("lengthOptions") || formData.has("lengthEnabled") ? validateLengths(formData) : null;
+  return { values: { name, frequency, productId, discount, discountType, ...(productId === "SELECTED_PRODUCTS" ? { productIds } : {}), ...(deliveryOptions ? { deliveryOptions } : {}), ...(length?.values || {}) }, errors };
+}
+
+// Customers type how many times (or Unlimited) on the storefront, so every frequency
+// sells one ongoing plan; a plan per typed count would exceed Shopify's 31-plan group cap.
+function validateLengths(formData) {
+  const lengthEnabled = ["on", "true", "1"].includes(String(formData.get("lengthEnabled") ?? ""));
+  return { values: { lengthEnabled, lengthOptions: lengthEnabled ? [{ interval: UNLIMITED }] : [] } };
 }
 
 export function validateBundle(formData, limits = { maxProducts: 50, maxOptions: 7 }) {

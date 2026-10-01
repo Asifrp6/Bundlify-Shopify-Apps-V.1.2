@@ -12,6 +12,7 @@ import {
   defaults,
   fields,
   iconOptions,
+  normalizeHex,
   validateAppearance,
 } from "../services/appearance";
 import { getAppearance, saveAppearance } from "../services/appearance.server";
@@ -37,6 +38,16 @@ export async function action({ request }) {
 }
 /* eslint-disable react/prop-types */
 
+// Neutral stand-in for the merchant's theme in the admin preview; the storefront reads the real theme.
+const storePreviewColors = {
+  background: "#ffffff", text: "#1a1a1a", accent: "#1a1a1a", buttonTextColor: "#ffffff",
+  borderColor: "#e3e3e3", groupBackground: "#ffffff", cardBackground: "#ffffff", cardText: "#1a1a1a", cardBorder: "#dcdcdc",
+  hoverBackground: "#f7f7f7", hoverText: "#1a1a1a", hoverBorder: "#a8a8a8",
+  selectedBackground: "#f5f5f5", selectedText: "#1a1a1a", selectedBorder: "#1a1a1a",
+  selectedHoverBackground: "#efefef", selectedHoverText: "#1a1a1a", selectedHoverBorder: "#1a1a1a",
+  iconColor: "#5c5c5c", selectedIconColor: "#1a1a1a", hoverIconColor: "#1a1a1a", focusColor: "#1a1a1a",
+};
+
 function BlockSettings({ kind, initial }) {
   const [values, setValues] = useState(initial);
   const [previewChoice, setPreviewChoice] = useState(0);
@@ -48,9 +59,21 @@ function BlockSettings({ kind, initial }) {
     navigation.state !== "idle" && navigation.formData?.get("kind") === kind;
   const update = (key, value) =>
     setValues((current) => ({ ...current, [key]: value }));
+  const [hexDrafts, setHexDrafts] = useState({});
+  const clearDraft = (key) =>
+    setHexDrafts((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  const updateColor = (key, value) => {
+    update(key, value);
+    clearDraft(key);
+  };
+  const colors = values.matchStore ? storePreviewColors : values;
   const selectedStyle = {
-    background: values.accent,
-    color: values.buttonTextColor,
+    background: colors.accent,
+    color: colors.buttonTextColor,
   };
   return (
     <section
@@ -78,10 +101,28 @@ function BlockSettings({ kind, initial }) {
           <div className={styles.controls} role="region" aria-label={title + " design controls"}>
             <fieldset className={styles.group}>
               <legend>Colors</legend>
-              <p className={styles.hint}>A palette that feels like</p>
+              <label className={styles.matchStore}>
+                <input
+                  type="checkbox"
+                  name="matchStore"
+                  value="true"
+                  checked={values.matchStore}
+                  onChange={(event) => update("matchStore", event.target.checked)}
+                />
+                <span>
+                  {fields.matchStore}
+                  <small>
+                    {values.matchStore
+                      ? "On: the block uses your theme's font, text color, and button colors, so it fits any theme you switch to."
+                      : "Off: the block uses the colors below. Your theme's font is still used."}
+                  </small>
+                </span>
+              </label>
+              <div hidden={values.matchStore}>
+              <p className={styles.hint}>{bundle ? "Button / selected color and Button / selected text color set the custom bundle popup button." : "A palette that feels like your store."}</p>
               <div className={styles.colorGrid}>
                 {colorKeys.map((key) => (
-                  <label className={styles.colorField} key={key}>
+                  <div className={styles.colorField} key={key}>
                     <span>{fields[key]}</span>
                     <div className={styles.colorControl}>
                       <input
@@ -89,13 +130,41 @@ function BlockSettings({ kind, initial }) {
                         name={key}
                         type="color"
                         value={values[key]}
-                        onChange={(event) => update(key, event.target.value)}
+                        onChange={(event) => updateColor(key, event.target.value)}
                       />
-                      <span>{values[key].toUpperCase()}</span>
+                      <input
+                        aria-label={fields[key] + " hex code"}
+                        className={styles.hexInput}
+                        type="text"
+                        inputMode="text"
+                        autoComplete="off"
+                        spellCheck={false}
+                        maxLength={9}
+                        value={hexDrafts[key] ?? values[key].toUpperCase()}
+                        onChange={(event) => {
+                          const text = event.target.value;
+                          setHexDrafts((current) => ({ ...current, [key]: text }));
+                          const hex = normalizeHex(text);
+                          if (hex) update(key, hex);
+                        }}
+                        onPaste={(event) => {
+                          const hex = normalizeHex(event.clipboardData.getData("text"));
+                          if (!hex) return;
+                          event.preventDefault();
+                          updateColor(key, hex);
+                        }}
+                        onBlur={() => clearDraft(key)}
+                      />
                     </div>
-                  </label>
+                  </div>
                 ))}
               </div>
+              </div>
+              {values.matchStore && (
+                <p className={styles.hint}>
+                  Your saved colors are kept. Turn this off to use them again.
+                </p>
+              )}
             </fieldset>
             <fieldset className={styles.group}>
               <legend>Typography</legend>
@@ -113,8 +182,8 @@ function BlockSettings({ kind, initial }) {
                 />
               </label>
               <p className={styles.hint}>
-                Uses Poppins for headings, body text, and controls in both the
-                preview and storefront widgets. Sizes scale together from 12–24 px.
+                The storefront block uses your theme&apos;s heading and body
+                fonts. Sizes scale together from 12–24 px.
               </p>
             </fieldset>
 
@@ -170,6 +239,7 @@ function BlockSettings({ kind, initial }) {
                   .filter(
                     (key) =>
                       !colorKeys.includes(key) &&
+                      key !== "matchStore" &&
                       key !== "logoUrl" &&
                       key !== "fontSize" &&
                       !key.endsWith("Icon"),
@@ -209,11 +279,11 @@ function BlockSettings({ kind, initial }) {
               <div
                 className={styles.preview}
                 style={{
-                  background: values.background,
-                  color: values.text,
-                  borderColor: values.borderColor,
+                  background: colors.background,
+                  color: colors.text,
+                  borderColor: colors.borderColor,
                   ...Object.fromEntries(
-                    colorKeys.map((key) => ["--bl-" + key, values[key]]),
+                    colorKeys.map((key) => ["--bl-" + key, colors[key]]),
                   ),
                   "--preview-font-scale":
                     Math.min(24, Math.max(12, Number(values.fontSize) || 16)) /
@@ -284,7 +354,7 @@ function BlockSettings({ kind, initial }) {
                             className={styles.productArt}
                             aria-hidden="true"
                           >
-                            {index ? "?" : "?"}
+                            {index ? "B" : "A"}
                           </span>
                           <div>
                             <strong>{name}</strong>
@@ -310,7 +380,7 @@ function BlockSettings({ kind, initial }) {
                   <>
                     <p className={styles.frequency}>DELIVERY FREQUENCY</p>
                     <div className={styles.delivery} style={selectedStyle}>
-                      <span aria-hidden="true">?</span>
+                      <span aria-hidden="true">✓</span>
                       <div>
                         <strong>Every month</strong>
                         <small>Save 10% on every delivery</small>
@@ -318,7 +388,7 @@ function BlockSettings({ kind, initial }) {
                       <b>$90.00</b>
                     </div>
                     <p className={styles.details}>
-                      Subscription details <span aria-hidden="true">?</span>
+                      Subscription details <span aria-hidden="true">›</span>
                     </p>
                   </>
                 )}
@@ -349,7 +419,10 @@ function BlockSettings({ kind, initial }) {
             <button
               type="button"
               className={styles.secondary}
-              onClick={() => setValues({ ...defaults[kind] })}
+              onClick={() => {
+                setValues({ ...defaults[kind] });
+                setHexDrafts({});
+              }}
             >
               Restore defaults
             </button>

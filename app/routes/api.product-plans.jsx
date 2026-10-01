@@ -1,4 +1,4 @@
-import { schedules } from "../services/delivery-options";
+import { scheduleFor } from "../services/delivery-options";
 import { creationBlocked } from "../services/app-plans";
 import { createSubscription } from "../services/subscriptions.server";
 import { changeSubscription } from "../services/subscription-management.server";
@@ -84,7 +84,7 @@ export async function action({ request }) {
   }
   const frequency = body.frequency;
   const discount = Number(body.discount);
-  if (!Object.hasOwn(schedules, frequency) || !Number.isInteger(discount) || discount < 0 || discount > 100)
+  if (!scheduleFor(frequency) || !Number.isInteger(discount) || discount < 0 || discount > 100)
     return Response.json({ error: "Choose a delivery frequency and a discount from 0 to 100%." }, { status: 400 });
   if (body.intent === "update") {
     if (!plan) return Response.json({ error: "Plan not found." }, { status: 404 });
@@ -100,7 +100,7 @@ export async function action({ request }) {
   }
   const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
   const blocked = creationBlocked(usage, "plan", usage?.plans ?? 0);
-  if (!usage) return Response.json({ error: "Choose a Bundlify plan before creating a subscription." }, { status: 402 });
+  if (!usage) return Response.json({ error: "Choose a Bundle Base plan before creating a subscription." }, { status: 402 });
   if (blocked) return Response.json({ error: blocked }, { status: 402 });
   const name = String(body.name || "").trim();
   if (!name || name.length > 80) return Response.json({ error: "Enter a plan name of 80 characters or fewer." }, { status: 400 });

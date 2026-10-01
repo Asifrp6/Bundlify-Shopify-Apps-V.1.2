@@ -1,11 +1,56 @@
+/* Store match: theme colors (Dawn-style "r,g,b" variables or full colors) with neutral fallbacks.
+   Full-color theme variables resolve on the block, rgb-triplet variables on its children; an invalid
+   value falls back to the parent's, so whichever format the theme uses wins. */
+@property --bundlify-theme-accent { syntax: "<color>"; inherits: true; initial-value: #121212; }
+@property --bundlify-theme-accent-text { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --bundlify-theme-surface { syntax: "<color>"; inherits: true; initial-value: transparent; }
+bundlify-subscription.bundlify-subscription-widget {
+  --bundlify-theme-accent: var(--color-primary-button-background, var(--color-button-background, var(--color-button, var(--color-foreground))));
+  --bundlify-theme-accent-text: var(--color-primary-button-text, var(--color-button-label, var(--color-button-text, var(--color-background))));
+  --bundlify-theme-surface: var(--color-background, var(--color-base-background, transparent));
+  --bundlify-line: color-mix(in srgb, currentColor 14%, transparent);
+  --bundlify-line-strong: color-mix(in srgb, currentColor 32%, transparent);
+  --bundlify-tint: color-mix(in srgb, currentColor 5%, transparent);
+  --bundlify-muted: color-mix(in srgb, currentColor 68%, transparent);
+}
+/* Glass: a translucent copy of the theme background (or the merchant's saved card colors when matching is
+   off) over a faint currentColor tint, so light and dark themes both stay readable. */
+bundlify-subscription.bundlify-subscription-widget > * {
+  --bundlify-theme-accent: rgb(var(--color-button-rgb, var(--color-button)));
+  --bundlify-theme-accent-text: rgb(var(--color-button-text-rgb, var(--color-button-text)));
+  --bundlify-theme-surface: rgb(var(--color-background));
+  --bundlify-accent: var(--bundlify-action-background, var(--bundlify-theme-accent));
+  --bundlify-on-accent: var(--bundlify-action-text, var(--bundlify-theme-accent-text));
+  --bundlify-glass-alpha: 52%;
+  --bundlify-glass-alpha-hover: 64%;
+  --bundlify-glass-alpha-strong: 74%;
+  --bundlify-glass-tint: linear-gradient(color-mix(in srgb, currentColor 3%, transparent), color-mix(in srgb, currentColor 3%, transparent));
+  --bundlify-glass: color-mix(in srgb, var(--bl-cardBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha), transparent);
+  --bundlify-glass-hover: color-mix(in srgb, var(--bl-hoverBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-hover), transparent);
+  --bundlify-glass-strong: color-mix(in srgb, var(--bl-selectedBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-strong), transparent);
+  --bundlify-glass-line: color-mix(in srgb, currentColor 12%, transparent);
+  --bundlify-glass-blur: blur(14px) saturate(140%);
+  --bundlify-glass-shadow: 0 1px 2px rgb(0 0 0 / .03), 0 12px 32px -20px rgb(0 0 0 / .22);
+  /* Selection color: the theme button color, or the merchant's selected icon color when matching is off. */
+  --bundlify-ring: var(--bl-selectedIconColor, var(--bundlify-accent));
+  --bundlify-on-ring: var(--bl-selectedBackground, var(--bundlify-on-accent));
+  --bundlify-selected-tint: linear-gradient(150deg, color-mix(in srgb, var(--bundlify-ring) 14%, transparent), color-mix(in srgb, var(--bundlify-ring) 4%, transparent) 75%);
+  --bundlify-selected-shadow: 0 0 0 4px color-mix(in srgb, var(--bundlify-ring) 12%, transparent), 0 18px 36px -22px color-mix(in srgb, var(--bundlify-ring) 60%, transparent);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  bundlify-subscription.bundlify-subscription-widget > * {
+    --bundlify-glass-alpha: 86%;
+    --bundlify-glass-alpha-hover: 90%;
+    --bundlify-glass-alpha-strong: 94%;
+  }
+}
+
 .bundlify-subscription-widget {
   width: 100%;
   max-width: 620px;
-  padding: 32px;
-  border-radius: 32px;
-  background: linear-gradient(145deg, #f8f9fc 0%, #eef0f5 100%);
   box-sizing: border-box;
-  color: #0a1435;
+  font-family: var(--font-body-family, inherit);
+  color: inherit;
 }
 
 .bundlify-subscription-widget .bundlify-purchase-cards {
@@ -19,8 +64,8 @@
   padding: 24px;
   border: 0;
   border-radius: 30px;
-  background: rgba(255, 255, 255, 0.45);
-  color: #7b8499;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -39,9 +84,7 @@
 }
 
 .bundlify-subscription-widget .bundlify-purchase-card:has(input:checked) {
-  background: #ffffff;
-  color: #0a1435;
-  box-shadow: 0 14px 36px rgba(18, 32, 66, 0.12);
+  color: inherit;
 }
 
 .bundlify-subscription-widget .bundlify-card-icon {
@@ -73,7 +116,7 @@
   font-size:calc(11px * var(--bundlify-font-scale, 1));
   font-weight: 500;
   letter-spacing: 0.32em;
-  color: #24304d;
+  color: inherit;
 }
 
 .bundlify-subscription-widget .bundlify-option {
@@ -83,7 +126,7 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #19233f;
+  color: inherit;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -103,8 +146,8 @@
 }
 
 .bundlify-subscription-widget .bundlify-option:has(input:checked) {
-  background: #020b3f;
-  color: #ffffff;
+  background: var(--bundlify-accent);
+  color: var(--bundlify-on-accent);
 }
 
 .bundlify-subscription-widget .bundlify-plan-copy {
@@ -135,7 +178,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #020b3f;
+  color: var(--bundlify-accent);
   font-size:calc(11px * var(--bundlify-font-scale, 1));
   font-weight: 800;
 }
@@ -232,20 +275,22 @@
 }
 .bundlify-subscription-widget { display:block; margin:24px auto; font-family:inherit; line-height:1.5; }
 .bundlify-subscription-widget * { box-sizing:border-box; }
-.bundlify-subscription-widget h3 { margin:0 0 20px; color:inherit; font-size:calc(18px * var(--bundlify-font-scale, 1)); font-weight:600; }
+.bundlify-subscription-widget > h3 {
+  margin:0 0 4px; color:inherit; font-size:calc(20px * var(--bundlify-font-scale, 1)); line-height:1.25; letter-spacing:-.01em;
+  font-family:var(--font-heading-family, inherit); font-style:var(--font-heading-style, normal); font-weight:var(--font-heading-weight, 600);
+}
 .bundlify-subscription-widget fieldset { min-width:0; margin:0; padding:0; border:0; }
-.bundlify-subscription-widget legend { margin:0 0 12px; padding:0; font-size:calc(12px * var(--bundlify-font-scale, 1)); color:#5b6478; }
+.bundlify-subscription-widget legend { margin:0 0 14px; padding:0; font-size:calc(14px * var(--bundlify-font-scale, 1)); line-height:1.45; color:var(--bundlify-muted, inherit); }
 .bundlify-subscription-widget [hidden] { display:none !important; }
 .bundlify-subscription-widget .bundlify-purchase-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .bundlify-subscription-widget .bundlify-purchase-card { position:relative; margin:0; text-transform:none; letter-spacing:normal; gap:8px; overflow-wrap:anywhere; }
 .bundlify-subscription-widget .bundlify-purchase-card > input { position:absolute; opacity:0; width:1px; height:1px; }
-.bundlify-subscription-widget .bundlify-purchase-card:has(input:focus-visible) { outline:3px solid #6251e5; outline-offset:3px; }
 .bundlify-subscription-widget .bundlify-card-icon { margin-bottom:8px; }
 .bundlify-subscription-widget .bundlify-card-icon svg { display:block; }
 .bundlify-subscription-widget .bundlify-purchase-card > small { font-size:calc(12px * var(--bundlify-font-scale, 1)); text-align:center; }
 .bundlify-subscription-widget .bundlify-purchase-card[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
 .bundlify-subscription-widget .bundlify-option { padding:12px 15px; margin:2px 0; text-transform:none; letter-spacing:normal; }
-.bundlify-subscription-widget .bundlify-option input { margin:0; flex-shrink:0; accent-color:#6251e5; width:16px; height:16px; }
+.bundlify-subscription-widget .bundlify-option input { margin:0; flex-shrink:0; accent-color:var(--bundlify-accent); width:16px; height:16px; }
 .bundlify-subscription-widget .bundlify-plan-copy { flex:1; display:block; overflow-wrap:anywhere; }
 .bundlify-subscription-widget .bundlify-option small { display:block; font-size:calc(11px * var(--bundlify-font-scale, 1)); }
 .bundlify-subscription-widget .bundlify-price { text-align:right; }
@@ -253,7 +298,7 @@
 .bundlify-subscription-widget summary { cursor:pointer; }
 .bundlify-subscription-widget details p { line-height:1.6; }
 .bundlify-subscription-widget [data-bundlify-error] { font-size:calc(13px * var(--bundlify-font-scale, 1)); color:#a02a2a; }
-.bundlify-subscription-widget :is(input,summary):focus-visible { outline:3px solid #6251e5; outline-offset:3px; }
+.bundlify-subscription-widget :is(input,summary):focus-visible { outline:2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset:3px; }
 @media (max-width:440px) {
  .bundlify-subscription-widget { padding:16px; }
  .bundlify-subscription-widget .bundlify-purchase-card { padding:16px 10px; min-height:145px; border-radius:22px; }
@@ -265,47 +310,147 @@
  .bundlify-subscription-widget .bundlify-purchase-card:hover { transform:none; }
 }
 
-/* Matching soft sage option cards for bundle and purchase choices. */
-bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-title {
-  font-size: calc(16px * var(--bundlify-font-scale, 1)); font-weight: 700; color: inherit;
-}
-bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon { margin-bottom: 0; color: inherit; }
-bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon svg { width: 34px; height: 34px; }
+/* Purchase option cards. Same glass design as the bundle mode cards. The --bl-* palette is only set when the
+   merchant turns store matching off; otherwise every color derives from the theme text, background and button colors. */
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-cards {
-  gap: 10px; padding: 6px; border: 1px solid #e1e8e4;
-  border-radius: 22px; background: #f1f5f3;
+  gap: 10px; padding: 0; border: 1px solid var(--bl-borderColor, transparent);
+  border-radius: 0; background: color-mix(in srgb, var(--bl-groupBackground, transparent) 60%, transparent);
 }
+/* Icon tile in column 1, title, subtitle and price stacked in column 2; the badge sits centered on the right. */
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card {
-  min-width: 0; min-height: 154px; padding: 18px 12px;
-  border: 1px solid #dfe7e2; border-radius: 16px;
-  background: #fafcfb; color: #52645b; box-shadow: none;
-  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: center; align-items: center; justify-content: stretch;
+  column-gap: 12px; row-gap: 2px; min-width: 0; min-height: 0; padding: 13px 42px 13px 13px; text-align: left;
+  border: 1.5px solid var(--bl-cardBorder, var(--bundlify-glass-line)); border-radius: 16px;
+  background: var(--bundlify-glass-tint) var(--bundlify-glass); color: var(--bl-cardText, inherit);
+  -webkit-backdrop-filter: var(--bundlify-glass-blur); backdrop-filter: var(--bundlify-glass-blur);
+  box-shadow: var(--bundlify-glass-shadow);
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease, transform .2s ease;
+}
+/* Selection badge: ::after is the circle, ::before the check drawn on top of it. */
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card::after {
+  content: ""; position: absolute; top: 50%; right: 13px; margin-top: -9.5px; box-sizing: border-box;
+  width: 19px; height: 19px; border: 1.5px solid var(--bundlify-line-strong); border-radius: 50%;
+  background: transparent;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card::before {
+  content: ""; position: absolute; z-index: 1; top: 50%; right: 20px; margin-top: -5.5px; box-sizing: border-box;
+  width: 5px; height: 9.5px; border: solid var(--bundlify-on-ring); border-width: 0 2px 2px 0;
+  opacity: 0; transform: rotate(45deg) scale(.4);
+  transition: opacity .18s ease, transform .2s ease;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon {
+  grid-row: 1 / span 3; grid-column: 1; align-self: center;
+  display: grid; place-items: center; width: 36px; height: 36px; margin: 0;
+  border-radius: 10px; background: color-mix(in srgb, currentColor 6%, transparent);
+  color: var(--bl-iconColor, var(--bundlify-muted));
+  transition: color .2s ease, background-color .2s ease;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon svg { width: 21px; height: 21px; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-title {
+  color: inherit; text-align: left;
+  font-size: calc(13.5px * var(--bundlify-font-scale, 1)); font-weight: 650; line-height: 1.3; letter-spacing: -.015em;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card > small {
+  color: var(--bundlify-muted); text-align: left; line-height: 1.45; font-size: calc(11.5px * var(--bundlify-font-scale, 1));
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card > :is(.bundlify-card-title, small, strong) {
+  grid-column: 2; justify-self: start; min-width: 0;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card > strong {
+  padding-top: 4px; color: inherit;
+  font-size: calc(16px * var(--bundlify-font-scale, 1)); font-weight: 700; line-height: 1.15;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked) {
-  background: #e1efe6; color: #234e38; border-color: #81aa90;
-  box-shadow: inset 0 0 0 1px #81aa90, 0 3px 10px #234e380a;
+  background: var(--bundlify-selected-tint) var(--bundlify-glass-strong);
+  color: var(--bl-selectedText, inherit);
+  border-color: color-mix(in srgb, var(--bl-selectedBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
+  box-shadow: var(--bundlify-selected-shadow);
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked) .bundlify-card-title { font-weight: 700; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked)::after {
+  border-color: var(--bundlify-ring); background-color: var(--bundlify-ring);
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked)::before { opacity: 1; transform: rotate(45deg) scale(1); }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked) .bundlify-card-icon {
+  color: var(--bundlify-ring); background: color-mix(in srgb, var(--bundlify-ring) 14%, transparent);
+}
+/* Unavailable reads as a deliberate state, not a broken card. */
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card[aria-disabled="true"] {
+  opacity: 1; cursor: not-allowed; color: var(--bundlify-muted);
+  border-style: dashed; border-color: var(--bl-cardBorder, var(--bundlify-line-strong));
+  background: color-mix(in srgb, currentColor 2%, transparent); box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card[aria-disabled="true"]::after { border-style: dashed; opacity: .6; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card[aria-disabled="true"] .bundlify-card-icon { color: inherit; opacity: .7; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card[aria-disabled="true"] > small {
+  display: inline-block; margin-top: 5px; padding: 3px 9px; border-radius: 999px;
+  background: color-mix(in srgb, currentColor 8%, transparent); color: inherit;
+  font-size: calc(10.5px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.4; letter-spacing: .01em;
 }
 @media (hover: hover) {
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):hover {
-    transform: none; background: #edf4ef; color: #2e5140; border-color: #b2cabc;
+    transform: translateY(-2px); background-color: var(--bundlify-glass-hover);
+    color: var(--bl-hoverText, inherit); border-color: var(--bl-hoverBorder, var(--bundlify-line-strong));
+  }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):not(:has(input:checked)):hover::after { border-color: var(--bundlify-ring); }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):hover .bundlify-card-icon {
+    color: var(--bl-hoverIconColor, inherit);
   }
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):has(input:checked):hover {
-    background: #d5e8dc; border-color: #6e9b7e; color: #234e38;
+    background-color: color-mix(in srgb, var(--bl-selectedHoverBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-strong), transparent);
+    color: var(--bl-selectedHoverText, inherit);
+    border-color: color-mix(in srgb, var(--bl-selectedHoverBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
   }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):has(input:checked):hover .bundlify-card-icon { color: var(--bundlify-ring); }
 }
-bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:focus-visible) { outline: 3px solid #477d5c; outline-offset: 3px; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:focus-visible) { outline: 2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset: 3px; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-bundlify-error]:not([hidden]) { margin: 12px 0 0; line-height: 1.45; }
 @media (prefers-reduced-motion: reduce) {
-  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card { transition: none; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] :is(.bundlify-purchase-card, .bundlify-card-icon),
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card::after,
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card::before { transition: none; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:not([aria-disabled="true"]):hover { transform: none; }
+}
+
+/* Icon micro-motion. Only the drawn paths move so the icon tile and card never shift.
+   Path offsets are in the 48-unit viewBox, which renders at about half size. */
+@keyframes bundlify-sub-icon-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes bundlify-sub-icon-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: .8; } }
+@keyframes bundlify-sub-icon-spin { to { transform: rotate(360deg); } }
+@keyframes bundlify-sub-check-pop {
+  0% { opacity: 0; transform: rotate(45deg) scale(.4); }
+  60% { opacity: 1; transform: rotate(45deg) scale(1.25); }
+  100% { opacity: 1; transform: rotate(45deg) scale(1); }
+}
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg { overflow: visible; }
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg > path { transform-box: fill-box; transform-origin: center; }
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg.bundlify-icon-gift > path { animation: bundlify-sub-icon-bob 2.4s ease-in-out infinite; }
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg.bundlify-icon-box > path,
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg.bundlify-icon-repeat > path:not(.bundlify-icon-arrows) { animation: bundlify-sub-icon-bob 3.1s ease-in-out infinite; }
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg:is(.bundlify-icon-grid, .bundlify-icon-heart, .bundlify-icon-star) > path { animation: bundlify-sub-icon-pulse 2.8s ease-in-out infinite; }
+bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg.bundlify-icon-repeat > .bundlify-icon-arrows { animation: bundlify-sub-icon-spin 10s linear infinite; }
+bundlify-subscription.bundlify-subscription-widget .bundlify-purchase-card[aria-disabled="true"] .bundlify-card-icon svg > path { animation: none; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked)::before {
+  animation: bundlify-sub-check-pop .38s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  bundlify-subscription.bundlify-subscription-widget .bundlify-card-icon svg > path,
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked)::before { animation: none; }
 }
 
 /* Expanded Subscribe & Save panel. Keep purchase and cart behavior unchanged. */
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] {
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px solid #dfe7e2;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid var(--bl-cardBorder, var(--bundlify-glass-line));
   border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 4px 18px #234e3805;
+  background: var(--bundlify-glass-tint) var(--bundlify-glass);
+  -webkit-backdrop-filter: var(--bundlify-glass-blur);
+  backdrop-filter: var(--bundlify-glass-blur);
+  box-shadow: var(--bundlify-glass-shadow);
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies]:not([hidden]) {
   animation: bundlify-frequency-reveal 220ms ease-out both;
@@ -316,39 +461,56 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-ey
   font-weight: 650;
   letter-spacing: .12em;
   line-height: 1.5;
-  color: #53695c;
+  color: var(--bundlify-muted);
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 76px;
+  min-height: 56px;
   margin: 0;
-  padding: 16px;
-  border: 1px solid #e0e7e2;
-  border-radius: 12px;
-  background: #fbfcfb;
-  color: #354d3e;
+  padding: 12px 14px;
+  border: 1px solid var(--bl-cardBorder, var(--bundlify-glass-line));
+  border-radius: 14px;
+  background: transparent;
+  color: var(--bl-cardText, inherit);
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
-bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option + .bundlify-option { margin-top: 10px; }
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option + .bundlify-option { margin-top: 8px; }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:has(input:checked) {
-  background: var(--bl-selectedBackground, #e1efe6);
-  border-color: var(--bl-selectedBorder, #81aa90);
-  color: var(--bl-selectedText, #234e38);
-  box-shadow: inset 0 0 0 1px var(--bl-selectedBorder, #81aa90);
+  background: var(--bundlify-selected-tint) var(--bundlify-glass-strong);
+  border-color: color-mix(in srgb, var(--bl-selectedBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
+  color: var(--bl-selectedText, inherit);
+  box-shadow: none;
 }
-bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option input {
+/* Drawn radio: the native one takes the (often black) selected text color and themes add dark focus rings. */
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 18px;
   height: 18px;
   margin: 0;
-  accent-color: var(--bl-selectedText, #234e38);
+  padding: 0;
+  border: 1.5px solid var(--bundlify-line-strong);
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
   cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option input[type="radio"]:checked {
+  border-color: var(--bundlify-ring);
+  background: radial-gradient(circle, var(--bundlify-ring) 0 4px, transparent 4.5px);
+}
+bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option input[type="radio"]:is(:focus, :focus-visible) {
+  outline: none;
+  box-shadow: none;
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:has(input:focus-visible) {
-  outline: 2px solid var(--bl-selectedBorder, #81aa90);
-  outline-offset: 3px;
+  outline: 2px solid color-mix(in srgb, var(--bundlify-ring) 45%, transparent);
+  outline-offset: 2px;
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-plan-copy {
   min-width: 0;
@@ -371,9 +533,9 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-pr
   margin: 0;
   text-align: right;
   color: inherit;
-  font-size: calc(15px * var(--bundlify-font-scale, 1));
+  font-size: calc(14px * var(--bundlify-font-scale, 1));
   line-height: 1.4;
-  font-weight: 650;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-price small {
@@ -384,8 +546,8 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-pr
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] details {
   margin-top: 18px;
   padding-top: 15px;
-  border-top: 1px solid #e8ede9;
-  color: #53695c;
+  border-top: 1px solid var(--bundlify-line);
+  color: var(--bundlify-muted);
   font-size: calc(12px * var(--bundlify-font-scale, 1));
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies] summary {
@@ -399,8 +561,8 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-freque
 }
 @media (hover: hover) {
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:not(:has(input:checked)):hover {
-    background: #f2f6f3;
-    border-color: #b7cbbb;
+    background: var(--bundlify-glass-hover);
+    border-color: var(--bl-hoverBorder, var(--bundlify-line-strong));
   }
 }
 @keyframes bundlify-frequency-reveal {
@@ -416,4 +578,126 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-freque
 @media (prefers-reduced-motion: reduce) {
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] [data-frequencies]:not([hidden]) { animation: none; }
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option { transition: none; }
+}
+
+/* Subscription length: summary row in the frequency panel and the compact picker popup. */
+bundlify-subscription .bundlify-length-summary {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
+  margin: 0 0 16px; padding: 10px 14px;
+  border: 1px solid var(--bundlify-glass-line, var(--bundlify-line)); border-radius: 12px; background: transparent;
+  font-size: calc(13px * var(--bundlify-font-scale, 1)); color: var(--bundlify-muted);
+}
+bundlify-subscription .bundlify-length-summary strong { color: var(--bl-selectedText, currentColor); font-weight: 650; }
+bundlify-subscription .bundlify-length-summary button[type="button"] {
+  margin: 0 0 0 auto; padding: 4px 12px; min-height: 0;
+  border: 1px solid var(--bl-selectedBorder, var(--bundlify-accent)); border-radius: 999px;
+  background: transparent; color: var(--bl-selectedText, var(--bundlify-accent));
+  font: inherit; font-size: calc(12px * var(--bundlify-font-scale, 1)); font-weight: 600; cursor: pointer;
+}
+bundlify-subscription .bundlify-length-dialog {
+  --bl-accent: var(--bundlify-action-background, var(--bundlify-theme-accent));
+  /* Fixed keeps the modal in the viewport; relative/absolute in the top layer sits at the document top and focus scrolls there. */
+  position: fixed; inset: 0; box-sizing: border-box;
+  width: min(360px, calc(100% - 32px)); max-width: none; height: fit-content;
+  max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); margin: auto; padding: 20px 20px 18px;
+  overflow-y: auto; overscroll-behavior: contain;
+  border: 0; border-radius: 20px;
+  background: #fff; color: #171d26;
+  box-shadow: 0 24px 64px #09131f33, 0 2px 8px #09131f14;
+  font-family: inherit; text-align: left;
+}
+bundlify-subscription .bundlify-length-dialog[open] { animation: bundlify-length-in 180ms ease-out both; }
+bundlify-subscription .bundlify-length-dialog::backdrop { background: #09131f66; backdrop-filter: blur(8px); }
+bundlify-subscription .bundlify-length-eyebrow {
+  display: inline-flex; align-items: center; margin: 0 44px 10px 0; padding: 3px 10px;
+  border-radius: 999px; background: #f1f5f2; color: #4a5563;
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+}
+bundlify-subscription .bundlify-length-eyebrow[hidden] { display: none; }
+bundlify-subscription .bundlify-length-dialog h4 {
+  margin: 0 44px 4px 0; color: inherit;
+  font-size: calc(18px * var(--bundlify-font-scale, 1)); font-weight: 700; letter-spacing: -.02em; line-height: 1.3;
+}
+bundlify-subscription .bundlify-length-dialog > p {
+  margin: 0 0 16px; color: #666d75; font-size: calc(13px * var(--bundlify-font-scale, 1)); line-height: 1.45;
+}
+bundlify-subscription .bundlify-length-dialog button.bundlify-length-close[type="button"] {
+  position: absolute; top: 14px; right: 14px;
+  display: grid; place-items: center;
+  width: 32px; height: 32px; min-height: 32px; margin: 0; padding: 0;
+  border: 1px solid #e6e9ec; border-radius: 999px;
+  background: #fff; color: #242d38; font-size: 18px; line-height: 1; cursor: pointer;
+  transition: background-color .15s ease;
+}
+bundlify-subscription .bundlify-length-dialog button.bundlify-length-close[type="button"]:hover { background: #f1f5f2; }
+bundlify-subscription .bundlify-length-choices { display: grid; grid-template-columns: 1fr; gap: 8px; }
+bundlify-subscription .bundlify-length-choice {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; margin: 0; padding: 10px 12px;
+  border: 1.5px solid #dfe2e7; border-radius: 14px; background: #fff;
+  color: #353f4d; font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.25;
+  text-align: center; cursor: pointer; overflow-wrap: anywhere;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+bundlify-subscription .bundlify-length-choice::before {
+  content: ""; flex: 0 0 auto; box-sizing: border-box; width: 16px; height: 16px;
+  border: 1.5px solid #b9bfc7; border-radius: 999px; background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+bundlify-subscription .bundlify-length-choice input[type="radio"] { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+bundlify-subscription .bundlify-length-count input[type="number"] {
+  width: 72px; min-height: 36px; margin: 0; padding: 6px 10px;
+  border: 1.5px solid #cfd4da; border-radius: 10px; background: #fff; color: #171d26;
+  font: inherit; font-size: calc(15px * var(--bundlify-font-scale, 1)); font-weight: 600; text-align: center;
+  font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield;
+}
+bundlify-subscription .bundlify-length-count input[type="number"]::-webkit-inner-spin-button,
+bundlify-subscription .bundlify-length-count input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+bundlify-subscription .bundlify-length-count input[type="number"]:focus { outline: none; border-color: var(--bl-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bl-accent) 18%, transparent); }
+bundlify-subscription .bundlify-length-count input[aria-invalid="true"] { border-color: #b3261e; }
+bundlify-subscription .bundlify-length-error { margin: 8px 0 0; color: #b3261e; font-size: calc(12px * var(--bundlify-font-scale, 1)); line-height: 1.4; }
+bundlify-subscription .bundlify-length-error[hidden] { display: none; }
+bundlify-subscription .bundlify-length-choice:has(input:checked) {
+  border-color: var(--bl-accent); background: #eef1f5; background: color-mix(in srgb, var(--bl-accent) 9%, #fff); color: #171d26;
+}
+bundlify-subscription .bundlify-length-choice:has(input:checked)::before {
+  border-color: var(--bl-accent); background: var(--bl-accent); box-shadow: inset 0 0 0 3px #fff;
+}
+bundlify-subscription .bundlify-length-choice:has(input[type="radio"]:focus-visible) { outline: 3px solid var(--bl-focusColor, var(--bl-accent)); outline-offset: 2px; }
+bundlify-subscription .bundlify-length-dialog button.bundlify-length-confirm[type="button"] {
+  display: block; width: 100%; min-height: 44px; margin: 18px 0 0; padding: 10px 18px;
+  border: 0; border-radius: 999px; box-shadow: none;
+  background: var(--bundlify-action-background, var(--bundlify-theme-accent)); color: var(--bundlify-action-text, var(--bundlify-theme-accent-text));
+  font: inherit; font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600; letter-spacing: 0; cursor: pointer;
+  transition: filter .15s ease;
+}
+bundlify-subscription .bundlify-length-dialog button.bundlify-length-confirm[type="button"]:hover { filter: brightness(.94); }
+bundlify-subscription .bundlify-length-dialog button:focus-visible { outline: 3px solid var(--bl-focusColor, var(--bl-accent)); outline-offset: 3px; }
+@media (hover: hover) {
+  bundlify-subscription .bundlify-length-choice:not(:has(input:checked)):hover { background: #f6f9f7; border-color: #b9bfc7; }
+}
+@media (max-width: 420px) {
+  bundlify-subscription .bundlify-length-dialog { width: calc(100% - 24px); padding: 18px 16px 16px; border-radius: 18px; }
+  bundlify-subscription .bundlify-length-count { flex-wrap: wrap; }
+}
+/* iOS Safari zooms the page when a focused field is under 16px, pushing the popup off-screen. */
+@media (max-width: 600px), (pointer: coarse) {
+  bundlify-subscription .bundlify-length-count input[type="number"] { font-size: max(16px, calc(15px * var(--bundlify-font-scale, 1))); }
+}
+/* Size to the theme column: stack the purchase cards when the block is phone-narrow. */
+bundlify-subscription.bundlify-subscription-widget { container: bundlify-subscription / inline-size; }
+@container bundlify-subscription (max-width: 380px) {
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-cards { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card { padding: 12px 44px 12px 12px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon { width: 34px; height: 34px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-card-icon svg { width: 19px; height: 19px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card[aria-disabled="true"] > small { margin-top: 2px; }
+}
+@keyframes bundlify-length-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  bundlify-subscription .bundlify-length-dialog[open] { animation: none; }
+  bundlify-subscription .bundlify-length-choice { transition: none; }
 }

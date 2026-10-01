@@ -1,6 +1,6 @@
 import { discountLabel } from "../services/discounts";
 import { creationBlocked } from "../services/app-plans";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
 import { setSubscriptionStatus } from "../services/subscription-status.server";
 import { Banner } from "@shopify/polaris";
@@ -19,18 +19,17 @@ export async function loader({ request }) {
     throw error;
   }
   try {
-    const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
-    const subscriptions = await prisma.subscriptionPlan.findMany({
-      where: { shop: session.shop },
-      orderBy: { createdAt: "desc" },
-      include: { deliveryOptions: true },
-    });
-    let contracts = [];
-    try {
-      contracts = await (await import("../services/subscription-portal.server")).listSubscriberContracts(admin, session.shop);
-    } catch {
-      contracts = [];
-    }
+    const [usage, subscriptions, contracts] = await Promise.all([
+      import("../services/app-billing.server").then(({ shopUsage }) => shopUsage(session.shop)),
+      prisma.subscriptionPlan.findMany({
+        where: { shop: session.shop },
+        orderBy: { createdAt: "desc" },
+        include: { deliveryOptions: true },
+      }),
+      import("../services/subscription-portal.server")
+        .then(({ listSubscriberContracts }) => listSubscriberContracts(admin, session.shop))
+        .catch(() => []),
+    ]);
     return {
       subscriptions,
       contracts,
@@ -65,13 +64,13 @@ export async function action({ request }) {
 /* eslint-disable react/prop-types */
 function PlanStatus({ plan }) {
   const fetcher = useFetcher();
-  return <div>
+  return <div className={styles.statusAction}>
     {plan.status !== "PENDING" && <fetcher.Form method="post">
       <input type="hidden" name="planId" value={plan.id} />
       <input type="hidden" name="status" value={plan.status === "ACTIVE" ? "DRAFT" : "ACTIVE"} />
-      <button className={styles.editButton} type="submit" disabled={fetcher.state !== "idle"}>{fetcher.state !== "idle" ? "Saving…" : plan.status === "ACTIVE" ? "Move to draft" : "Activate subscription"}</button>
+      <button className={plan.status === "ACTIVE" ? styles.ghostButton : styles.activateButton} type="submit" disabled={fetcher.state !== "idle"}>{fetcher.state !== "idle" ? "Saving…" : plan.status === "ACTIVE" ? "Move to draft" : "Activate subscription"}</button>
     </fetcher.Form>}
-    {fetcher.data?.error && <p role="alert" className={styles.notice}>{fetcher.data.error}</p>}
+    {fetcher.data?.error && <p role="alert" className={styles.footerError}>{fetcher.data.error}</p>}
   </div>;
 }
 /* eslint-enable react/prop-types */
@@ -84,6 +83,16 @@ const statusOf = plan => plan.status === "ACTIVE" && plan.sellingPlanGroupId ? "
 export default function Subscriptions() {
   const { subscriptions, contracts, planLimit, planName, maxPlans } = useLoaderData();
   const [params] = useSearchParams();
+  const [savedToast, setSavedToast] = useState(() => params.get("created") === "1" ? "Subscription plan saved successfully." : params.get("updated") === "1" ? "Subscription plan updated successfully." : "");
+  useEffect(() => {
+    if (!savedToast) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("created");
+    url.searchParams.delete("updated");
+    window.history.replaceState(window.history.state, "", url);
+    const timer = setTimeout(() => setSavedToast(""), 2000);
+    return () => clearTimeout(timer);
+  }, [savedToast]);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const activeCount = subscriptions.filter(plan => statusOf(plan) === "active").length;
@@ -96,9 +105,8 @@ export default function Subscriptions() {
       <div><span className={styles.eyebrow}>RECURRING PURCHASES</span><h1>Subscription plans</h1><p>Thoughtful plans. More reasons for customers to come back.</p></div>
       {planLimit ? <Link className={styles.primaryButton} to="/app/pricing">Upgrade plan</Link> : <Link className={styles.primaryButton} to="/app/subscriptions/new"><span aria-hidden="true">+</span> Create subscription</Link>}
     </header>
-    {params.get("created") === "1" && <Banner tone="success">Subscription plan saved successfully.</Banner>}
-    {params.get("updated") === "1" && <Banner tone="success">Subscription plan updated successfully.</Banner>}
-    {params.get("deleted") === "1" && <Banner tone="success">Subscription plan deleted successfully.</Banner>}
+    <div className={styles.toast} role="status" aria-live="polite">{savedToast}</div>
+    {params.get("deleted") === "1" && <Banner tone="info">Subscription plan deleted successfully.</Banner>}
     {planLimit && <Banner tone="warning">{planLimit}</Banner>}
     {planName && <p>{maxPlans == null ? `${planName} plan includes unlimited subscription plans.` : `${planName} plan: ${subscriptions.length} of ${maxPlans} subscription plans.`}</p>}
 
@@ -112,7 +120,7 @@ export default function Subscriptions() {
       <div className={styles.collectionHeading}><div><h2>Subscribers <span>{contracts.length}</span></h2><p>Each purchase links to the customer and the Shopify order.</p></div></div>
       <div className={styles.cards}>
         {contracts.length ? contracts.map(contract => <article key={contract.id} className={styles.planCard}>
-          <div className={styles.planHeading}><div className={styles.planTitle}><h3>{contract.customerName}</h3><p>{contract.frequency} · {contract.status}</p></div></div>
+          <div className={styles.planHeading}><div className={styles.planTitle}><h3>{contract.customerName}</h3><p>{contract.frequency} · {contract.cycleLimit} · {contract.status}</p></div></div>
           <p className={styles.notice}>{contract.lines.map(line => `${line.quantity} × ${line.title}${line.amount ? ` · ${line.amount} ${line.currencyCode}` : ""}`).join(", ") || "No products on this contract."}{contract.nextBillingDate ? ` Next charge ${new Date(contract.nextBillingDate).toLocaleDateString()}.` : ""}</p>
           <footer className={styles.cardFooter}>
             <span>{contract.orderName || "No order yet"}</span>
@@ -137,17 +145,16 @@ export default function Subscriptions() {
           const options = plan.deliveryOptions?.length ? plan.deliveryOptions : [{frequency:plan.frequency,discount:plan.discount}];
           return <article key={plan.id} className={styles.planCard}>
             <div className={styles.planHeading}><div className={styles.productIcon}>{plan.productImage ? <img src={plan.productImage} alt="" loading="lazy" /> : <PlanSymbol />}</div><div className={styles.planTitle}><Link to={`/app/subscriptions/${plan.id}`}><h3>{plan.name}</h3></Link><p>{plan.productId === "ALL_PRODUCTS" ? "All products" : plan.productTitle || plan.productId}</p></div><span className={`${styles.badge} ${styles[status]}`}><span aria-hidden="true" />{status === "active" ? "Active" : status === "review" ? "Needs review" : "Draft"}</span></div>
-            <div className={styles.delivery}><span className={styles.detailLabel}>DELIVERY & SAVINGS</span><div className={styles.options}>{options.map((option,index) => <div className={styles.option} key={`${option.frequency}-${index}`}><span className={styles.frequency}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg>{option.frequency}</span><span className={styles.savings}>{discountLabel(option.discount, option.discountType)}</span></div>)}</div></div>
-            {status === "review" && <p className={styles.notice}>Review this plan in Shopify before creating another.</p>}
-            {status === "draft" && <p className={styles.notice}>Saved locally. This plan is not active in Shopify.</p>}
-            <PlanStatus plan={plan} />
-            <footer className={styles.cardFooter}><span>{options.length} delivery {options.length === 1 ? "option" : "options"}</span><div><Link className={styles.editButton} to={`/app/subscriptions/${plan.id}`} aria-label={`Edit ${plan.name}`}>Edit plan <span aria-hidden="true">?</span></Link><Link className={styles.deleteButton} to={`/app/subscriptions/${plan.id}#delete-plan`} aria-label={`Delete ${plan.name}`} title="Delete plan"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/></svg></Link></div></footer>
+            <div className={styles.delivery}><span className={styles.detailLabel}>Delivery & savings<span className={styles.detailCount}>{options.length} {options.length === 1 ? "option" : "options"}</span></span><div className={styles.options}>{options.map((option,index) => <div className={styles.option} key={`${option.frequency}-${index}`}><span className={styles.frequency}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg>{option.frequency}</span><span className={styles.savings}>{discountLabel(option.discount, option.discountType)}</span></div>)}</div></div>
+            {status === "review" && <p className={styles.planNotice}>Review this plan in Shopify before creating another.</p>}
+            {status === "draft" && <p className={styles.planNotice}>Saved locally. This plan is not active in Shopify.</p>}
+            <footer className={`${styles.cardFooter} ${styles.planFooter}`}><PlanStatus plan={plan} /><div className={styles.footerActions}><Link className={styles.editButton} to={`/app/subscriptions/${plan.id}`} aria-label={`Edit ${plan.name}`}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>Edit plan</Link><Link className={styles.deleteButton} to={`/app/subscriptions/${plan.id}#delete-plan`} aria-label={`Delete ${plan.name}`} title="Delete plan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/></svg></Link></div></footer>
           </article>;
         })}
         {!filtered.length && <div className={styles.empty}><span className={styles.productIcon}><PlanSymbol /></span><h3>{subscriptions.length ? "No matching plans" : "Start something recurring"}</h3><p>{subscriptions.length ? "Try another search or status to find your plan." : "Create your first subscription plan and give customers a reason to return."}</p>{subscriptions.length ? <button className={styles.editButton} onClick={() => {setQuery("");setFilter("all");}}>Clear filters</button> : planLimit ? <Link className={styles.primaryButton} to="/app/pricing">Upgrade plan</Link> : <Link className={styles.primaryButton} to="/app/subscriptions/new">Create your first plan</Link>}</div>}
       </div>
       <div className={styles.collectionFooter} role="status">Showing {filtered.length} of {subscriptions.length} plans</div>
     </section>
-    <p className={styles.footnote}><span aria-hidden="true">?</span> Plan changes apply to future purchases. Existing customer subscriptions stay unchanged.</p>
+    <p className={styles.footnote}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg> Plan changes apply to future purchases. Existing customer subscriptions stay unchanged.</p>
   </div>;
 }

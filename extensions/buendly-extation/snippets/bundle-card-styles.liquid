@@ -1,0 +1,26 @@
+{% comment %}Core card layout rendered with the Liquid, so the block never shows raw text if bundlify-bundles.css or .js fails to load. bundlify-bundles.css overrides every rule here. Colors and fonts come from the theme.{% endcomment %}
+<style>
+  bundlify-bundles { display: block; box-sizing: border-box; }
+  bundlify-bundles * { box-sizing: border-box; }
+  bundlify-bundles [hidden] { display: none !important; }
+  :where(bundlify-bundles) .bundlify-mode-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 24px; }
+  bundlify-bundles .bundlify-mode-card {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; row-gap: 2px;
+    width: 100%; min-width: 0; margin: 0; padding: 16px;
+    border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 16px;
+    background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  bundlify-bundles .bundlify-mode-card[aria-pressed="true"] { border-color: currentColor; }
+  bundlify-bundles .bundlify-mode-card:disabled { border-style: dashed; cursor: not-allowed; opacity: .7; }
+  bundlify-bundles .bundlify-mode-card .bundlify-choice-icon { grid-row: 1 / span 2; width: 34px; height: 34px; margin: 0; }
+  bundlify-bundles .bundlify-mode-card :is(strong, small) { grid-column: -2; }
+  :where(bundlify-bundles) .bundlify-mode-card small { font-size: calc(13px * var(--bundlify-font-scale, 1)); color: color-mix(in srgb, currentColor 70%, transparent); }
+  bundlify-bundles .bundlify-load-state { display: grid; }
+  bundlify-bundles .bundlify-load-state > * { grid-area: 1 / 1; margin: 0; }
+  bundlify-bundles .bundlify-load-failed { display: none; }
+  {%- comment %}The element only stays undefined when bundlify-bundles.js never ran, so swap the loading text for the failure text.{% endcomment %}
+  bundlify-bundles:not(:defined) .bundlify-load-failed { display: block; visibility: hidden; animation: bundlify-load-failed 0s 12s forwards; }
+  bundlify-bundles:not(:defined) .bundlify-load-state > [data-message] { animation: bundlify-load-pending 0s 12s forwards; }
+  @keyframes bundlify-load-failed { to { visibility: visible; } }
+  @keyframes bundlify-load-pending { to { visibility: hidden; } }
+</style>

@@ -23,7 +23,7 @@ also does not override a shop's already-saved settings: use **Restore defaults**
 
 ## Shop owner guide
 
-1. Open **Shopify admin → Apps → Bundlify → Settings** (`/app/settings`).
+1. Open **Shopify admin → Apps → Bundle Base → Settings** (`/app/settings`).
 2. In **Subscription block**, edit the Purchase options heading and subtitle, One-time purchase label and description, and Subscribe & Save label and description. You can also edit the unavailable message.
 3. In **Bundle block**, edit Better together, Our bundle, Custom bundle, their descriptions, the unavailable message, and the add-to-cart button label.
 4. Use **Card icons** to choose Gift, Build a bundle, Package, Recurring delivery, Heart, Star, or No icon independently for each card.

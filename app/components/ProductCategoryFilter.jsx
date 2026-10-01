@@ -2,7 +2,7 @@
 import { productCategories } from "../services/product-categories";
 import styles from "../styles/bundle-editor.module.css";
 
-export default function ProductCategoryFilter({ products, value, onChange, disabled }) {
+export default function ProductCategoryFilter({ products, value, onChange, disabled, maxProducts = 50 }) {
   return <fieldset className={styles.categoryFilter} disabled={disabled}>
     <legend>Select product categories</legend>
     <div className={styles.categoryChoices}>
@@ -11,6 +11,6 @@ export default function ProductCategoryFilter({ products, value, onChange, disab
         <span>{category.label} ({category.count})</span>
       </label>)}
     </div>
-    <small>Select multiple categories to add all their products, then uncheck any products you want to exclude. Unchecking a category removes its products. One discount applies to the final selection (maximum 50 products).</small>
+    <small>Select multiple categories to add all their products, then uncheck any products you want to exclude. Unchecking a category removes its products. Your plan allows up to {maxProducts} products.</small>
   </fieldset>;
 }

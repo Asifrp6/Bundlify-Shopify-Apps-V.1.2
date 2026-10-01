@@ -10,6 +10,8 @@
       }
       disconnectedCallback() {
         this.querySelector('[data-custom-dialog]')?.close();
+        this.closeDialog(this.querySelector('[data-gift-preview]'));
+        this.closeDialog(this.querySelector('[data-gift-dialog]'));
         this.bundleView?.abort();
         this.controller?.abort();
       }
@@ -24,29 +26,40 @@
         try {
           const root = (this.dataset.root || "/").replace(/\/$/, "");
           const url = new URL(`${root}/apps/bundlify/bundles`, location.origin);
-          if (this.dataset.product)
-            url.searchParams.set("productId", this.dataset.product);
           const response = await fetch(url, { signal: controller.signal });
           if (!response.ok) throw new Error("Request failed");
-          const { bundles } = await response.json();
+          const { bundles, giftOptions, giftEnabled } = await response.json();
           if (!Array.isArray(bundles)) throw new Error("Invalid response");
           if (!this.isConnected || this.controller !== controller) return;
+          // Older app responses have no flag; only an explicit false turns the gift steps off.
+          const gift = giftEnabled === false ? null : this.giftChoices(giftOptions);
           const list = this.querySelector("[data-list]");
           list.replaceChildren();
           list.parentElement?.querySelector("[data-bundle-options]")?.remove();
+          this.closeDialog(this.querySelector('[data-gift-preview]'));
+          this.querySelector('[data-gift-preview]')?.remove();
+          this.querySelector('[data-gift-dialog]')?.remove();
+          const dialog = this.giftDialog(controller.signal);
           // Share requests between bundles in this load, without caching stale prices.
           const productRequests = new Map();
-          const renderBundle = (bundle) => {
+          const renderBundle = (bundle, choice) => {
             this.bundleView?.abort();
             const view = new AbortController();
             this.bundleView = view;
             controller.signal.addEventListener("abort", () => view.abort(), { once: true });
             const card = document.createElement("article");
+            card.className = "bundlify-bundle-detail";
             const title = document.createElement("h3");
+            title.id = `bundlify-gift-title-${crypto.randomUUID?.() || Date.now()}`;
+            title.tabIndex = -1;
             title.textContent = bundle.name;
             card.append(title);
-            list.replaceChildren(card);
-            this.preparePurchase(card, bundle, root, view.signal, productRequests);
+            dialog.querySelector('.bundlify-bundle-detail')?.remove();
+            dialog.append(card);
+            dialog.setAttribute('aria-labelledby', title.id);
+            dialog.returnFocus = choice;
+            this.preparePurchase(card, { ...bundle, gift, popup: true }, root, view.signal, productRequests);
+            this.openDialog(dialog, title);
           };
           if (bundles.length) {
             const options = document.createElement("div");
@@ -77,24 +90,27 @@
               choice.append(mark, copy, radio);
               choice.setAttribute("aria-pressed", "false");
               choice.addEventListener("click", () => {
-                if (choice.getAttribute("aria-pressed") === "true") return;
+                if (choice.getAttribute("aria-pressed") === "true" && dialog.querySelector('.bundlify-bundle-detail')) {
+                  dialog.returnFocus = choice;
+                  this.openDialog(dialog, dialog.querySelector('.bundlify-bundle-detail > h3'));
+                  return;
+                }
                 for (const node of options.querySelectorAll("button")) node.setAttribute("aria-pressed", "false");
                 choice.setAttribute("aria-pressed", "true");
-                renderBundle(bundle);
+                renderBundle(bundle, choice);
               }, { signal: controller.signal });
               options.append(choice);
             }
             list.before(options);
           }
           this.hidden = false;
-          this.querySelector("[data-message]").textContent = bundles.length || hasCustom
+          this.querySelector("[data-message]").textContent = bundles.length
             ? ""
             : this.dataset.editor === "true"
-              ? "Activate a bundle in Bundlify. Its products must be published and match this product page."
-              : "No bundle offers are available for this product right now.";
-          if (!bundles.length && hasCustom) {
-            this.querySelector('[data-message]').textContent = 'No ready-made bundles are available right now. Create your own custom bundle.';
-          }
+              ? "No active bundles found. In Bundle Base, activate a bundle with at least two products published to the Online Store."
+              : hasCustom
+                ? "No ready-made bundles are available right now. Create your own custom bundle."
+                : "No bundle offers are available right now.";
         } catch {
           if (!this.isConnected || this.controller !== controller) return;
           this.hidden = false;
@@ -206,7 +222,7 @@
         signal,
         productRequests = new Map(),
       ) {
-        const buttonLabel = bundle.onDone ? 'Done' : bundle.custom ? "Add custom bundle to cart" : this.dataset.buttonText || "Add bundle to cart";
+        const buttonLabel = bundle.onDone ? 'Done' : bundle.custom ? "Add custom bundle to cart" : bundle.popup ? "Add to cart" : this.dataset.buttonText || "Add bundle to cart";
         const button = document.createElement("button");
         button.type = "button";
         button.className = "bundlify-purchase-action";
@@ -246,6 +262,9 @@
             bundle.fixedAmount = Number.isFinite(rate) && rate > 0 ? Math.round(Number(bundle.fixedDiscount || 0) * rate * 100) : 0;
             bundle.fixedEstimate = currency !== bundle.shopCurrency;
           }
+          const steps = bundle.gift && !bundle.custom
+            ? this.giftSteps(card, { bundle, button, message, productGrid, total, money, currency, signal })
+            : null;
           const discount =
             Number.isInteger(bundle.discount) &&
             bundle.discount >= 0 &&
@@ -293,6 +312,7 @@
             }
             total.replaceChildren();
             const label = document.createElement("span");
+            label.className = "bundlify-total-label";
             label.textContent = "Bundle total";
             const value = document.createElement("strong");
             value.textContent = money(subtotal - savings);
@@ -310,16 +330,20 @@
                 `Original total ${money(displayedOriginal)}`,
               );
               const saving = document.createElement("small");
-              saving.textContent = bundle.fixed ? `${bundle.fixedEstimate ? 'Estimated savings' : 'You save'} ${money(displayedSavings)} off this bundle` : `You save ${money(displayedSavings)} (${displayedPercentage}%)`; 
+              saving.className = "bundlify-total-save";
+              saving.textContent = bundle.fixed ? `${bundle.fixedEstimate ? 'Estimated savings' : 'You save'} ${money(displayedSavings)} off this bundle`
+                : bundle.custom ? `You save ${money(displayedSavings)} (${displayedPercentage}%)`
+                : `Save ${displayedPercentage}% · ${money(displayedSavings)}`;
               total.append(was, value);
               if (displayedSavings > 0) total.append(saving);
-              if (bundle.fixedEstimate) { const note = document.createElement('small'); note.textContent = 'Final discount and currency conversion are calculated at checkout.'; total.append(note); }
+              if (bundle.fixedEstimate) { const note = document.createElement('small'); note.className = 'bundlify-total-note'; note.textContent = 'Final discount and currency conversion are calculated at checkout.'; total.append(note); }
             } else total.append(value);
             if (bundle.custom) {
               const count = entries.filter(entry => entry.checkbox.checked).length;
               button.disabled = count < 2;
-              message.textContent = `${count} products selected. Choose at least 2.`;
+              message.textContent = count < 2 ? `Select ${2 - count} more product${count === 1 ? "" : "s"}.` : `${count} products in this bundle`;
             }
+            steps?.update(subtotal - savings);
           };
           const products = await Promise.all(
             bundle.products.map((product) => {
@@ -396,7 +420,10 @@
             sale.className = 'bundlify-sale-badge';
             prices.append(was, price, sale);
             const label = document.createElement("label");
-            label.textContent = "Choose option";
+            const labelText = document.createElement("span");
+            labelText.className = "bundlify-variant-label";
+            labelText.textContent = "Choose option";
+            label.append(labelText);
             const select = document.createElement("select");
             for (const variant of variants) {
               const option = document.createElement("option");
@@ -452,6 +479,7 @@
           button.disabled = false;
           updatePrices();
           button.textContent = buttonLabel;
+          steps?.ready();
           button.addEventListener(
             "click",
             async () => {
@@ -470,6 +498,7 @@
               button.textContent = "Adding…";
               message.textContent = "";
               cart.hidden = true;
+              steps?.lock(true);
               try {
                 const drawer = document.querySelector("cart-drawer");
                 const sections =
@@ -486,14 +515,14 @@
                     Accept: "application/json",
                   },
                   body: JSON.stringify({
-                    items: selectedEntries.map(({ select }) => ({
+                    items: [...selectedEntries.map(({ select }) => ({
                       id: select.value,
                       quantity: 1,
                       properties: {
                         ...(bundle.custom ? { _bundlify_custom: 'true' } : { _bundlify_bundle: String(bundle.id) }),
                         _bundlify_group: group,
                       },
-                    })),
+                    })), ...(steps?.items(group) || [])],
                     ...(sections.length
                       ? { sections, sections_url: location.pathname }
                       : {}),
@@ -507,10 +536,19 @@
                       result.message ||
                       "Could not add the bundle. Check your cart before trying again.",
                   );
-                message.textContent = "Bundle added to your cart.";
+                message.textContent = steps?.addedMessage() || "Bundle added to your cart.";
                 button.textContent = "Added to cart";
                 cart.hidden = false;
                 // Drawer rendering is separate from adding: never retry a successful cart write.
+                if (bundle.popup) {
+                  const dialog = card.closest('[data-gift-dialog]');
+                  if (dialog?.open || dialog?.hasAttribute('open')) {
+                    await new Promise(resolve => {
+                      dialog.addEventListener('close', resolve, { once: true });
+                      this.closeDialog(dialog);
+                    });
+                  }
+                }
                 if (bundle.custom) {
                   const dialog = this.querySelector('[data-custom-dialog]');
                   if (dialog?.open) {
@@ -533,6 +571,7 @@
                   select.disabled = false;
                 });
                 entries.forEach(entry => { if (entry.checkbox) entry.checkbox.disabled = false; });
+                steps?.lock(false);
               } catch (error) {
                 message.textContent =
                   error.name === "TimeoutError" || error instanceof TypeError
@@ -545,6 +584,7 @@
                   select.disabled = false;
                 });
                 entries.forEach(entry => { if (entry.checkbox) entry.checkbox.disabled = false; });
+                steps?.lock(false);
               }
             },
             { signal },
@@ -554,6 +594,319 @@
           button.textContent = "Bundle unavailable";
           message.textContent = error.message;
         }
+      }
+      giftCardImage(value) {
+        try {
+          const url = new URL(String(value || ""), "https://invalid.local");
+          const host = url.hostname.toLowerCase();
+          const shopify = host === "cdn.shopify.com" || host.endsWith(".shopify.com") || host.endsWith(".shopifycdn.com") || host.endsWith(".myshopify.com");
+          return url.protocol === "https:" && !url.username && !url.password && shopify ? url.href : "";
+        } catch {
+          return "";
+        }
+      }
+      giftChoices(raw) {
+        const pick = list => (Array.isArray(list) ? list : [])
+          .filter(option => option?.name && /^\d+$/.test(String(option.variantId)) && Number.isFinite(Number(option.price)) && Number(option.price) >= 0)
+          .map(option => ({ id: String(option.id), name: String(option.name), price: String(option.price), variantId: String(option.variantId), imageUrl: this.giftCardImage(option.imageUrl) }));
+        return { packages: pick(raw?.packages), wraps: pick(raw?.wraps) };
+      }
+      giftDialog(signal) {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'bundlify-gift-dialog';
+        dialog.dataset.giftDialog = '';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'bundlify-builder-close';
+        close.setAttribute('aria-label', 'Close');
+        close.innerHTML = '<span aria-hidden="true">×</span>';
+        close.addEventListener('click', () => this.closeDialog(dialog), { signal });
+        dialog.addEventListener('click', event => {
+          if (event.target !== dialog) return;
+          const bounds = dialog.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) this.closeDialog(dialog);
+        }, { signal });
+        dialog.addEventListener('close', () => {
+          this.closeDialog(this.querySelector('[data-gift-preview]'));
+          if (this.isConnected) dialog.returnFocus?.focus({ preventScroll: true });
+        }, { signal });
+        dialog.append(close);
+        this.append(dialog);
+        return dialog;
+      }
+      openDialog(dialog, focusTarget) {
+        if (!dialog.open && !dialog.hasAttribute('open')) {
+          if (typeof dialog.showModal === 'function') dialog.showModal();
+          else dialog.setAttribute('open', '');
+        }
+        focusTarget?.focus({ preventScroll: true });
+      }
+      closeDialog(dialog) {
+        if (!dialog || (!dialog.open && !dialog.hasAttribute('open'))) return;
+        if (typeof dialog.close === 'function') dialog.close();
+        else {
+          dialog.removeAttribute('open');
+          dialog.dispatchEvent(new Event('close'));
+        }
+      }
+      // Large image above the gift steps. Closing it leaves the package or wrap selection unchanged.
+      openGiftPreview(src, returnFocus, signal) {
+        if (!src || signal?.aborted) return;
+        const existing = this.querySelector('[data-gift-preview]');
+        if (existing) {
+          existing.dataset.skipFocus = 'true';
+          this.closeDialog(existing);
+        }
+        const dialog = document.createElement('dialog');
+        dialog.className = 'bundlify-gift-preview';
+        dialog.dataset.giftPreview = '';
+        dialog.setAttribute('aria-label', 'Image preview');
+        const image = document.createElement('img');
+        image.src = src;
+        image.alt = '';
+        image.decoding = 'async';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'bundlify-builder-close';
+        close.setAttribute('aria-label', 'Close');
+        close.innerHTML = '<span aria-hidden="true">×</span>';
+        const closePreview = () => this.closeDialog(dialog);
+        close.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          closePreview();
+        });
+        dialog.addEventListener('click', event => {
+          event.stopPropagation();
+          if (event.target !== dialog) return;
+          const bounds = dialog.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closePreview();
+        });
+        dialog.addEventListener('keydown', event => {
+          if (event.key !== 'Escape') return;
+          event.preventDefault();
+          event.stopPropagation();
+          closePreview();
+        });
+        dialog.addEventListener('cancel', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          closePreview();
+        });
+        const onAbort = () => closePreview();
+        signal?.addEventListener('abort', onAbort, { once: true });
+        dialog.addEventListener('close', () => {
+          signal?.removeEventListener('abort', onAbort);
+          const x = window.scrollX;
+          const y = window.scrollY;
+          dialog.remove();
+          if (dialog.dataset.skipFocus !== 'true' && this.isConnected && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+          if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
+        });
+        dialog.append(image, close);
+        this.append(dialog);
+        const host = this.querySelector('[data-gift-dialog]');
+        const top = host?.scrollTop || 0;
+        const x = window.scrollX;
+        const y = window.scrollY;
+        this.openDialog(dialog, close);
+        if (host) host.scrollTop = top;
+        if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
+      }
+      // Ready-made bundle popup: products → package → wrap → summary. Package and wrap fees are real variants
+      // added next to the bundle lines, so checkout charges them.
+      giftSteps(card, { bundle, button, message, productGrid, total, money, currency, signal }) {
+        const { packages, wraps } = bundle.gift;
+        const rate = currency === bundle.shopCurrency ? 1 : Number(window.Shopify?.currency?.rate);
+        const converted = Number.isFinite(rate) && rate > 0 ? rate : 1;
+        const cents = option => option ? Math.round(Number(option.price) * converted * 100) : 0;
+        const make = (tag, className, text) => {
+          const node = document.createElement(tag);
+          if (className) node.className = className;
+          if (text != null) node.textContent = text;
+          return node;
+        };
+        const action = (label, primary) => {
+          const node = make('button', `bundlify-gift-button${primary ? ' bundlify-gift-primary' : ''}`, label);
+          node.type = 'button';
+          return node;
+        };
+        const heading = text => {
+          const node = make('h4', 'bundlify-gift-heading', text);
+          node.tabIndex = -1;
+          return node;
+        };
+        const state = { step: 'products', history: [], packageId: '', wrapId: '', productCents: 0 };
+        const uid = Math.random().toString(36).slice(2);
+        const title = card.querySelector('h3');
+
+        const nav = make('div', 'bundlify-gift-nav');
+        const back = make('button', 'bundlify-gift-back', 'Back');
+        back.type = 'button';
+        back.setAttribute('aria-label', 'Back to the previous step');
+        const progress = make('p', 'bundlify-gift-progress');
+        nav.append(back, progress);
+        title.after(nav);
+
+        const productActions = make('div', 'bundlify-gift-actions');
+        const giftBox = action('Gift Box', true);
+        const skipProducts = action('Skip');
+        giftBox.disabled = skipProducts.disabled = true;
+        productActions.append(giftBox, skipProducts);
+
+        const packageStep = make('section', 'bundlify-gift-step');
+        packageStep.dataset.giftStep = 'package';
+        const packageHeading = heading('Choose a package');
+        packageHeading.id = `bundlify-package-${uid}`;
+        packageStep.append(packageHeading);
+        const choices = (headingNode, key, options) => {
+          const group = make('div', 'bundlify-gift-choices');
+          group.setAttribute('role', 'radiogroup');
+          group.setAttribute('aria-labelledby', headingNode.id);
+          const inputs = options.map(option => {
+            const label = make('label', 'bundlify-gift-choice');
+            const input = make('input');
+            input.type = 'radio';
+            input.name = `${headingNode.id}-choice`;
+            input.value = option.id;
+            input.addEventListener('change', () => { state[key] = option.id; }, { signal });
+            label.append(input);
+            const imageUrl = this.giftCardImage(option.imageUrl);
+            if (imageUrl) {
+              const media = make('button', 'bundlify-gift-choice-media');
+              media.type = 'button';
+              const img = make('img', 'bundlify-gift-choice-image');
+              img.src = imageUrl;
+              img.alt = '';
+              img.width = 64;
+              img.height = 64;
+              img.decoding = 'async';
+              const view = make('span', 'bundlify-gift-choice-view', 'View');
+              label.classList.add('bundlify-gift-choice-with-image');
+              media.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.openGiftPreview(imageUrl, media, signal);
+              }, { signal });
+              img.addEventListener('error', () => {
+                label.classList.remove('bundlify-gift-choice-with-image');
+                media.remove();
+              }, { signal });
+              media.append(img, view);
+              label.append(media);
+            }
+            label.append(make('span', 'bundlify-gift-choice-name', option.name), make('strong', 'bundlify-gift-choice-price', money(cents(option))));
+            group.append(label);
+            return input;
+          });
+          return { group, inputs };
+        };
+        let radios = [];
+        if (packages.length) {
+          const built = choices(packageHeading, 'packageId', packages);
+          radios = built.inputs;
+          packageStep.append(built.group);
+        } else packageStep.append(make('p', 'bundlify-gift-empty', 'No packages are set up yet. You can skip this step.'));
+        const packageActions = make('div', 'bundlify-gift-actions');
+        const wrapBox = action('Wrap a Box', true);
+        const skipPackage = action('Skip');
+        packageActions.append(wrapBox, skipPackage);
+        packageStep.append(packageActions);
+
+        const wrapStep = make('section', 'bundlify-gift-step');
+        wrapStep.dataset.giftStep = 'wrap';
+        const wrapHeading = heading('Wrap Your Gift Box');
+        wrapHeading.id = `bundlify-wrap-${uid}`;
+        wrapStep.append(wrapHeading);
+        let wrapRadios = [];
+        if (wraps.length) {
+          const built = choices(wrapHeading, 'wrapId', [{ id: '', name: 'No wrap', price: 0 }, ...wraps]);
+          wrapRadios = built.inputs;
+          wrapRadios[0].checked = true;
+          wrapStep.append(built.group);
+        } else wrapStep.append(make('p', 'bundlify-gift-empty', 'No wraps are set up yet. Continue without a wrap.'));
+        const wrapActions = make('div', 'bundlify-gift-actions');
+        const continueButton = action('Continue', true);
+        wrapActions.append(continueButton);
+        wrapStep.append(wrapActions);
+
+        const summaryStep = make('section', 'bundlify-gift-step');
+        summaryStep.dataset.giftStep = 'summary';
+        const summaryHeading = heading('Order summary');
+        const summary = make('dl', 'bundlify-gift-summary');
+        summaryStep.append(summaryHeading, summary);
+        if (currency !== bundle.shopCurrency && (packages.length || wraps.length))
+          summaryStep.append(make('p', 'bundlify-gift-note', 'Gift prices are converted from the store currency. The final amount is confirmed at checkout.'));
+        summaryStep.append(button);
+        message.before(productActions, packageStep, wrapStep, summaryStep);
+
+        const selected = () => ({
+          pack: packages.find(option => option.id === state.packageId) || null,
+          wrap: wraps.find(option => option.id === state.wrapId) || null,
+        });
+        const renderSummary = () => {
+          const { pack, wrap } = selected();
+          const rows = [['Product price', state.productCents], ['Box price', cents(pack), pack?.name]];
+          if (wrap) rows.push(['Wrap price', cents(wrap), wrap.name]);
+          rows.push(['Total', state.productCents + cents(pack) + cents(wrap)]);
+          summary.replaceChildren();
+          for (const [label, amount, detail] of rows) {
+            const row = make('div', label === 'Total' ? 'bundlify-gift-summary-total' : null);
+            const term = make('dt', null, label);
+            if (detail) term.append(make('small', null, detail));
+            row.append(term, make('dd', null, money(amount)));
+            summary.append(row);
+          }
+        };
+        const order = ['products', 'package', 'wrap', 'summary'];
+        const names = { products: 'Products', package: 'Package', wrap: 'Wrap', summary: 'Summary' };
+        const sections = { package: [packageStep, packageHeading], wrap: [wrapStep, wrapHeading], summary: [summaryStep, summaryHeading] };
+        const show = (step, focus = true) => {
+          state.step = step;
+          const onProducts = step === 'products';
+          for (const node of [productGrid, total, productActions]) node.hidden = !onProducts;
+          for (const [name, [section]] of Object.entries(sections)) section.hidden = name !== step;
+          back.hidden = onProducts;
+          progress.textContent = `Step ${order.indexOf(step) + 1} of 4 · ${names[step]}`;
+          card.dataset.giftCurrent = step;
+          if (step === 'summary') renderSummary();
+          if (!focus) return;
+          message.textContent = '';
+          (onProducts ? title : sections[step][1]).focus({ preventScroll: true });
+          const dialog = card.closest('[data-gift-dialog]');
+          if (dialog) dialog.scrollTop = 0;
+        };
+        const go = (step, changes = {}) => {
+          state.history.push(state.step);
+          Object.assign(state, changes);
+          if (!state.packageId) for (const radio of radios) radio.checked = false;
+          if (!state.wrapId && wrapRadios.length) wrapRadios[0].checked = true;
+          show(step);
+        };
+        giftBox.addEventListener('click', () => go('package'), { signal });
+        skipProducts.addEventListener('click', () => go('summary', { packageId: '', wrapId: '' }), { signal });
+        wrapBox.addEventListener('click', () => go('wrap'), { signal });
+        skipPackage.addEventListener('click', () => go('summary', { wrapId: '' }), { signal });
+        continueButton.addEventListener('click', () => go('summary'), { signal });
+        back.addEventListener('click', () => show(state.history.pop() || 'products'), { signal });
+        show('products', false);
+        return {
+          ready() { giftBox.disabled = skipProducts.disabled = false; },
+          update(productCents) {
+            state.productCents = productCents;
+            if (state.step === 'summary') renderSummary();
+          },
+          lock(locked) { back.disabled = locked; },
+          items(group) {
+            const { pack, wrap } = selected();
+            const line = (option, label) => option && { id: option.variantId, quantity: 1, properties: { [label]: option.name, Bundle: bundle.name, _bundlify_gift_for: group } };
+            return [line(pack, 'Gift box'), line(wrap, 'Gift wrap')].filter(Boolean);
+          },
+          addedMessage() {
+            const extras = Object.values(selected()).filter(Boolean).map(option => option.name);
+            return extras.length ? `Bundle added to your cart with ${extras.join(' and ')}.` : 'Bundle added to your cart.';
+          },
+        };
       }
       async openCart(url, result, drawer, sections) {
         if (drawer?.renderContents && sections.length) {

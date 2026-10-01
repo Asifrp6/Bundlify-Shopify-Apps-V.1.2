@@ -3,6 +3,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { getProducts, listProducts } from "../services/products.server";
 import { validateBundle } from "../services/validation";
+import { bundleActivationError } from "../services/product-selection";
 
 
 export { default } from "./app.bundles.new";
@@ -23,10 +24,14 @@ async function findBundle(id, shop) {
 }
 export async function loader({ request, params }) {
   const { admin, session } = await authenticate.admin(request);
-  const bundle = await findBundle(params.id, session.shop);
-  const limits = await (await import("../services/app-billing.server")).shopLimits(session.shop);
+  const catalog = listProducts(admin);
+  catalog.catch(() => {});
+  const [bundle, limits] = await Promise.all([
+    findBundle(params.id, session.shop),
+    import("../services/app-billing.server").then(({ shopLimits }) => shopLimits(session.shop)),
+  ]);
   try {
-    return { bundle, products: await listProducts(admin), error: null, maxProducts: limits?.maxProducts ?? 5 };
+    return { bundle, products: await catalog, error: null, maxProducts: limits?.maxProducts ?? 5 };
   } catch (error) {
     if (error instanceof Response) throw error;
     return {
@@ -85,6 +90,8 @@ export async function action({ request, params }) {
       },
       { status: 400 },
     );
+  const inactive = publish && bundleActivationError(products);
+  if (inactive) return data({ errors: { productIds: inactive } }, { status: 400 });
   const { createBundleDiscount, removeBundleDiscount } = await import("../services/bundle-discount.server");
   let updated;
   try {
@@ -114,12 +121,16 @@ export async function action({ request, params }) {
     );
   }
   if (publish) {
+    let discountNodeId = null;
+    let discountError;
     try {
-      const discountNodeId = await createBundleDiscount(admin, updated);
-      await prisma.bundle.update({ where: { id: updated.id }, data: { status: "ACTIVE", discountNodeId } });
+      discountNodeId = await createBundleDiscount(admin, updated);
     } catch (error) {
-      return data({ error: `${error.message || "Could not activate this bundle."} It was saved as a draft.` }, { status: 502 });
+      discountError = error;
     }
+    await prisma.bundle.update({ where: { id: updated.id }, data: { status: "ACTIVE", discountNodeId } });
+    if (discountError)
+      return data({ error: `${discountError.message || "Could not activate the bundle discount."} The bundle is live without its discount. Use Enable bundle discount on the Bundles page to retry.` }, { status: 502 });
   }
   return redirect("/app/bundles?updated=1");
 }

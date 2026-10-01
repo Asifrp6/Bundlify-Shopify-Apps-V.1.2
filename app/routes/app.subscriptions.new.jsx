@@ -1,10 +1,11 @@
-import ProductCategoryFilter from "../components/ProductCategoryFilter";
-import { capProductSelection, categoryLabel, filterBundleProducts, selectCategoryProducts } from "../services/product-categories";
+import PlanProductFields from "../components/PlanProductFields";
+import { selectionReady, selectionSummary } from "../services/product-selection";
 import { creationBlocked } from "../services/app-plans";
-import productStyles from "../styles/bundle-editor.module.css";
 import { discountLabel } from "../services/discounts";
 import styles from "../styles/plan-form.module.css";
-import { schedules } from "../services/delivery-options";
+import { nextFrequency } from "../services/delivery-options";
+import FrequencyFields from "../components/FrequencyFields";
+import SubscriptionLengthFields from "../components/SubscriptionLengthFields";
 import {
   data,
   Form,
@@ -36,11 +37,13 @@ import prisma from "../db.server";
 
 export async function loader({ request }) {
   const { admin, session } = await authenticate.admin(request);
+  const catalog = listProducts(admin);
+  catalog.catch(() => {});
   const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
   const limits = usage;
 
   try {
-    const products = await listProducts(admin);
+    const products = await catalog;
 
     return data({
       products,
@@ -153,7 +156,7 @@ export default function NewSubscription() {
   const revalidator = useRevalidator();
 
   const submitting = navigation.state !== "idle";
-  const [status, setStatus] = useState("DRAFT");
+  const [status, setStatus] = useState("ACTIVE");
 
   const [name, setName] = useState("");
 
@@ -161,17 +164,10 @@ export default function NewSubscription() {
     { frequency: "Monthly", discount: 0 },
   ]);
 
+  const [lengthEnabled, setLengthEnabled] = useState(false);
   const [productId, setProductId] = useState("");
 
   const [selected, setSelected] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState("");
-  const changeCategory = (id, checked) => {
-    setProductId("SELECTED_PRODUCTS");
-    setCategories(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
-    setSelected(current => capProductSelection(current, selectCategoryProducts(products, current, id, checked), maxProducts));
-  };
-  const selectedProduct = products.find((product) => product.id === productId);
   const updateOption = (index, key, value) =>
     setOptions((current) =>
       current.map((option, i) =>
@@ -182,10 +178,7 @@ export default function NewSubscription() {
     setOptions((current) => [
       ...current,
       {
-        frequency: Object.keys(schedules).find(
-          (frequency) =>
-            !current.some((option) => option.frequency === frequency),
-        ),
+        frequency: nextFrequency(current),
         discount: 0,
       },
     ]);
@@ -262,46 +255,7 @@ export default function NewSubscription() {
                   <p>Decide where this subscription will be available.</p>
                 </div>
               </div>
-              <label className={styles.field} htmlFor="plan-product">
-                Apply plan to
-                <select
-                  id="plan-product"
-                  name="productId"
-                  required
-                  value={productId}
-                  onChange={(event) => setProductId(event.target.value)}
-                  aria-describedby="product-help"
-                >
-                  <option value="" disabled>
-                    Select a product
-                  </option>
-                  <option value="ALL_PRODUCTS">All current products</option>
-                  <option value="SELECTED_PRODUCTS">Choose products by category</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {productId === "SELECTED_PRODUCTS" && <>
-                {selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
-                <ProductCategoryFilter products={products} value={categories} onChange={changeCategory} disabled={submitting} />
-                <label className={styles.field}>Search products<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
-                <div className={productStyles.list}>
-                  {filterBundleProducts(products, search, categories).map(product => <label aria-label={product.title} className={productStyles.product} key={product.id} htmlFor={`subscription-product-${product.id}`}>
-                    <input id={`subscription-product-${product.id}`} type="checkbox" checked={selected.includes(product.id)} disabled={submitting || (!selected.includes(product.id) && selected.length >= maxProducts)} onChange={() => setSelected(current => current.includes(product.id) ? current.filter(id => id !== product.id) : [...current, product.id])} />
-                    <span><strong>{product.title}</strong><small className={productStyles.categoryLabel}>{categoryLabel(product)}</small></span>
-                  </label>)}
-                </div>
-                <p role="status">{selected.length} products selected (1–{maxProducts}). Products added to these categories later are not included automatically.</p>
-                <button type="button" disabled={submitting} onClick={() => { setSelected([]); setCategories([]); }}>Clear selection</button>
-              </>}
-              <p className={styles.help} id="product-help">
-                {productId === "ALL_PRODUCTS"
-                  ? "Includes your current catalog. Products added later aren't included automatically."
-                  : "Choose a product, select products by category, or include your current catalog."}
-              </p>
+              <PlanProductFields products={products} productId={productId} onProductIdChange={setProductId} selected={selected} onSelectedChange={setSelected} maxProducts={maxProducts} disabled={submitting} styles={styles} />
             </section>
             <section className={styles.card} aria-labelledby="delivery-heading">
               <div className={styles.sectionHeading}>
@@ -338,31 +292,14 @@ export default function NewSubscription() {
                       </button>
                     </div>
                     <div className={styles.optionFields}>
-                      <label
+                      <FrequencyFields
+                        index={index}
+                        option={option}
+                        options={options}
                         className={styles.field}
-                        htmlFor={"frequency-" + index}
-                      >
-                        Delivery frequency
-                        <select
-                          id={"frequency-" + index}
-                          value={option.frequency}
-                          onChange={(event) =>
-                            updateOption(index, "frequency", event.target.value)
-                          }
-                        >
-                          {Object.keys(schedules).map((frequency) => (
-                            <option
-                              key={frequency}
-                              disabled={options.some(
-                                (other, i) =>
-                                  i !== index && other.frequency === frequency,
-                              )}
-                            >
-                              {frequency}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                        disabled={submitting}
+                        onChange={(frequency) => updateOption(index, "frequency", frequency)}
+                      />
                       <label className={styles.field}>Discount type<select value={option.discountType || "percentage"} onChange={event => { updateOption(index, "discountType", event.target.value); updateOption(index, "discount", 0); }}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed amount (store currency)</option></select></label>
                       <label className={styles.field} htmlFor={"discount-" + index}
                       >
@@ -403,9 +340,24 @@ export default function NewSubscription() {
                 Offer up to {maxOptions} frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
               </p>
             </section>
+            <SubscriptionLengthFields number="04" enabled={lengthEnabled} onEnabledChange={setLengthEnabled} disabled={submitting} styles={styles} />
           </div>
           <aside className={styles.summary} aria-labelledby="summary-heading">
-            <label className={styles.summaryLabel}>Plan status<select name="status" value={status} onChange={event => setStatus(event.target.value)} style={{ display: "block", width: "100%", padding: 10, margin: "8px 0 16px", borderRadius: 8 }}><option value="DRAFT">Draft ? save for later</option><option value="ACTIVE">Active ? publish to storefront</option></select></label>
+            <fieldset className={styles.statusGroup}>
+              <legend className={styles.summaryLabel}>Plan status</legend>
+              <div className={styles.statusOptions}>
+                {[
+                  { value: "ACTIVE", title: "Active", hint: "Publish to storefront" },
+                  { value: "DRAFT", title: "Draft", hint: "Save for later" },
+                ].map(option => (
+                  <label key={option.value} className={`${styles.statusOption} ${status === option.value ? styles.statusOptionActive : ""}`}>
+                    <input type="radio" name="status" value={option.value} checked={status === option.value} onChange={() => setStatus(option.value)} />
+                    <span className={styles.statusTitle}><span className={styles.statusDot} aria-hidden="true" />{option.title}</span>
+                    <small>{option.hint}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <div className={styles.summaryTop}>
               <span className={styles.eyebrow}>AT A GLANCE</span>
               <span className={styles.previewTag}>Live summary</span>
@@ -418,11 +370,7 @@ export default function NewSubscription() {
             </p>
             <div className={styles.productSummary}>
               <span>APPLIES TO</span>
-              <strong>
-                {productId === "ALL_PRODUCTS"
-                  ? "All current products"
-                  : productId === "SELECTED_PRODUCTS" ? `${selected.length} selected products` : selectedProduct?.title || "No product selected yet"}
-              </strong>
+              <strong>{selectionSummary(productId, selected, products)}</strong>
             </div>
             <p className={styles.summaryLabel}>
               DELIVERY OPTIONS &middot; {options.length}
@@ -441,6 +389,9 @@ export default function NewSubscription() {
                 </li>
               ))}
             </ul>
+            <p className={styles.summaryLabel}>
+              SUBSCRIPTION LENGTH &middot; {lengthEnabled ? "Customer enters times or Unlimited" : "Hidden"}
+            </p>
             <p className={styles.summaryNote}>
               Customers choose one delivery option when they subscribe.
             </p>
@@ -458,7 +409,7 @@ export default function NewSubscription() {
             <button
               type="submit"
               className={styles.primary}
-              disabled={submitting || !products.length || !!error || (productId === "SELECTED_PRODUCTS" && (!selected.length || selected.length > maxProducts)) || !!planLimit}
+              disabled={submitting || !products.length || !!error || !selectionReady(productId, selected, maxProducts) || !!planLimit}
             >
               {submitting ? "Saving plan..." : status === "DRAFT" ? "Save subscription draft" : "Create active subscription"}
               <span aria-hidden="true">&rarr;</span>

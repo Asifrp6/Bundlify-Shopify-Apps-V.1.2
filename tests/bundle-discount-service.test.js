@@ -9,7 +9,7 @@ test('reapplying the same bundle uses a unique automatic discount title', async 
   const titles = new Set();
   const client = { graphql: async (_query, { variables }) => {
     const title = variables.input.title;
-    assert.ok(title.startsWith('Bundlify: Test ('));
+    assert.ok(title.startsWith('Bundle Base: Test ('));
     assert.ok(!titles.has(title), 'A replacement must not conflict with the still-active discount');
     titles.add(title);
     return { json: async () => ({ data: { discountAutomaticAppCreate: {

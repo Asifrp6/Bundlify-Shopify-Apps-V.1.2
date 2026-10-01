@@ -1,0 +1,6 @@
+-- CreateTable
+CREATE TABLE "GiftSetting" (
+    "shop" TEXT NOT NULL PRIMARY KEY,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

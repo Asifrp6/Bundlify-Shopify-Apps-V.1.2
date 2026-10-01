@@ -21,7 +21,7 @@ bundle uses one Shopify automatic discount slot, subject to Shopify's store limi
 and Function eligibility.
 
 The storefront uses the theme's `cart-drawer` section renderer when available.
-Other themes use an accessible Bundlify cart dialog populated from Shopify's Cart
+Other themes use an accessible Bundle Base cart dialog populated from Shopify's Cart
 API, with links to the cart and checkout. All drawer prices come from Shopify.
 
 ## Verify

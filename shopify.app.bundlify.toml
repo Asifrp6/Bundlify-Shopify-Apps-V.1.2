@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "597fad9e0520214bdfa371cb2953e5df"
-name = "Bundlify"
+name = "Bundle Base"
 application_url = "https://bundlify.imranwebstudio.me"
 embedded = true
 
@@ -24,9 +24,13 @@ api_version = "2026-07"
   uri = "/webhooks/app/uninstalled"
   topics = [ "app/uninstalled" ]
 
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/subscription_contracts/create"
+  topics = [ "subscription_contracts/create" ]
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_discounts,write_app_proxy,write_products,read_own_subscription_contracts,write_own_subscription_contracts,write_customers"
+scopes = "write_discounts,write_app_proxy,write_products,read_publications,write_publications,read_own_subscription_contracts,write_own_subscription_contracts,write_customers,read_customer_payment_methods"
 
 [auth]
 redirect_urls = [ "https://bundlify.imranwebstudio.me/auth/callback" ]

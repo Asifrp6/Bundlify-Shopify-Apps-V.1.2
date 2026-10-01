@@ -1,4 +1,4 @@
-import { defaults } from "./appearance";
+import { defaults, resolveMatchStore } from "./appearance";
 export const APPEARANCE_QUERY = `#graphql
 query BlockAppearance { shop { id bundle: metafield(namespace: "bundlify", key: "bundle_appearance") { value } subscription: metafield(namespace: "bundlify", key: "subscription_appearance") { value } } }
 `;
@@ -12,7 +12,7 @@ export async function getAppearance(admin) {
   const settings = {};
   for (const kind of Object.keys(defaults)) {
     let saved = {}; try { saved = JSON.parse(shop[kind]?.value || "{}"); } catch { /* Use defaults for invalid saved data. */ }
-    settings[kind] = { ...defaults[kind], ...saved };
+    settings[kind] = { ...defaults[kind], ...saved, matchStore: resolveMatchStore(saved) };
   }
   return { shopId: shop.id, settings };
 }

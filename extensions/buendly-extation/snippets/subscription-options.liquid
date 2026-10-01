@@ -42,9 +42,16 @@
           </div>
           <div data-frequencies {% unless variant.requires_selling_plan %}hidden{% endunless %}>
             <p class="bundlify-eyebrow">DELIVERY FREQUENCY</p>
+            {% assign has_length = false %}
             {% for allocation in variant.selling_plan_allocations %}
+              {% comment %}Plans from groups with a "Subscription length" option open the popup where the customer types how many times (or Unlimited), so they start unselected.{% endcomment %}
+              {% assign plan_length = '' %}
+              {% for plan_option in allocation.selling_plan.options %}
+                {% if plan_option.name == 'Subscription length' %}{% assign plan_length = plan_option.value %}{% assign has_length = true %}{% endif %}
+              {% endfor %}
               <label class="bundlify-option">
-                <input type="radio" data-plan name="plan-{{ block.id }}-{{ variant.id }}" value="{{ allocation.selling_plan.id }}" {% if forloop.first %}checked{% endif %}>
+                <input type="radio" data-plan name="plan-{{ block.id }}-{{ variant.id }}" value="{{ allocation.selling_plan.id }}" {% if forloop.first and plan_length == blank %}checked{% endif %}
+                  {% if plan_length != blank %}data-length="{{ plan_length | escape }}" data-frequency="{{ allocation.selling_plan.options.first.value | escape }}"{% endif %}>
                 <span class="bundlify-plan-copy">
                   <span>{{ allocation.selling_plan.name | escape }}</span>
                   {% if variant.price > allocation.price and variant.price > 0 %}
@@ -55,7 +62,7 @@
                 <span class="bundlify-price">{{ allocation.price | money_with_currency }}<small> / delivery</small></span>
               </label>
             {% endfor %}
-            <details><summary>Subscription details</summary><p>You are choosing recurring deliveries at the selected frequency. Review the payment schedule and subscription terms at checkout.</p></details>
+            <details><summary>Subscription details</summary><p>You are choosing recurring deliveries at the selected frequency. Review the payment schedule and subscription terms at checkout.{% if has_length %} You are charged once per delivery for the number of times you choose, or until you cancel if you choose Unlimited. Your choice is shown as Subscription length on the cart line and at checkout.{% endif %}</p></details>
           </div>
         </fieldset>
       {% endfor %}

@@ -2,8 +2,9 @@
 {% assign custom_bundle_products = shop.metafields.bundlify.custom_bundle_products.value %}
 {{ 'bundlify-bundles.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'bundlify-bundles.js' | asset_url }}" defer></script>
+{% render 'bundle-card-styles' %}
 {% render 'block-appearance', kind: 'bundle', appearance: appearance %}
-<bundlify-bundles data-button-text="{{ appearance.buttonText | default: 'Add bundle to cart' | escape }}" data-currency="{{ cart.currency.iso_code }}" data-root="{{ routes.root_url }}" data-product="{% if block.settings.match_product %}{{ product.id }}{% endif %}" data-editor="{{ request.design_mode }}" {{ block.shopify_attributes }}>
+<bundlify-bundles data-button-text="{{ appearance.buttonText | default: 'Add bundle to cart' | escape }}" data-currency="{{ cart.currency.iso_code }}" data-root="{{ routes.root_url }}" data-editor="{{ request.design_mode }}" {{ block.shopify_attributes }}>
   {% if appearance.logoUrl != blank %}<img class="bundlify-custom-logo" src="{{ appearance.logoUrl | escape }}" alt="{{ shop.name | escape }}" width="160" height="80">{% endif %}
   <h2>{{ appearance.heading | default: block.settings.heading | default: 'Better together' | escape }}</h2>
   <div class="bundlify-mode-cards" role="group" aria-label="Choose your bundle">
@@ -18,12 +19,15 @@
   </div>
   <div id="bundlify-ours-{{ block.id }}" data-preset-panel>
   <div data-list></div>
-  <p data-message role="status">Loading bundle offers…</p>
+  <div class="bundlify-load-state">
+    <p data-message role="status">Loading bundle offers…</p>
+    <p class="bundlify-load-failed" role="status">Bundles could not be loaded. Please refresh the page to try again.</p>
+  </div>
   </div>
   {% if custom_bundle_products.count >= 2 %}
     <div data-custom-bundle data-discount-type="{{ shop.metafields.bundlify.custom_bundle_discount.value.discountType | default: 'percentage' | escape }}" data-fixed-amount="{{ shop.metafields.bundlify.custom_bundle_discount.value.fixedAmount | default: 0 }}" data-shop-currency="{{ shop.currency }}" data-custom-discount="{{ shop.metafields.bundlify.custom_bundle_discount.value.percentage | default: 0 }}">
       <dialog id="bundlify-custom-{{ block.id }}" class="bundlify-builder-dialog" data-custom-dialog aria-labelledby="bundlify-custom-title-{{ block.id }}">
-        <button type="button" class="bundlify-builder-close" data-custom-close aria-label="Close custom bundle" autofocus>Close <span aria-hidden="true">×</span></button>
+        <button type="button" class="bundlify-builder-close" data-custom-close aria-label="Close" autofocus><span aria-hidden="true">×</span></button>
       <article data-custom-picker hidden>
         <h3 id="bundlify-custom-title-{{ block.id }}">Create your bundle</h3>
         <p>Select at least 2 different products. Your bundle savings will apply in the cart.</p>
@@ -36,6 +40,6 @@
       </div>
     </div>
   {% elsif request.design_mode %}
-    <p>Open the Bundlify app → Bundles → Manage custom bundle products and save at least 2 products to enable Create custom bundle.</p>
+    <p>Open the Bundle Base app → Bundles → Manage custom bundle products and save at least 2 products to enable Create custom bundle.</p>
   {% endif %}
 </bundlify-bundles>

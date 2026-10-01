@@ -53,13 +53,13 @@ export function SuccessState({ message = "Success!", onClose }) {
   return (
     <Box
       padding="400"
-      background="bg-fill-success"
+      background="bg-surface-info"
       borderRadius="200"
       role="status"
     >
       <InlineStack gap="200" blockAlign="center">
-        <Icon source={CheckCircleIcon} tone="success" />
-        <Text as="p" variant="bodySm" tone="success">
+        <Icon source={CheckCircleIcon} tone="info" />
+        <Text as="p" variant="bodySm">
           {message}
         </Text>
         {onClose && (

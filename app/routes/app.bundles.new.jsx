@@ -1,6 +1,6 @@
 import { validDiscount as isValidDiscount, discountLabel } from "../services/discounts";
-import ProductCategoryFilter from "../components/ProductCategoryFilter";
-import { capProductSelection, categoryLabel, filterBundleProducts, selectCategoryProducts } from "../services/product-categories";
+import BundleProductFields from "../components/BundleProductFields";
+import { bundleActivationError, bundleInitialMode, withMissingProducts } from "../services/product-selection";
 import {
   Form,
   Link,
@@ -21,10 +21,12 @@ import styles from "../styles/bundle-editor.module.css";
 
 export async function loader({ request }) {
   const { admin, session } = await authenticate.admin(request);
+  const catalog = listProducts(admin);
+  catalog.catch(() => {});
   const usage = await (await import("../services/app-billing.server")).shopUsage(session.shop);
   const limits = usage;
   try {
-    return { products: await listProducts(admin), error: null, maxProducts: limits?.maxProducts ?? 5, bundleLimit: creationBlocked(usage, "bundle", usage?.bundles ?? 0) };
+    return { products: await catalog, error: null, maxProducts: limits?.maxProducts ?? 5, bundleLimit: creationBlocked(usage, "bundle", usage?.bundles ?? 0) };
   } catch (error) {
     if (error instanceof Response) throw error;
     return {
@@ -68,6 +70,8 @@ export async function action({ request }) {
       { status: 400 },
     );
   }
+  const inactive = publish && bundleActivationError(products);
+  if (inactive) return data({ errors: { productIds: inactive } }, { status: 400 });
   let created;
   try {
     created = await prisma.bundle.create({
@@ -98,9 +102,8 @@ export async function action({ request }) {
       const discountNodeId = await createBundleDiscount(admin, created);
       if (discountNodeId) await prisma.bundle.update({ where: { id: created.id }, data: { discountNodeId } });
     } catch (error) {
-      await prisma.bundle.update({ where: { id: created.id }, data: { status: "DRAFT" } });
-      const message = String(error?.message || "Could not activate this bundle.").slice(0, 240);
-      return redirect(`/app/bundles/${created.id}?error=${encodeURIComponent(`${message} It was saved as a draft.`)}`);
+      const message = String(error?.message || "Could not activate the bundle discount.").slice(0, 240);
+      return redirect(`/app/bundles/${created.id}?error=${encodeURIComponent(`${message} The bundle is live without its discount. Use Enable bundle discount on the Bundles page to retry.`)}`);
     }
   }
   return redirect("/app/bundles?created=1");
@@ -115,22 +118,14 @@ export default function NewBundle() {
   const [discountType, setDiscountType] = useState(bundle?.discountType || "percentage");
   const [discount, setDiscount] = useState(String(bundle?.discount ?? 0));
   const [selected, setSelected] = useState(bundle?.products.map(product => product.productId) || []);
-  const [search, setSearch] = useState("");
   const [confirm, setConfirm] = useState(false);
-  const missing = (bundle?.products || []).filter(saved => !products.some(product => product.id === saved.productId));
-  const choices = [...products, ...missing.map(product => ({ id: product.productId, title: product.productTitle, missing: true }))];
-  const [category, setCategory] = useState([]);
-  const changeCategory = (id, checked) => {
-    setCategory(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
-    setSelected(current => capProductSelection(current, selectCategoryProducts(choices, current, id, checked), maxProducts));
-    
-  };
-  const visible = filterBundleProducts(choices, search, category);
+  const saved = bundle?.products || [];
+  const choices = withMissingProducts(products, saved.map(product => product.productId), Object.fromEntries(saved.map(product => [product.productId, product.productTitle])));
+  const [mode, setMode] = useState(() => bundleInitialMode(saved.map(product => product.productId), choices));
   const submitting = navigation.state !== "idle";
   const pendingStatus = navigation.formData?.get("status");
   const validDiscount = isValidDiscount(discount, discountType);
   const saveDisabled = !!loadError || selected.length < 2 || selected.length > maxProducts || !name.trim() || !validDiscount || submitting;
-  const toggle = id => setSelected(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
   if (bundleLimit && !bundle) return <main className={styles.page}>
     <Link to="/app/bundles" className={styles.back}>All bundles</Link>
     <Banner tone="warning">{bundleLimit}</Banner>
@@ -142,25 +137,14 @@ export default function NewBundle() {
     {(loadError || result?.error || params.get("error")) && <Banner tone="critical">{loadError || result?.error || params.get("error")}</Banner>}
     <Form method="post" className={styles.layout}>
       {bundle && <input type="hidden" name="intent" value="update" />}
-      {selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
       <div className={styles.sections}>
         <section className={styles.card}><div className={styles.sectionHeading}><span>01</span><div><h2>Bundle details</h2><p>Start with a name your customers will remember.</p></div></div>
           <label className={styles.field}>Bundle name<input name="name" value={name} onChange={event => setName(event.target.value)} placeholder="e.g. The everyday essentials" autoComplete="off" maxLength={120} required aria-invalid={!!result?.errors?.name} /></label>
           {result?.errors?.name && <p className={styles.error} role="alert">{result.errors.name}</p>}
         </section>
-        <section className={styles.card}><div className={styles.sectionHeading}><span>02</span><div><h2>Choose your products</h2><p>Select 2?{maxProducts} products to build your bundle.</p></div><b className={styles.count}>{selected.length} selected</b></div>
-          <label className={styles.search}><span className={styles.srOnly}>Search products</span><input type="search" placeholder="Search your products?" value={search} onChange={event => setSearch(event.target.value)} /></label>
-          <ProductCategoryFilter products={choices} value={category} onChange={changeCategory} disabled={submitting} />
-          {selected.length > maxProducts && <p className={styles.error} role="alert">{selected.length} products selected. Remove {selected.length - maxProducts} products before continuing; bundles support up to {maxProducts} products.</p>}
-          <div className={styles.list} role="group" aria-label="Bundle products">
-            {visible.map(product => <label key={product.id} className={styles.product} data-selected={selected.includes(product.id)}>
-              <input type="checkbox" checked={selected.includes(product.id)} onChange={() => toggle(product.id)} disabled={!selected.includes(product.id) && selected.length >= maxProducts} />
-              <span className={styles.productIcon} aria-hidden="true">{product.title.slice(0, 1).toUpperCase()}</span><span><strong>{product.title}</strong><small className={styles.categoryLabel}>{categoryLabel(product)}</small>{product.missing && <small>No longer available. Remove this product to save.</small>}</span>
-              {selected.includes(product.id) && <span className={styles.selectedLabel}>Selected</span>}
-            </label>)}
-            {!visible.length && <div className={styles.empty}>{products.length ? "No products match your search." : "Add at least two products to your store to get started."}</div>}
-          </div>
-          <div className={styles.listFooter}><span>{visible.length} products shown</span><button type="button" disabled={!selected.length} onClick={() => { setSelected([]); setCategory([]); }}>Clear selection</button></div>
+        <section className={styles.card}><div className={styles.sectionHeading}><span>02</span><div><h2>Choose your products</h2><p>Select 2–{maxProducts} products to build your bundle.</p></div><b className={styles.count}>{selected.length} selected</b></div>
+          {selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
+          <BundleProductFields products={choices} mode={mode} onModeChange={setMode} selected={selected} onSelectedChange={setSelected} maxProducts={maxProducts} disabled={submitting} idPrefix="bundle-product" label="Bundle products" emptyText={products.length ? "No products match your search." : "Add at least two products to your store to get started."} />
           {result?.errors?.productIds && <p className={styles.error} role="alert">{result.errors.productIds}</p>}
         </section>
         <section className={styles.card}><div className={styles.sectionHeading}><span>03</span><div><h2>Set your bundle discount</h2><p>A little incentive to bring it all together.</p></div></div>
@@ -172,9 +156,9 @@ export default function NewBundle() {
           {result?.errors?.discount && <p className={styles.error} role="alert">{result.errors.discount}</p>}
         </section>
       </div>
-      <aside className={styles.sidebar}><section className={styles.summary}><div className={styles.summaryTop}><span className={styles.eyebrow}>YOUR BUNDLE</span><span className={styles.badge}>{bundle?.status === "ACTIVE" ? "Active" : "Draft"}</span></div><h2>{name.trim() || "Your bundle name"}</h2><p className={styles.hint}>Here?s how your offer is coming together.</p>
-        <div className={styles.metrics}><div><strong>{selected.length}</strong><span>Products</span></div><div><strong>{validDiscount ? discountLabel(discount, discountType) : "?"}</strong><span>Bundle savings</span></div></div>
-        <div className={styles.summaryProducts}>{selected.length ? choices.filter(product => selected.includes(product.id)).map(product => <p key={product.id}><span aria-hidden="true">?</span>{product.title}</p>) : <p className={styles.hint}>Your selected products will appear here.</p>}</div>
+      <aside className={styles.sidebar}><section className={styles.summary}><div className={styles.summaryTop}><span className={styles.eyebrow}>YOUR BUNDLE</span><span className={styles.badge}>{bundle?.status === "ACTIVE" ? "Active" : "Draft"}</span></div><h2>{name.trim() || "Your bundle name"}</h2><p className={styles.hint}>Here’s how your offer is coming together.</p>
+        <div className={styles.metrics}><div><strong>{selected.length}</strong><span>Products</span></div><div><strong>{validDiscount ? discountLabel(discount, discountType) : "—"}</strong><span>Bundle savings</span></div></div>
+        <div className={styles.summaryProducts}>{selected.length ? choices.filter(product => selected.includes(product.id)).map(product => <p key={product.id}><span aria-hidden="true">✓</span>{product.title}</p>) : <p className={styles.hint}>Your selected products will appear here.</p>}</div>
         <div className={styles.note}><strong>Save as draft or activate now.</strong><p>A draft stays hidden. Save and activate to show this bundle on your store and apply the discount in the cart and at checkout.</p></div>
         <button className={styles.primary} name="status" value="ACTIVE" type="submit" disabled={saveDisabled}>{submitting && pendingStatus === "ACTIVE" ? "Activating…" : "Save and activate"}</button>
         <button className={styles.secondary} name="status" value="DRAFT" type="submit" disabled={saveDisabled}>{submitting && pendingStatus === "DRAFT" ? "Saving…" : "Save as draft"}</button>

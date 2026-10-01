@@ -1,18 +1,65 @@
+/* Store match: theme colors (Dawn-style "r,g,b" variables or full colors) with neutral fallbacks.
+   Full-color theme variables resolve on the block, rgb-triplet variables on its children; an invalid
+   value falls back to the parent's, so whichever format the theme uses wins. */
+@property --bundlify-theme-accent { syntax: "<color>"; inherits: true; initial-value: #121212; }
+@property --bundlify-theme-accent-text { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --bundlify-theme-surface { syntax: "<color>"; inherits: true; initial-value: transparent; }
+bundlify-bundles, .bundlify-cart-drawer {
+  --bundlify-theme-accent: var(--color-primary-button-background, var(--color-button-background, var(--color-button, var(--color-foreground))));
+  --bundlify-theme-accent-text: var(--color-primary-button-text, var(--color-button-label, var(--color-button-text, var(--color-background))));
+  --bundlify-theme-surface: var(--color-background, var(--color-base-background, transparent));
+  --bundlify-line: color-mix(in srgb, currentColor 14%, transparent);
+  --bundlify-line-strong: color-mix(in srgb, currentColor 32%, transparent);
+  --bundlify-tint: color-mix(in srgb, currentColor 5%, transparent);
+  --bundlify-muted: color-mix(in srgb, currentColor 68%, transparent);
+  font-family: var(--font-body-family, inherit);
+}
+/* Glass: a translucent copy of the theme background (or the merchant's saved card colors when matching is
+   off) over a faint currentColor tint, so light and dark themes both stay readable. */
+:is(bundlify-bundles, .bundlify-cart-drawer) > * {
+  --bundlify-theme-accent: rgb(var(--color-button-rgb, var(--color-button)));
+  --bundlify-theme-accent-text: rgb(var(--color-button-text-rgb, var(--color-button-text)));
+  --bundlify-theme-surface: rgb(var(--color-background));
+  --bundlify-accent: var(--bundlify-action-background, var(--bundlify-theme-accent));
+  --bundlify-on-accent: var(--bundlify-action-text, var(--bundlify-theme-accent-text));
+  --bundlify-glass-alpha: 52%;
+  --bundlify-glass-alpha-hover: 64%;
+  --bundlify-glass-alpha-strong: 74%;
+  --bundlify-glass-tint: linear-gradient(color-mix(in srgb, currentColor 3%, transparent), color-mix(in srgb, currentColor 3%, transparent));
+  --bundlify-glass: color-mix(in srgb, var(--bl-cardBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha), transparent);
+  --bundlify-glass-hover: color-mix(in srgb, var(--bl-hoverBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-hover), transparent);
+  --bundlify-glass-strong: color-mix(in srgb, var(--bl-selectedBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-strong), transparent);
+  --bundlify-glass-line: color-mix(in srgb, currentColor 12%, transparent);
+  --bundlify-glass-blur: blur(14px) saturate(140%);
+  --bundlify-glass-shadow: 0 1px 2px rgb(0 0 0 / .03), 0 12px 32px -20px rgb(0 0 0 / .22);
+  /* Selection color: the theme button color, or the merchant's selected icon color when matching is off. */
+  --bundlify-ring: var(--bl-selectedIconColor, var(--bundlify-accent));
+  --bundlify-on-ring: var(--bl-selectedBackground, var(--bundlify-on-accent));
+  --bundlify-selected-tint: linear-gradient(150deg, color-mix(in srgb, var(--bundlify-ring) 14%, transparent), color-mix(in srgb, var(--bundlify-ring) 4%, transparent) 75%);
+  --bundlify-selected-shadow: 0 0 0 4px color-mix(in srgb, var(--bundlify-ring) 12%, transparent), 0 18px 36px -22px color-mix(in srgb, var(--bundlify-ring) 60%, transparent);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :is(bundlify-bundles, .bundlify-cart-drawer) > * {
+    --bundlify-glass-alpha: 86%;
+    --bundlify-glass-alpha-hover: 90%;
+    --bundlify-glass-alpha-strong: 94%;
+  }
+}
 bundlify-bundles { display:block; padding:24px; color:inherit; }
 bundlify-bundles[hidden] { display:none; }
 bundlify-bundles [data-list] { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:16px; }
-bundlify-bundles article { border:1px solid #dce5de; border-radius:16px; padding:20px; overflow-wrap:anywhere; }
+bundlify-bundles article { border:1px solid var(--bundlify-line); border-radius:16px; padding:20px; overflow-wrap:anywhere; }
 bundlify-bundles a { display:block; margin-top:12px; color:inherit; text-underline-offset:3px; }
 bundlify-bundles a:focus-visible { outline:2px solid currentColor; outline-offset:4px; }
 bundlify-bundles [data-message]:empty { display:none; }
 bundlify-bundles label { display:block; margin-top:16px; font-size:calc(14px * var(--bundlify-font-scale, 1)); }
-bundlify-bundles select { display:block; width:100%; margin:6px 0 12px; padding:10px; border:1px solid #ccd8cf; border-radius:8px; background:white; color:#20382b; font:inherit; }
-bundlify-bundles button { margin-top:20px; padding:12px 18px; border:0; border-radius:8px; background:#285c43; color:white; font:inherit; cursor:pointer; width:100%; }
+bundlify-bundles select { display:block; width:100%; margin:6px 0 12px; padding:10px; border:1px solid var(--bundlify-line-strong); border-radius:10px; background:transparent; color:inherit; font:inherit; }
+bundlify-bundles button { margin-top:20px; padding:12px 18px; border:0; border-radius:10px; background:var(--bundlify-accent); color:var(--bundlify-on-accent); font:inherit; cursor:pointer; width:100%; }
 bundlify-bundles button:disabled { opacity:.6; cursor:default; }
 /* Outrank storefront resets targeting [type="button"]. */
 bundlify-bundles button.bundlify-purchase-action[type="button"] {
-  background: var(--bundlify-action-background, #285c43);
-  color: var(--bundlify-action-text, #fff);
+  background: var(--bundlify-accent);
+  color: var(--bundlify-on-accent);
   border: 1px solid transparent;
   min-height: 48px;
   width: 100%;
@@ -20,8 +67,8 @@ bundlify-bundles button.bundlify-purchase-action[type="button"] {
 }
 bundlify-bundles button.bundlify-purchase-action[type="button"]:not(:disabled):hover { filter: brightness(.94); }
 bundlify-bundles button.bundlify-edit-action[type="button"] {
-  background: var(--bundlify-action-background, #285c43);
-  color: var(--bundlify-action-text, #fff);
+  background: var(--bundlify-accent);
+  color: var(--bundlify-on-accent);
   border: 1px solid transparent;
   min-height: 48px;
   width: 100%;
@@ -29,74 +76,103 @@ bundlify-bundles button.bundlify-edit-action[type="button"] {
   font-weight: 600;
 }
 bundlify-bundles button.bundlify-edit-action[type="button"]:hover { filter: brightness(.94); }
+bundlify-bundles [data-custom-result] :is(button.bundlify-edit-action, button.bundlify-purchase-action)[type="button"] {
+  min-height: 42px;
+  margin-top: 0;
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-size: calc(14px * var(--bundlify-font-scale, 1));
+  font-weight: 550;
+  letter-spacing: -.01em;
+  box-shadow: none;
+}
+bundlify-bundles [data-custom-result] button.bundlify-edit-action[type="button"] {
+  margin-bottom: 14px;
+  border: 1px solid var(--bundlify-line-strong);
+  background: transparent;
+  color: inherit;
+}
+bundlify-bundles [data-custom-result] button.bundlify-edit-action[type="button"]:hover {
+  filter: none;
+  background: var(--bundlify-tint);
+  border-color: currentColor;
+}
+bundlify-bundles [data-custom-result] button.bundlify-purchase-action[type="button"] {
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--bundlify-accent);
+  color: var(--bundlify-on-accent);
+}
 bundlify-bundles a[hidden] { display:none; }
-bundlify-bundles :is(select,button):focus-visible { outline:2px solid #285c43; outline-offset:3px; }
+bundlify-bundles :is(select,button):focus-visible { outline:2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset:3px; }
 
-bundlify-bundles article { background:#fff; box-shadow:0 4px 20px #1f3a2710; }
-bundlify-bundles article h3 { margin:0 0 18px; font-size:calc(22px * var(--bundlify-font-scale, 1)); }
-bundlify-bundles .bundlify-product { display:grid; grid-template-columns:96px minmax(0,1fr); gap:16px; padding:18px 0; border-top:1px solid #e7ede8; align-items:start; }
-bundlify-bundles .bundlify-product img { width:96px; height:112px; object-fit:contain; border-radius:10px; background:#f5f7f5; }
-bundlify-bundles .bundlify-image-placeholder { display:grid; place-items:center; width:96px; height:112px; border-radius:10px; background:#f5f7f5; color:#637267; font-size:calc(12px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles article { background:transparent; box-shadow:none; }
+bundlify-bundles article h3 { margin:0 0 18px; font-size:calc(22px * var(--bundlify-font-scale, 1)); font-family:var(--font-heading-family, inherit); font-weight:var(--font-heading-weight, 600); color:inherit; }
+bundlify-bundles .bundlify-product { display:grid; grid-template-columns:96px minmax(0,1fr); gap:16px; padding:18px 0; border-top:1px solid var(--bundlify-line); align-items:start; }
+bundlify-bundles .bundlify-product img { width:96px; height:112px; object-fit:contain; border-radius:10px; background:var(--bundlify-tint); }
+bundlify-bundles .bundlify-image-placeholder { display:grid; place-items:center; width:96px; height:112px; border-radius:10px; background:var(--bundlify-tint); color:var(--bundlify-muted); font-size:calc(12px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-product a { margin:0 0 10px; text-decoration:none; font-weight:600; }
 bundlify-bundles .bundlify-product a:hover { text-decoration:underline; }
 bundlify-bundles .bundlify-product-price { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-bundlify-bundles s { color:#6c776e; font-size:calc(14px * var(--bundlify-font-scale, 1)); font-weight:400; }
-bundlify-bundles .bundlify-product-price strong { color:#205a3d; }
-bundlify-bundles .bundlify-total { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; padding-top:18px; border-top:1px solid #dce5de; }
+bundlify-bundles s { color:var(--bundlify-muted); font-size:calc(14px * var(--bundlify-font-scale, 1)); font-weight:400; }
+bundlify-bundles .bundlify-product-price strong { color:inherit; font-variant-numeric:tabular-nums; }
+bundlify-bundles .bundlify-total { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; padding-top:18px; border-top:1px solid var(--bundlify-line); }
 bundlify-bundles .bundlify-total > span { grid-column:1; grid-row:1; font-weight:700; font-size:calc(18px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-total > s { grid-column:1; grid-row:2; text-align:left; font-weight:600; font-size:calc(17px * var(--bundlify-font-scale, 1)); }
-bundlify-bundles .bundlify-total strong { grid-column:2; grid-row:2; text-align:right; color:#205a3d; font-size:calc(24px * var(--bundlify-font-scale, 1)); }
-bundlify-bundles .bundlify-total small { grid-column:1 / -1; grid-row:3; justify-self:start; padding:8px 12px; border-radius:24px; background:#e7f1e9; color:#205a3d; font-size:calc(13px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-total strong { grid-column:2; grid-row:2; text-align:right; color:inherit; font-size:calc(20px * var(--bundlify-font-scale, 1)); font-variant-numeric:tabular-nums; }
+bundlify-bundles .bundlify-total small { grid-column:1 / -1; grid-row:3; justify-self:start; padding:8px 12px; border-radius:24px; background:color-mix(in srgb, var(--bundlify-accent) 10%, transparent); color:inherit; font-size:calc(13px * var(--bundlify-font-scale, 1)); font-weight:600; }
 @media(max-width:440px) { bundlify-bundles .bundlify-total small { grid-column:1 / -1; grid-row:3; } }
 bundlify-bundles [hidden] { display:none !important; }
-bundlify-bundles { box-sizing:border-box; width:100%; max-width:620px; margin:24px auto; padding:28px; border-radius:28px; background:linear-gradient(145deg,#f8f9fc,#eef0f5); }
+bundlify-bundles { box-sizing:border-box; width:100%; max-width:620px; margin:24px auto; }
 bundlify-bundles * { box-sizing:border-box; }
-bundlify-bundles .bundlify-mode-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0 0 24px; }
-bundlify-bundles button.bundlify-mode-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:174px; margin:0; padding:20px 12px; border:1px solid transparent; border-radius:24px; background:#ffffff70; color:#657087; text-align:center; }
-bundlify-bundles button.bundlify-mode-card[aria-pressed="true"] { background:#fff; color:#0a1435; box-shadow:0 14px 36px #1220421f; }
-bundlify-bundles .bundlify-mode-card small { font-size:calc(12px * var(--bundlify-font-scale,1)); line-height:1.5; }
-bundlify-bundles .bundlify-mode-card strong { font-size:calc(16px * var(--bundlify-font-scale,1)); }
-bundlify-bundles .bundlify-sale-badge { padding:4px 8px; border-radius:16px; background:#e7f1e9; color:#205a3d; font-size:12px; }
+bundlify-bundles .bundlify-sale-badge { padding:3px 8px; border-radius:16px; background:color-mix(in srgb, var(--bundlify-accent) 10%, transparent); color:inherit; font-size:calc(12px * var(--bundlify-font-scale, 1)); font-weight:600; }
 bundlify-bundles [data-custom-bundle] { margin-top:0; }
 bundlify-bundles [data-custom-picker] { margin-top:16px; }
 bundlify-bundles .bundlify-custom-choice { display:flex; align-items:center; gap:10px; margin:0 0 12px; cursor:pointer; font-weight:600; }
-bundlify-bundles .bundlify-custom-choice input { width:20px; height:20px; flex:none; accent-color:#285c43; }
-.bundlify-cart-drawer { box-sizing:border-box; position:fixed; inset:0 0 0 auto; margin:0; width:min(100%,460px); height:100dvh; max-height:100dvh; max-width:100%; padding:24px; border:0; background:#fff; color:#20382b; overflow-y:auto; }
+bundlify-bundles .bundlify-custom-choice input { width:20px; height:20px; flex:none; accent-color:var(--bundlify-accent); }
+.bundlify-cart-drawer { box-sizing:border-box; position:fixed; inset:0 0 0 auto; margin:0; width:min(100%,460px); height:100dvh; max-height:100dvh; max-width:100%; padding:24px; border:0; background:#fff; color:#121212; overflow-y:auto; }
 .bundlify-cart-drawer::backdrop { background:#0006; }
 .bundlify-cart-drawer button { float:right; padding:8px 12px; cursor:pointer; }
-.bundlify-cart-row { padding:16px 0; border-bottom:1px solid #dce5de; }
-.bundlify-cart-row strong { margin-left:12px; color:#205a3d; }
-.bundlify-cart-drawer > a { display:block; text-align:center; padding:14px; margin-top:12px; border-radius:8px; background:#285c43; color:#fff; }
-@media(max-width:440px) { bundlify-bundles { padding:8px; } bundlify-bundles article { padding:16px; } bundlify-bundles .bundlify-product { grid-template-columns:72px minmax(0,1fr); gap:12px; } bundlify-bundles .bundlify-product :is(img,.bundlify-image-placeholder) { width:72px; height:88px; } }
+.bundlify-cart-row { padding:16px 0; border-bottom:1px solid var(--bundlify-line); }
+.bundlify-cart-row strong { margin-left:12px; color:inherit; }
+.bundlify-cart-drawer > a { display:block; text-align:center; padding:14px; margin-top:12px; border-radius:10px; background:var(--bundlify-accent); color:var(--bundlify-on-accent); }
+@media(max-width:440px) { bundlify-bundles article { padding:16px; } bundlify-bundles .bundlify-product { grid-template-columns:72px minmax(0,1fr); gap:12px; } bundlify-bundles .bundlify-product :is(img,.bundlify-image-placeholder) { width:72px; height:88px; } }
 
 /* Size the product cards to the actual theme column, not the browser width. */
 bundlify-bundles {
   container: bundlify / inline-size;
   max-width: 1040px;
-  padding: clamp(14px, 3vw, 28px);
-  border: 1px solid #e5e9ed;
-  background: linear-gradient(145deg, #fafbfc, #f0f4f3);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
-bundlify-bundles > h2 { margin: 0 0 22px; letter-spacing: -.025em; }
+bundlify-bundles > h2 {
+  margin: 0 0 16px; color: inherit; line-height: 1.25; letter-spacing: -.01em;
+  font-family: var(--font-heading-family, inherit); font-style: var(--font-heading-style, normal); font-weight: var(--font-heading-weight, 600);
+}
 bundlify-bundles [data-list] { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-bundlify-bundles article { padding: 20px; border-color: #e3e9e6; border-radius: 22px; box-shadow: 0 8px 28px #20382b06; }
-bundlify-bundles article h3 { margin-bottom: 12px; letter-spacing: -.02em; }
+bundlify-bundles article { padding: 20px; border-color: var(--bundlify-line); border-radius: 16px; box-shadow: none; }
+bundlify-bundles [data-list] > article {
+  padding: 22px; border: 1px solid var(--bl-cardBorder, var(--bundlify-glass-line)); border-radius: 20px;
+  background: var(--bundlify-glass-tint) var(--bundlify-glass);
+  -webkit-backdrop-filter: var(--bundlify-glass-blur); backdrop-filter: var(--bundlify-glass-blur);
+  box-shadow: var(--bundlify-glass-shadow);
+}
+bundlify-bundles article h3 { margin-bottom: 12px; letter-spacing: -.01em; }
+bundlify-bundles [data-list] > article > h3 { font-size: calc(17px * var(--bundlify-font-scale, 1)); font-weight: var(--font-heading-weight, 600); }
 bundlify-bundles article > p { line-height: 1.6; font-size: calc(14px * var(--bundlify-font-scale, 1)); }
-bundlify-bundles .bundlify-mode-cards { gap: 12px; padding: 6px; border-radius: 22px; background: #e8edec; }
-bundlify-bundles button.bundlify-mode-card { min-height: 140px; border-radius: 17px; gap: 8px; padding: 18px 12px; background: transparent; transition: background .18s, box-shadow .18s; }
-bundlify-bundles button.bundlify-mode-card[aria-pressed="true"] { border-color: #dce5df; box-shadow: 0 4px 14px #142a1e12; }
-bundlify-bundles .bundlify-mode-card svg { width: 34px; height: 34px; }
 bundlify-bundles .bundlify-product-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 22px 0; }
 bundlify-bundles .bundlify-product {
   position: relative; display: flex; flex-direction: column; gap: 14px;
-  min-width: 0; padding: 12px; border: 1px solid #e2e8e4; border-radius: 16px;
-  background: #fff; transition: border-color .18s, box-shadow .18s;
+  min-width: 0; padding: 12px; border: 1px solid var(--bundlify-glass-line, var(--bundlify-line)); border-radius: 14px;
+  background: transparent; transition: border-color .18s, background-color .18s;
 }
-bundlify-bundles .bundlify-product:has(input:checked) { box-shadow: 0 0 0 1px #ffffff, 0 6px 18px #285c4310; }
+bundlify-bundles .bundlify-product:has(input:checked) { border-color: var(--bundlify-accent); background-color: color-mix(in srgb, var(--bundlify-accent) 4%, transparent); }
 bundlify-bundles .bundlify-product:focus-within {  outline-offset: 3px; }
 bundlify-bundles .bundlify-product :is(img, .bundlify-image-placeholder) {
   width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain;
-  padding: 10px; border-radius: 10px; background: #f4f6f5;
+  padding: 10px; border-radius: 10px; background: var(--bundlify-tint);
 }
 bundlify-bundles .bundlify-product > div { display: flex; flex-direction: column; flex: 1; width: 100%; min-width: 0; }
 bundlify-bundles .bundlify-product a { font-size: calc(14px * var(--bundlify-font-scale, 1)); line-height: 1.45; margin: 0 0 10px; }
@@ -105,9 +181,9 @@ bundlify-bundles .bundlify-product-price strong { font-size: calc(16px * var(--b
 bundlify-bundles .bundlify-product-price s { font-size: calc(12px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-product label:not(.bundlify-custom-choice) { margin-top: auto; font-size: calc(12px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-product select { margin-bottom: 0; padding: 9px; font-size: calc(13px * var(--bundlify-font-scale, 1)); }
-bundlify-bundles .bundlify-custom-choice { padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid #edf0ed; font-size: calc(12px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-custom-choice { padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--bundlify-line); font-size: calc(12px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-custom-choice input { margin: 0; width: 18px; height: 18px; }
-bundlify-bundles .bundlify-total { padding: 18px; border: 1px solid #e4ebe6; border-radius: 14px; background: #f6f9f7; }
+bundlify-bundles .bundlify-total { padding: 16px 18px; border: 1px solid var(--bundlify-glass-line, var(--bundlify-line)); border-radius: 14px; background: transparent; }
 bundlify-bundles .bundlify-total > span { font-size: calc(15px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles .bundlify-total small { padding: 6px 10px; font-size: calc(12px * var(--bundlify-font-scale, 1)); }
 bundlify-bundles article > button { min-height: 48px; border-radius: 12px; font-weight: 600; margin-top: 16px; }
@@ -120,8 +196,6 @@ bundlify-bundles [data-custom-picker] { margin-top: 0; }
 }
 @container bundlify (max-width: 359px) {
   bundlify-bundles article { padding: 14px; }
-  bundlify-bundles .bundlify-mode-card small { display: none; }
-  bundlify-bundles button.bundlify-mode-card { min-height: 110px; }
   bundlify-bundles .bundlify-total small { grid-column: 1 / -1; grid-row: 3; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -130,31 +204,102 @@ bundlify-bundles [data-custom-picker] { margin-top: 0; }
 
 bundlify-bundles .bundlify-builder-dialog {
   container: bundlify / inline-size;
-  width: min(1040px, calc(100vw - 32px)); max-width: none;
-  max-height: calc(100dvh - 32px); margin: auto; padding: 24px;
-  overflow-y: auto; overscroll-behavior: contain;
-  border: 1px solid #e2e8e4; border-radius: 24px;
-  background: #f7faf8; color: #20382b;
-  box-shadow: 0 24px 80px #10221940;
+  position: relative;
+  width: min(920px, calc(100% - 32px)); max-width: none;
+  max-height: min(860px, calc(100vh - 32px)); max-height: min(860px, calc(100dvh - 32px)); margin: auto; padding: 22px 22px 18px;
+  overflow: hidden; overscroll-behavior: contain;
+  border: 0; border-radius: 28px;
+  background: #fff; color: #171d26;
+  box-shadow: 0 30px 80px #09131f40;
 }
-bundlify-bundles .bundlify-builder-dialog::backdrop { background: #101c2c99; backdrop-filter: blur(4px); }
+bundlify-bundles .bundlify-builder-dialog::backdrop { background: #09131f66; backdrop-filter: blur(8px); }
 bundlify-bundles button.bundlify-builder-close {
-  display: flex; align-items: center; gap: 12px;
-  width: auto; min-height: 44px; margin: 0 0 16px auto; padding: 8px 14px;
-  border: 1px solid #dce5df; border-radius: 12px;
-  background: #fff; color: #20382b; font-size: 14px;
+  position: absolute; top: 16px; right: 16px; z-index: 2;
+  display: grid; place-items: center;
+  width: 40px; height: 40px; min-height: 40px; margin: 0; padding: 0;
+  border: 1px solid #e6e9ec; border-radius: 999px;
+  background: #fff; color: #242d38; font-size: 22px; line-height: 1;
+  box-shadow: 0 6px 18px #171d2614;
 }
-bundlify-bundles .bundlify-builder-close span { font-size: 24px; line-height: 1; }
+bundlify-bundles .bundlify-builder-close span { font-size: 22px; line-height: 1; }
+bundlify-bundles .bundlify-builder-dialog article h3 {
+  margin: 0 48px 6px 0; font-size: calc(26px * var(--bundlify-font-scale, 1)); letter-spacing: -.03em;
+}
+bundlify-bundles .bundlify-builder-dialog article > p {
+  margin: 0 48px 0 0; color: #666d75; font-size: calc(14px * var(--bundlify-font-scale, 1)); line-height: 1.5;
+}
 bundlify-bundles .bundlify-builder-dialog article { box-shadow: none; }
-bundlify-bundles .bundlify-builder-dialog .bundlify-product { padding: 9px; gap: 9px;  }
-bundlify-bundles .bundlify-builder-dialog .bundlify-product :is(img, .bundlify-image-placeholder) { aspect-ratio: 3 / 2; max-height: 150px; border-radius:10px; }
+/* Create-your-bundle product cards only. Gift rows, summaries, and mode cards keep their own layout. */
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product {
+  gap: 0; padding: 0; overflow: hidden; min-height: min-content;
+  border-radius: 16px; border-color: #e7eaee; box-shadow: none;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product:has(input:checked) {
+  border-color: var(--bundlify-accent);
+  box-shadow: inset 0 0 0 1px var(--bundlify-accent);
+  background-color: color-mix(in srgb, var(--bundlify-accent) 5%, #fff);
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product :is(img, .bundlify-image-placeholder) {
+  flex: 0 0 auto; width: 100%;
+  height: 180px; min-height: 180px; max-height: 180px; aspect-ratio: auto;
+  object-fit: cover; object-position: center;
+  margin: 0; padding: 0; border: 0; border-radius: 0; background: #f3f5f4;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product > img { display: block; }
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product > .bundlify-image-placeholder {
+  display: grid; place-items: center;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice {
+  position: absolute; top: 8px; left: 8px; z-index: 1;
+  display: inline-flex; align-items: center; gap: 4px;
+  width: auto; max-width: calc(100% - 16px);
+  margin: 0; padding: 2px 8px 2px 5px; border: 0; border-radius: 999px;
+  background: #fff; color: var(--bundlify-accent);
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.2;
+  white-space: nowrap; box-shadow: 0 2px 8px #171d2624;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice input {
+  width: 14px; height: 14px; margin: 0; flex: none;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product > div {
+  flex: 0 0 auto; gap: 4px; padding: 10px 12px 12px;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product a {
+  display: block; margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.3; letter-spacing: -.01em;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product-price {
+  flex-wrap: nowrap; align-items: center; gap: 6px; margin: 0; min-width: 0; line-height: 1.2;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product-price s {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 400;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product-price strong {
+  flex: none; font-size: calc(13px * var(--bundlify-font-scale, 1)); font-weight: 600; white-space: nowrap;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-sale-badge {
+  flex: none; margin: 0; padding: 1px 6px; border-radius: 999px;
+  font-size: calc(10px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.45; white-space: nowrap;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product label:not(.bundlify-custom-choice) {
+  margin: 6px 0 0; font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 500; line-height: 1.2; color: #666d75;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-variant-label { display: block; margin: 0 0 4px; }
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product select {
+  width: 100%; height: 34px; min-height: 34px; margin: 0; padding: 0 28px 0 10px;
+  border-radius: 8px; font-size: calc(13px * var(--bundlify-font-scale, 1)); line-height: 32px;
+}
 bundlify-bundles [data-custom-result] { margin-top: 16px; }
 /* The picker uses cards; the selected-products preview below stays a list. */
-bundlify-bundles [data-custom-picker] .bundlify-product-grid { grid-template-columns: minmax(0, 1fr); }
-@container bundlify (min-width: 360px) {
+bundlify-bundles [data-custom-picker] .bundlify-product-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@container bundlify (min-width: 300px) {
   bundlify-bundles [data-custom-picker] .bundlify-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@container bundlify (min-width: 760px) {
+@container bundlify (min-width: 720px) {
+  bundlify-bundles [data-custom-picker] .bundlify-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+}
+@container bundlify (min-width: 980px) {
   bundlify-bundles [data-custom-picker] .bundlify-product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 bundlify-bundles [data-custom-bundle] .bundlify-product a { margin-bottom: 6px; }
@@ -176,92 +321,224 @@ bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-prod
 }
 bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product a { margin-bottom: 6px; }
 bundlify-bundles :is([data-custom-result], [data-list] > article) .bundlify-product-price { margin-bottom: 0; }
-@media (max-width: 480px) {
-  bundlify-bundles .bundlify-builder-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 12px; border-radius: 18px; }
+@media (max-width: 640px) {
+  bundlify-bundles .bundlify-builder-dialog {
+    width: 100%; max-width: 100%;
+    margin: auto 0 0; padding: 18px 16px 14px;
+  }
+  bundlify-bundles button.bundlify-builder-close { top: 12px; right: 12px; }
 }
 
-/* Matching soft sage option cards for bundle and purchase choices. */
+/* Bundle mode cards. Same glass design as the purchase option cards. The --bl-* palette is only set when the
+   merchant turns store matching off; otherwise every color derives from the theme text, background and button colors. */
 bundlify-bundles .bundlify-mode-cards {
-  gap: 10px; padding: 6px; border: 1px solid #e1e8e4;
-  border-radius: 22px; background: #f1f5f3;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 24px;
+  padding: 0; border: 1px solid var(--bl-borderColor, transparent);
+  border-radius: 0; background: color-mix(in srgb, var(--bl-groupBackground, transparent) 60%, transparent);
 }
-bundlify-bundles button.bundlify-mode-card {
-  min-width: 0; min-height: 154px; padding: 18px 12px;
-  border: 1px solid #dfe7e2; border-radius: 16px;
-  background: #fafcfb; color: #52645b; box-shadow: none;
-  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease;
+/* Icon tile in column 1, title and subtitle stacked in column 2; the badge sits centered on the right. */
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto;
+  align-content: center; align-items: center; justify-content: stretch;
+  column-gap: 14px; row-gap: 2px; width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 16px 50px 16px 16px;
+  border: 1.5px solid var(--bl-cardBorder, var(--bundlify-glass-line)); border-radius: 18px;
+  background: var(--bundlify-glass-tint) var(--bundlify-glass); color: var(--bl-cardText, inherit);
+  -webkit-backdrop-filter: var(--bundlify-glass-blur); backdrop-filter: var(--bundlify-glass-blur);
+  font: inherit; text-align: left; text-transform: none; letter-spacing: normal; box-shadow: var(--bundlify-glass-shadow); overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease, transform .2s ease;
 }
-bundlify-bundles button.bundlify-mode-card[aria-pressed="true"] {
-  background: #e1efe6; color: #234e38; border-color: #81aa90;
-  box-shadow: inset 0 0 0 1px #81aa90, 0 3px 10px #234e380a;
+/* Selection badge: ::after is the circle, ::before the check drawn on top of it. */
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::after {
+  content: ""; position: absolute; top: 50%; right: 16px; margin-top: -11px; box-sizing: border-box;
+  width: 22px; height: 22px; border: 1.5px solid var(--bundlify-line-strong); border-radius: 50%;
+  background: transparent;
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+}
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::before {
+  content: ""; position: absolute; z-index: 1; top: 50%; right: 24px; margin-top: -6.5px; box-sizing: border-box;
+  width: 6px; height: 11px; border: solid var(--bundlify-on-ring); border-width: 0 2px 2px 0;
+  opacity: 0; transform: rotate(45deg) scale(.4);
+  transition: opacity .18s ease, transform .2s ease;
+}
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card .bundlify-choice-icon {
+  grid-row: 1 / span 2; grid-column: 1; align-self: center;
+  flex: none; box-sizing: border-box; width: 42px; height: 42px; margin: 0; padding: 9px;
+  border-radius: 12px; background: color-mix(in srgb, currentColor 6%, transparent);
+  color: var(--bl-iconColor, var(--bundlify-muted));
+  transition: color .2s ease, background-color .2s ease;
+}
+/* grid-column -2 is column 2 with an icon and column 1 when the merchant picks no icon. */
+bundlify-bundles .bundlify-mode-card :is(strong, small) { grid-column: -2; justify-self: start; min-width: 0; }
+bundlify-bundles .bundlify-mode-card strong { align-self: end; }
+bundlify-bundles .bundlify-mode-card small { align-self: start; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:has(.bundlify-choice-icon)) { grid-template-columns: minmax(0, 1fr); }
+bundlify-bundles .bundlify-mode-card strong {
+  font-size: calc(15px * var(--bundlify-font-scale, 1)); font-weight: 650; line-height: 1.3; letter-spacing: -.015em;
+}
+bundlify-bundles .bundlify-mode-card small {
+  color: var(--bundlify-muted); font-size: calc(12.5px * var(--bundlify-font-scale, 1)); line-height: 1.45;
+}
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"] {
+  background: var(--bundlify-selected-tint) var(--bundlify-glass-strong);
+  color: var(--bl-selectedText, inherit);
+  border-color: color-mix(in srgb, var(--bl-selectedBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
+  box-shadow: var(--bundlify-selected-shadow);
+}
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"] strong { font-weight: 700; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"]::after {
+  border-color: var(--bundlify-ring); background-color: var(--bundlify-ring);
+}
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"]::before { opacity: 1; transform: rotate(45deg) scale(1); }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"] .bundlify-choice-icon {
+  color: var(--bundlify-ring); background: color-mix(in srgb, var(--bundlify-ring) 14%, transparent);
+}
+/* Unavailable reads as a deliberate "coming soon" state, not a broken button. */
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled {
+  opacity: 1; cursor: not-allowed; color: var(--bundlify-muted);
+  border-style: dashed; border-color: var(--bl-cardBorder, var(--bundlify-line-strong));
+  background: color-mix(in srgb, currentColor 2%, transparent); box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled::after { border-style: dashed; opacity: .6; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled .bundlify-choice-icon { color: inherit; opacity: .7; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled small {
+  display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px;
+  background: color-mix(in srgb, currentColor 8%, transparent); color: inherit;
+  font-size: calc(11.5px * var(--bundlify-font-scale, 1)); font-weight: 600; letter-spacing: .01em;
 }
 @media (hover: hover) {
-  bundlify-bundles button.bundlify-mode-card:not(:disabled):hover {
-    transform: none; background: #edf4ef; color: #2e5140; border-color: #b2cabc;
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled):hover {
+    transform: translateY(-2px); background-color: var(--bundlify-glass-hover);
+    color: var(--bl-hoverText, inherit); border-color: var(--bl-hoverBorder, var(--bundlify-line-strong));
   }
-  bundlify-bundles button.bundlify-mode-card:not(:disabled)[aria-pressed="true"]:hover {
-    background: #d5e8dc; border-color: #6e9b7e; color: #234e38;
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled):not([aria-pressed="true"]):hover::after { border-color: var(--bundlify-ring); }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled):hover .bundlify-choice-icon { color: var(--bl-hoverIconColor, inherit); }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled)[aria-pressed="true"]:hover {
+    background-color: color-mix(in srgb, var(--bl-selectedHoverBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-strong), transparent);
+    color: var(--bl-selectedHoverText, inherit);
+    border-color: color-mix(in srgb, var(--bl-selectedHoverBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
   }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled)[aria-pressed="true"]:hover .bundlify-choice-icon { color: var(--bundlify-ring); }
 }
-bundlify-bundles button.bundlify-mode-card:focus-visible { outline: 3px solid #477d5c; outline-offset: 3px; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:focus-visible { outline: 2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset: 3px; }
+@container bundlify (max-width: 640px) {
+  bundlify-bundles .bundlify-mode-cards { gap: 10px; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card { column-gap: 12px; padding: 14px 44px 14px 14px; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::after { right: 14px; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::before { right: 22px; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card .bundlify-choice-icon { width: 38px; height: 38px; padding: 8px; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled small { margin-top: 2px; }
+}
+/* Below this each card is under ~235px, too tight for icon + text beside the badge, so stack the cards. */
+@container bundlify (max-width: 480px) {
+  bundlify-bundles .bundlify-mode-cards { grid-template-columns: minmax(0, 1fr); }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card { padding-right: 50px; }
+}
+@container bundlify (max-width: 280px) {
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card { grid-template-columns: minmax(0, 1fr); padding-top: 16px; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card .bundlify-choice-icon { grid-row: auto; margin: 0 0 8px; }
+  bundlify-bundles .bundlify-mode-card :is(strong, small) { grid-column: 1; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::after { top: 14px; margin-top: 0; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::before { top: 19px; margin-top: 0; }
+}
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled):hover { transform: none; }
+}
+
+/* Ready-made bundle picker rows. */
 bundlify-bundles .bundlify-bundle-options {
-  display:grid; gap:8px; margin:4px 0 18px; padding:8px;
-  border:1px solid var(--bl-borderColor, #e3ebe6); border-radius:20px;
-  background:var(--bl-groupBackground, #f3f6f4);
+  display:grid; gap:8px; margin:4px 0 18px; padding:0;
+  border:1px solid var(--bl-borderColor, transparent); border-radius:16px;
+  background:color-mix(in srgb, var(--bl-groupBackground, transparent) 60%, transparent);
 }
 bundlify-bundles button.bundlify-bundle-option {
-  display:flex; align-items:center; gap:12px; width:100%; margin:0; min-height:72px; padding:12px 14px;
-  border:1px solid transparent; border-radius:16px;
-  background:#fff; color:#24382d; font-weight:600; text-align:left;
-  box-shadow:0 1px 2px #20382b0a;
-  transition:background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+  display:flex; align-items:center; gap:12px; width:100%; margin:0; min-height:60px; padding:12px 16px;
+  border:1px solid var(--bl-cardBorder, var(--bundlify-glass-line)); border-radius:16px;
+  background:var(--bundlify-glass-tint) var(--bundlify-glass); color:var(--bl-cardText, inherit); font-weight:600; text-align:left;
+  -webkit-backdrop-filter:var(--bundlify-glass-blur); backdrop-filter:var(--bundlify-glass-blur);
+  box-shadow:var(--bundlify-glass-shadow);
+  transition:background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 bundlify-bundles .bundlify-bundle-option-mark {
-  display:grid; place-items:center; flex:none; width:42px; height:42px; border-radius:12px;
-  background:#eef5f0; color:#2f6a49;
+  display:grid; place-items:center; flex:none; width:28px; height:28px; border-radius:0;
+  background:none; color:var(--bl-iconColor, var(--bundlify-muted));
 }
 bundlify-bundles .bundlify-bundle-option-mark svg { width:22px; height:22px; display:block; }
 bundlify-bundles .bundlify-bundle-option-copy { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
 bundlify-bundles .bundlify-bundle-option-copy strong {
-  font-size:calc(15px * var(--bundlify-font-scale, 1)); font-weight:650; letter-spacing:-.01em; line-height:1.3;
+  font-size:calc(14px * var(--bundlify-font-scale, 1)); font-weight:600; line-height:1.3; letter-spacing:-.01em;
 }
 bundlify-bundles .bundlify-bundle-option-copy small {
-  font-size:calc(12px * var(--bundlify-font-scale, 1)); font-weight:500; color:#6d8076; line-height:1.4;
+  font-size:calc(12px * var(--bundlify-font-scale, 1)); font-weight:400; color:var(--bundlify-muted); line-height:1.4;
 }
 bundlify-bundles .bundlify-bundle-option-radio {
-  flex:none; width:20px; height:20px; border-radius:50%; border:2px solid #c5d4cb; background:#fff;
-  box-shadow:inset 0 0 0 4px transparent;
+  flex:none; width:16px; height:16px; border-radius:50%; border:1px solid var(--bundlify-line-strong); background:transparent;
 }
 bundlify-bundles button.bundlify-bundle-option[aria-pressed="true"] {
-  background:var(--bl-selectedBackground, #f4faf6); color:var(--bl-selectedText, #234e38);
-  border-color:var(--bl-selectedBorder, #7eae93);
-  box-shadow:0 8px 22px #234e3814;
+  background:var(--bundlify-selected-tint) var(--bundlify-glass-strong); color:var(--bl-selectedText, inherit);
+  border-color:color-mix(in srgb, var(--bl-selectedBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
+  box-shadow:var(--bundlify-selected-shadow);
 }
-bundlify-bundles button.bundlify-bundle-option[aria-pressed="true"] .bundlify-bundle-option-mark { background:#285c43; color:#fff; }
+bundlify-bundles button.bundlify-bundle-option[aria-pressed="true"] .bundlify-bundle-option-mark {
+  color:var(--bundlify-ring);
+}
 bundlify-bundles button.bundlify-bundle-option[aria-pressed="true"] .bundlify-bundle-option-radio {
-  border-color:#285c43; background:#285c43; box-shadow:inset 0 0 0 4px #fff;
+  border-color:var(--bundlify-ring);
+  background:radial-gradient(circle, var(--bundlify-ring) 0 4px, transparent 4.5px);
 }
-bundlify-bundles button.bundlify-bundle-option[aria-pressed="true"] .bundlify-bundle-option-copy small { color:#3e6b52; }
 @media (hover: hover) {
   bundlify-bundles button.bundlify-bundle-option:not(:disabled):hover {
-    background:var(--bl-hoverBackground, #f7fbf8); color:var(--bl-hoverText, #24382d);
-    border-color:var(--bl-hoverBorder, #d5e3da); box-shadow:0 6px 16px #20382b10;
+    background-color:var(--bundlify-glass-hover); color:var(--bl-hoverText, inherit);
+    border-color:var(--bl-hoverBorder, var(--bundlify-line-strong));
   }
   bundlify-bundles button.bundlify-bundle-option[aria-pressed="true"]:not(:disabled):hover {
-    background:var(--bl-selectedHoverBackground, #e7f3eb); color:var(--bl-selectedHoverText, #234e38);
-    border-color:var(--bl-selectedHoverBorder, #6e9b7e);
+    background-color:color-mix(in srgb, var(--bl-selectedHoverBackground, var(--bundlify-theme-surface)) var(--bundlify-glass-alpha-strong), transparent); color:var(--bl-selectedHoverText, inherit);
+    border-color:var(--bl-selectedHoverBorder, var(--bundlify-accent));
   }
 }
-bundlify-bundles button.bundlify-bundle-option:focus-visible { outline:3px solid var(--bl-focusColor, #477d5c); outline-offset:3px; }
+bundlify-bundles button.bundlify-bundle-option:focus-visible { outline:2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset:3px; }
 @media (prefers-reduced-motion: reduce) {
-  bundlify-bundles button.bundlify-mode-card, bundlify-bundles button.bundlify-bundle-option { transition: none; }
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card, bundlify-bundles button.bundlify-bundle-option,
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::after, bundlify-bundles .bundlify-choice-icon { transition: none; }
+}
+
+/* Icon micro-motion. Only the drawn paths move so the icon tile and card never shift.
+   Path offsets are in the 48-unit viewBox, which renders at about half size. */
+@keyframes bundlify-icon-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes bundlify-icon-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes bundlify-icon-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: .8; } }
+@keyframes bundlify-icon-spin { to { transform: rotate(360deg); } }
+@keyframes bundlify-check-pop {
+  0% { opacity: 0; transform: rotate(45deg) scale(.4); }
+  60% { opacity: 1; transform: rotate(45deg) scale(1.25); }
+  100% { opacity: 1; transform: rotate(45deg) scale(1); }
+}
+bundlify-bundles svg.bundlify-choice-icon { overflow: visible; }
+bundlify-bundles svg.bundlify-choice-icon > path { transform-box: fill-box; transform-origin: center; }
+bundlify-bundles svg.bundlify-icon-gift > path { animation: bundlify-icon-bob 2.4s ease-in-out infinite; }
+bundlify-bundles svg.bundlify-icon-box > path,
+bundlify-bundles svg.bundlify-icon-repeat > path:not(.bundlify-icon-arrows) { animation: bundlify-icon-bob 3.1s ease-in-out infinite; }
+bundlify-bundles svg:is(.bundlify-icon-grid, .bundlify-icon-heart, .bundlify-icon-star) > path { animation: bundlify-icon-pulse 2.8s ease-in-out infinite; }
+bundlify-bundles svg.bundlify-icon-repeat > .bundlify-icon-arrows { animation: bundlify-icon-spin 10s linear infinite; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled svg.bundlify-choice-icon > path { animation: none; }
+bundlify-bundles .bundlify-bundle-option-mark svg { animation: bundlify-icon-float 3.4s ease-in-out infinite; }
+bundlify-bundles button.bundlify-bundle-option:nth-child(even) .bundlify-bundle-option-mark svg { animation-delay: -1.7s; }
+bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"]::before {
+  animation: bundlify-check-pop .38s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  bundlify-bundles svg.bundlify-choice-icon > path,
+  bundlify-bundles .bundlify-bundle-option-mark svg,
+  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card[aria-pressed="true"]::before { animation: none; }
 }
 
 /* Keep the custom builder action visible while its product list scrolls. */
 bundlify-bundles .bundlify-builder-dialog[open] {
   display: flex;
   flex-direction: column;
-  height: min(820px, calc(100dvh - 32px));
+  height: auto;
+  max-height: min(860px, calc(100dvh - 32px));
   overflow: hidden;
 }
 bundlify-bundles .bundlify-builder-dialog > .bundlify-builder-close { flex: 0 0 auto; }
@@ -279,31 +556,289 @@ bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-produ
   overflow-y: auto;
   overscroll-behavior: contain;
   align-content: start;
+  align-items: start;
   padding: 4px;
   scrollbar-gutter: stable;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-total {
   margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #dce5de;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 18px;
+  background: #f4f7f5;
 }
-bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > button {
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > button.bundlify-purchase-action {
   display: block;
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   margin-top: 10px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bundlify-accent);
+  color: var(--bundlify-on-accent);
+  font-size: calc(14px * var(--bundlify-font-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > [role="status"] {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.4;
 }
-@media (max-width: 480px) {
-  bundlify-bundles .bundlify-builder-dialog[open] { height: calc(100dvh - 16px); }
-  bundlify-bundles .bundlify-builder-dialog [data-custom-picker] { padding: 12px; }
+@media (max-width: 640px) {
+  bundlify-bundles .bundlify-builder-dialog[open] {
+    height: auto; max-height: calc(100vh - 12px); max-height: calc(100dvh - 12px);
+    border-radius: 22px 22px 0 0; padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  bundlify-bundles .bundlify-builder-dialog [data-custom-picker] { padding: 0; }
 }
 @media (max-height: 500px) {
   bundlify-bundles .bundlify-builder-dialog[open] { overflow-y: auto; }
   bundlify-bundles .bundlify-builder-dialog [data-custom-picker]:not([hidden]) { flex: 0 0 auto; overflow: visible; }
   bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-product-grid { max-height: 35dvh; flex: 0 0 auto; }
+}
+
+/* Selected ready-made bundle: one compact panel with hairline product rows, shown in the gift box popup.
+   Scoped to the detail card so the mode cards, bundle choice rows and custom builder keep their own layout. */
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail { padding: 12px; border-radius: 14px; }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > h3 {
+  margin: 0 0 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: calc(15px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.3; letter-spacing: -.01em;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-product-grid { display: block; margin: 0; }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px;
+  min-height: 56px; padding: 8px 0; border: 0; border-radius: 0; background: none;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product + .bundlify-product { border-top: 1px solid var(--bundlify-line); }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product > :is(img, .bundlify-image-placeholder) {
+  width: 40px; height: 40px; padding: 2px; border-radius: 8px; aspect-ratio: 1; object-fit: contain; background: var(--bundlify-tint);
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-image-placeholder { font-size: 9px; line-height: 1.1; text-align: center; }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product > div {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product a {
+  grid-column: 1; grid-row: 1; margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.3;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product label {
+  grid-column: 1; grid-row: 2; margin: 0; min-width: 0; font-size: calc(12px * var(--bundlify-font-scale, 1));
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-variant-label {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product select {
+  width: 100%; max-width: 200px; height: 32px; margin: 0; padding: 0 28px 0 10px;
+  border-radius: 8px; font-size: calc(13px * var(--bundlify-font-scale, 1)); line-height: 30px;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product-price {
+  grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: auto auto; justify-items: end; align-content: center;
+  gap: 0 4px; margin: 0; line-height: 1.25; text-align: right;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product-price strong {
+  grid-column: 1 / -1; grid-row: 1; font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600; white-space: nowrap;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product-price s { grid-column: 1; grid-row: 2; font-size: calc(11px * var(--bundlify-font-scale, 1)); white-space: nowrap; }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-sale-badge {
+  grid-column: 2; grid-row: 2; padding: 0 5px; font-size: calc(10px * var(--bundlify-font-scale, 1)); line-height: 1.5; white-space: nowrap;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total {
+  grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 8px;
+  margin-top: 4px; padding: 10px 12px; border: 0; border-radius: 10px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > .bundlify-total-label {
+  grid-column: 1; grid-row: 1; font-size: calc(13px * var(--bundlify-font-scale, 1)); font-weight: 600;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > s {
+  grid-column: 2; grid-row: 1 / span 2; font-size: calc(12px * var(--bundlify-font-scale, 1)); font-weight: 400; white-space: nowrap;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > strong {
+  grid-column: 3; grid-row: 1 / span 2; font-size: calc(17px * var(--bundlify-font-scale, 1)); font-weight: 700; white-space: nowrap;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > .bundlify-total-save {
+  grid-column: 1; grid-row: 2; justify-self: start; padding: 2px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--bundlify-accent) 12%, transparent);
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.5;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > .bundlify-total-note {
+  grid-column: 1 / -1; grid-row: 3; padding: 0; background: none; color: var(--bundlify-muted);
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 400;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > button.bundlify-purchase-action[type="button"] {
+  min-height: 42px; margin-top: 8px; padding: 8px 16px; border-radius: 10px;
+  font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600;
+}
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > [role="status"] { margin: 6px 0 0; font-size: calc(12px * var(--bundlify-font-scale, 1)); line-height: 1.4; }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > [role="status"]:empty { display: none; }
+bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > a { margin-top: 4px; font-size: calc(13px * var(--bundlify-font-scale, 1)); }
+/* Wide column: name, variant and price share a single line. */
+@container bundlify (min-width: 480px) {
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product > div { grid-template-columns: minmax(0, 1fr) minmax(0, 180px) minmax(88px, auto); }
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product label { grid-column: 2; grid-row: 1; }
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail .bundlify-product-price { grid-column: 3; grid-row: 1; }
+}
+/* Narrow column: keep both total prices on the right, stacked, so nothing overflows. */
+@container bundlify (max-width: 359px) {
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail { padding: 12px; }
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total { grid-template-columns: minmax(0, 1fr) auto; }
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > s { grid-column: 2; grid-row: 2; justify-self: end; }
+  bundlify-bundles :is([data-list], .bundlify-gift-dialog) > .bundlify-bundle-detail > .bundlify-total > strong { grid-column: 2; grid-row: 1; justify-self: end; }
+}
+
+/* Gift box popup for a ready-made bundle. One fixed dialog; the steps swap inside the detail card. Surfaces
+   stay light like the custom builder; the accent follows the theme button, or the merchant accent when
+   store matching is off (the appearance snippet then also colors the card). */
+bundlify-bundles .bundlify-gift-dialog {
+  container: bundlify / inline-size;
+  position: fixed; inset: 0;
+  width: min(560px, calc(100% - 32px)); max-width: none;
+  max-height: min(760px, calc(100dvh - 32px));
+  margin: auto; padding: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  border: 0; border-radius: 20px;
+  background: #fff; color: #0e1b3d;
+  box-shadow: 0 30px 80px #0e1b3d40;
+}
+bundlify-bundles .bundlify-gift-dialog::backdrop { background: #0e1b3d66; backdrop-filter: blur(6px); }
+/* Image lightbox sits above the gift-step dialog and closes back to the same step. */
+bundlify-bundles dialog.bundlify-gift-preview {
+  position: fixed; z-index: 80; inset: 0; width: fit-content; height: fit-content;
+  max-width: 90vw; max-height: 80vh; margin: auto; padding: 0;
+  overflow: visible; border: 0; background: transparent; box-shadow: none;
+}
+bundlify-bundles dialog.bundlify-gift-preview::backdrop { background: #0e1b3d66; backdrop-filter: blur(6px); }
+bundlify-bundles dialog.bundlify-gift-preview img {
+  display: block; width: auto; height: auto; max-width: 90vw; max-height: 80vh;
+  object-fit: contain; border-radius: 12px; background: #fff;
+}
+bundlify-bundles dialog.bundlify-gift-preview > button.bundlify-builder-close { top: 8px; right: 8px; }
+bundlify-bundles .bundlify-gift-dialog > button.bundlify-builder-close { top: 12px; right: 12px; width: 36px; height: 36px; min-height: 36px; }
+bundlify-bundles .bundlify-gift-dialog > .bundlify-bundle-detail.bundlify-bundle-detail {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 20px; border: 0; border-radius: 0; background-clip: padding-box;
+}
+bundlify-bundles .bundlify-gift-dialog > .bundlify-bundle-detail > h3 {
+  margin: 0 48px 0 0; font-size: calc(18px * var(--bundlify-font-scale, 1)); font-weight: 650; outline: none;
+}
+bundlify-bundles .bundlify-gift-dialog > .bundlify-bundle-detail > .bundlify-total { margin-top: 0; }
+bundlify-bundles .bundlify-gift-nav { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+bundlify-bundles .bundlify-gift-progress {
+  margin: 0; color: var(--bundlify-muted); font-size: calc(12px * var(--bundlify-font-scale, 1)); font-weight: 550; letter-spacing: .02em;
+}
+bundlify-bundles button.bundlify-gift-back[type="button"] {
+  display: inline-flex; align-items: center; gap: 4px; width: auto; min-height: 28px; margin: 0; padding: 2px 10px 2px 8px;
+  border: 1px solid var(--bundlify-line-strong); border-radius: 999px; background: transparent; color: inherit;
+  font-size: calc(12px * var(--bundlify-font-scale, 1)); font-weight: 600;
+}
+bundlify-bundles button.bundlify-gift-back[type="button"]::before { content: "\2039"; font-size: 16px; line-height: 1; }
+bundlify-bundles button.bundlify-gift-back[type="button"]:not(:disabled):hover { background: var(--bundlify-tint); }
+bundlify-bundles .bundlify-gift-step { display: flex; flex-direction: column; gap: 10px; }
+bundlify-bundles .bundlify-gift-heading {
+  margin: 0; font-size: calc(16px * var(--bundlify-font-scale, 1)); font-weight: 650; letter-spacing: -.01em; outline: none; color: inherit;
+}
+bundlify-bundles .bundlify-gift-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 4px; }
+bundlify-bundles .bundlify-gift-actions button.bundlify-gift-button[type="button"] {
+  min-height: 44px; margin: 0; padding: 10px 16px; border: 1px solid var(--bundlify-line-strong); border-radius: 12px;
+  background: transparent; color: inherit; font-size: calc(14px * var(--bundlify-font-scale, 1)); font-weight: 600;
+}
+bundlify-bundles .bundlify-gift-actions button.bundlify-gift-button[type="button"]:not(:disabled):hover { background: var(--bundlify-tint); border-color: currentColor; }
+bundlify-bundles .bundlify-gift-actions button.bundlify-gift-primary[type="button"] {
+  border-color: transparent; background: var(--bundlify-accent); color: var(--bundlify-on-accent);
+}
+bundlify-bundles .bundlify-gift-actions button.bundlify-gift-primary[type="button"]:not(:disabled):hover { background: var(--bundlify-accent); border-color: transparent; filter: brightness(.94); }
+bundlify-bundles .bundlify-gift-choices { display: grid; gap: 8px; }
+bundlify-bundles label.bundlify-gift-choice {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  margin: 0; padding: 12px 14px; border: 1px solid var(--bundlify-line); border-radius: 12px; cursor: pointer;
+  font-size: calc(14px * var(--bundlify-font-scale, 1));
+  transition: border-color .15s ease, background-color .15s ease;
+}
+bundlify-bundles label.bundlify-gift-choice:hover { border-color: var(--bundlify-line-strong); background: var(--bundlify-tint); }
+bundlify-bundles label.bundlify-gift-choice:has(input:checked) { border-color: var(--bundlify-ring); background: var(--bundlify-selected-tint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bundlify-ring) 12%, transparent); }
+bundlify-bundles label.bundlify-gift-choice input { width: 18px; height: 18px; margin: 0; accent-color: var(--bundlify-ring); }
+bundlify-bundles label.bundlify-gift-choice input:focus-visible { outline: 2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset: 2px; }
+bundlify-bundles label.bundlify-gift-choice-with-image { grid-template-columns: auto 64px minmax(0, 1fr) auto; }
+bundlify-bundles button.bundlify-gift-choice-media[type="button"] {
+  display: block; position: relative; width: 64px; height: 64px; margin: 0; padding: 0;
+  border: 0; border-radius: 10px; background: transparent; color: #0e1b3d;
+  line-height: 0; cursor: zoom-in; overflow: hidden;
+}
+bundlify-bundles button.bundlify-gift-choice-media[type="button"]:focus-visible {
+  outline: 2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset: 2px;
+}
+bundlify-bundles .bundlify-gift-choice-image {
+  display: block;
+  width: 64px; height: 64px; object-fit: cover; border-radius: 10px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+bundlify-bundles .bundlify-gift-choice-media::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  background: color-mix(in srgb, #fff 46%, transparent); opacity: 0;
+  transition: opacity .15s ease;
+}
+bundlify-bundles .bundlify-gift-choice-view {
+  position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  margin: 0; padding: 4px 8px; border-radius: 999px; line-height: 1.2;
+  background: color-mix(in srgb, #fff 78%, transparent); color: #0e1b3d;
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 700; letter-spacing: .04em;
+  box-shadow: 0 2px 8px #0e1b3d2e; pointer-events: none; user-select: none;
+  opacity: .9; transition: opacity .15s ease;
+}
+@media (hover: hover) {
+  bundlify-bundles .bundlify-gift-choice-view { opacity: 0; }
+  bundlify-bundles .bundlify-gift-choice-media:hover::before,
+  bundlify-bundles .bundlify-gift-choice-media:focus-within::before { opacity: 1; }
+  bundlify-bundles .bundlify-gift-choice-media:hover .bundlify-gift-choice-view,
+  bundlify-bundles .bundlify-gift-choice-media:focus-within .bundlify-gift-choice-view { opacity: 1; }
+}
+@media (hover: none) {
+  bundlify-bundles .bundlify-gift-choice-media::before { opacity: .4; }
+  bundlify-bundles .bundlify-gift-choice-view { opacity: .92; }
+}
+bundlify-bundles .bundlify-gift-choice-name { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+bundlify-bundles .bundlify-gift-choice-price { font-variant-numeric: tabular-nums; white-space: nowrap; }
+bundlify-bundles .bundlify-gift-empty {
+  margin: 0; padding: 12px 14px; border: 1px dashed var(--bundlify-line-strong); border-radius: 12px;
+  color: var(--bundlify-muted); font-size: calc(13px * var(--bundlify-font-scale, 1));
+}
+bundlify-bundles .bundlify-gift-summary {
+  display: grid; gap: 0; margin: 0; padding: 4px 14px; border-radius: 12px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+bundlify-bundles .bundlify-gift-summary > div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0;
+  font-size: calc(14px * var(--bundlify-font-scale, 1));
+}
+bundlify-bundles .bundlify-gift-summary > div + div { border-top: 1px solid var(--bundlify-line); }
+bundlify-bundles .bundlify-gift-summary dt { display: flex; flex-direction: column; min-width: 0; }
+bundlify-bundles .bundlify-gift-summary dt small { color: var(--bundlify-muted); font-size: calc(12px * var(--bundlify-font-scale, 1)); overflow-wrap: anywhere; }
+bundlify-bundles .bundlify-gift-summary dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+bundlify-bundles .bundlify-gift-summary > .bundlify-gift-summary-total { font-size: calc(16px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-gift-summary > .bundlify-gift-summary-total :is(dt, dd) { font-weight: 700; }
+bundlify-bundles .bundlify-gift-summary > .bundlify-gift-summary-total dd { color: var(--bundlify-accent); }
+bundlify-bundles .bundlify-gift-note { margin: 0; color: var(--bundlify-muted); font-size: calc(12px * var(--bundlify-font-scale, 1)); }
+bundlify-bundles .bundlify-gift-step > button.bundlify-purchase-action[type="button"] {
+  min-height: 46px; margin-top: 4px; padding: 10px 16px; border-radius: 12px;
+  font-size: calc(15px * var(--bundlify-font-scale, 1)); font-weight: 650;
+}
+bundlify-bundles .bundlify-gift-dialog > .bundlify-bundle-detail > [role="status"] { margin: 0; }
+bundlify-bundles .bundlify-gift-dialog > .bundlify-bundle-detail > a { margin-top: 0; }
+@media (max-width: 640px) {
+  bundlify-bundles .bundlify-gift-dialog {
+    width: 100%; max-width: 100%; max-height: calc(100dvh - 12px);
+    margin: auto 0 0; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom);
+  }
+  bundlify-bundles .bundlify-gift-dialog > .bundlify-bundle-detail.bundlify-bundle-detail { padding: 16px; }
+  bundlify-bundles label.bundlify-gift-choice-with-image { grid-template-columns: auto 56px minmax(0, 1fr) auto; }
+  bundlify-bundles button.bundlify-gift-choice-media[type="button"],
+  bundlify-bundles .bundlify-gift-choice-image { width: 56px; height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  bundlify-bundles label.bundlify-gift-choice,
+  bundlify-bundles .bundlify-gift-choice-media::before,
+  bundlify-bundles .bundlify-gift-choice-view { transition: none; }
 }

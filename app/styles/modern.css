@@ -1,9 +1,9 @@
 /* Modern App Styling */
 
 :root {
-  --color-primary: #2c5f2d;
-  --color-primary-light: #e8f5e9;
-  --color-success: #2c5f2d;
+  --color-primary: #0a6ff0;
+  --color-primary-light: #eaf3ff;
+  --color-success: #0a6ff0;
   --color-warning: #f59e0b;
   --color-critical: #dc2626;
   --color-subdued: #6b7280;
@@ -60,7 +60,7 @@ body {
 }
 
 .button-primary:hover {
-  background-color: #1e4620;
+  background-color: #0550d8;
   transform: translateY(-1px);
 }
 
@@ -183,8 +183,8 @@ body {
 
 /* Badges */
 .badge-success {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: #e8f3ff;
+  color: #0550d8;
   padding: 4px 12px;
   border-radius: var(--radius-200);
   font-size: 12px;
@@ -264,11 +264,11 @@ body {
 
 /* Alerts/Banners */
 .banner-success {
-  background-color: #d1fae5;
-  border: 1px solid #6ee7b7;
+  background-color: #e8f3ff;
+  border: 1px solid #b9d8ff;
   border-radius: var(--radius-200);
   padding: var(--space-400);
-  color: #065f46;
+  color: #0550d8;
   margin-bottom: var(--space-400);
 }
 
@@ -320,7 +320,7 @@ body {
 .form-textarea:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
+  box-shadow: 0 0 0 3px rgba(10, 111, 240, 0.12);
 }
 
 /* Responsive */
@@ -355,7 +355,7 @@ body {
 }
 
 .text-success {
-  color: #065f46;
+  color: #0550d8;
 }
 
 .text-error {

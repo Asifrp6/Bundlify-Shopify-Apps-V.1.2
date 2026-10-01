@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { giftStore } from "./gift-options.server.js";
 
 const topics = new Set(["customers/data_request", "customers/redact", "shop/redact"]);
 
@@ -42,6 +43,7 @@ export async function handlePrivacyWebhook(request, { db, secret }) {
         await tx.bundle.deleteMany({ where: { shop } });
         await tx.deliveryOption.deleteMany({ where: { subscriptionPlan: { shop } } });
         await tx.subscriptionPlan.deleteMany({ where: { shop } });
+        await giftStore(tx).removeShop(shop);
         await tx.session.deleteMany({ where: { shop } });
       });
     } catch {

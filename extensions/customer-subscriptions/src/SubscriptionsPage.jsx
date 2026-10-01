@@ -101,13 +101,15 @@ function Extension() {
       <s-stack direction="block" gap="base">
         {message ? <s-banner tone="info">{message}</s-banner> : null}
         {contracts.length === 0 ? <s-text>You do not have any subscriptions yet.</s-text> : null}
-        {contracts.map((contract) => (
-          <s-section key={contract.id} heading={contract.lines[0]?.title || "Subscription"}>
+        {contracts.map((contract) => {
+          const lines = contract.lines?.nodes || [];
+          return (
+          <s-section key={contract.id} heading={lines[0]?.title || "Subscription"}>
             <s-stack direction="block" gap="base">
               <s-text>Status: {contract.status}</s-text>
               <s-text>Delivery: {schedule(contract.deliveryPolicy)}</s-text>
               <s-text>Next charge: {contract.nextBillingDate || "Not scheduled"}</s-text>
-              {contract.lines.map((line) => (
+              {lines.map((line) => (
                 <s-text key={line.id}>
                   {line.quantity} × {line.title}{line.variantTitle ? ` (${line.variantTitle})` : ""} · {price(line, contract.currencyCode)}
                 </s-text>
@@ -120,7 +122,8 @@ function Extension() {
               ) : null}
             </s-stack>
           </s-section>
-        ))}
+          );
+        })}
       </s-stack>
     </s-page>
   );

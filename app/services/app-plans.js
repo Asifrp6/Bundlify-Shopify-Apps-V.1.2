@@ -56,8 +56,12 @@ export function planByHandle(handle) {
   return plans.find((plan) => plan.handle === handle) || null;
 }
 
+export const APP_NAME = "Bundle Base";
+// Charges created before the renames keep their original name.
+const SUBSCRIPTION_NAME_PREFIXES = [APP_NAME, "Codemart", "Bundlify"];
+
 export function planFromSubscriptionName(name) {
-  return plans.find((plan) => name === `Bundlify ${plan.name}` && plan.price > 0) || null;
+  return plans.find((plan) => plan.price > 0 && SUBSCRIPTION_NAME_PREFIXES.some((prefix) => name === `${prefix} ${plan.name}`)) || null;
 }
 
 export function limitsFor(handle) {

@@ -57,6 +57,9 @@ model SubscriptionPlan {
   sellingPlanGroupId String? @unique
   deliveryOptions DeliveryOption[]
 
+  lengthEnabled Boolean @default(false)
+  lengthOptionsJson String @default("[]")
+
   createdAt DateTime @default(now())
 
   @@index([shop, createdAt])
@@ -95,6 +98,28 @@ model ShopPlan {
   subscriptionId String?
   status         String   @default("active")
   updatedAt      DateTime @updatedAt
+}
+
+model GiftOption {
+  id        Int      @id @default(autoincrement())
+  shop      String
+  kind      String
+  name      String
+  price     String
+  productId String?
+  variantId String?
+  syncError String?
+  imageUrl  String?
+  mediaId   String?
+  createdAt DateTime @default(now())
+
+  @@index([shop, kind])
+}
+
+model GiftSetting {
+  shop      String   @id
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @default(now())
 }
 
 model BundleProduct {

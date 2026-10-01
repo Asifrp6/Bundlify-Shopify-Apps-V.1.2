@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Banner } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { plans } from "../services/app-plans";
+import { billingReturnUrl, isApprovedCharge } from "../services/billing-return";
 import styles from "../styles/pricing.module.css";
 
 const icons = {
@@ -13,12 +14,13 @@ const icons = {
 };
 
 export async function loader({ request }) {
-  const { admin, session } = await authenticate.admin(request);
-  const { syncShopPlan } = await import("../services/app-billing.server");
+  const { admin, session, redirect } = await authenticate.admin(request);
+  const { activeSubscriptionId, syncShopPlan } = await import("../services/app-billing.server");
   const chargeId = new URL(request.url).searchParams.get("charge_id");
   try {
     const handle = await syncShopPlan(admin, session.shop);
-    return { handle, error: null, declined: Boolean(chargeId) && !handle };
+    if (chargeId && handle && isApprovedCharge(await activeSubscriptionId(session.shop), chargeId)) return redirect("/app");
+    return { handle, error: null, declined: Boolean(chargeId) };
   } catch (error) {
     if (error instanceof Response) throw error;
     return { handle: null, error: "Shopify could not confirm your plan. Refresh and try again.", declined: false };
@@ -29,8 +31,8 @@ export async function action({ request }) {
   const { admin, session, redirect } = await authenticate.admin(request);
   const { billingTestMode, chooseShopPlan } = await import("../services/app-billing.server");
   const handle = String((await request.formData()).get("handle") || "");
-  const returnUrl = new URL("/app", process.env.SHOPIFY_APP_URL || new URL(request.url).origin).toString();
   try {
+    const returnUrl = billingReturnUrl({ appUrl: process.env.SHOPIFY_APP_URL || new URL(request.url).origin, shop: session.shop });
     const result = await chooseShopPlan({
       admin,
       shop: session.shop,

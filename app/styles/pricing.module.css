@@ -22,15 +22,15 @@
   margin: 0;
   padding: 8px 16px;
   border-radius: 999px;
-  background: #e8f1ff;
-  color: #3b6fd8;
+  background: #eaf3ff;
+  color: #0a6ff0;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 .intro h1 {
   margin: 0;
-  color: #172033;
+  color: #0e1b3d;
   font-size: 34px;
   line-height: 1.25;
   letter-spacing: -0.03em;
@@ -58,22 +58,22 @@
   border: 1px solid #e6ebf2;
   border-radius: 22px;
   background: #fff;
-  box-shadow: 0 10px 30px #17315c0d;
+  box-shadow: 0 10px 30px #0e1b3d0d;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .card:hover {
   transform: translateY(-6px);
   border-color: #c9d7ee;
-  box-shadow: 0 18px 40px #17315c1f;
+  box-shadow: 0 18px 40px #0e1b3d1f;
 }
 .growth:hover {
-  border-color: #2563eb;
+  border-color: #0a6ff0;
 }
 .free { background: #fff; }
-.starter { background: #f3fbf6; }
+.starter { background: #effaff; }
 .growth {
-  background: #f4f8ff;
-  border: 2px solid #3b82f6;
+  background: #f3f8ff;
+  border: 2px solid #0a6ff0;
 }
 .unlimited { background: #fff8ee; }
 .badge {
@@ -83,7 +83,7 @@
   transform: translateX(-50%);
   padding: 4px 10px;
   border-radius: 999px;
-  background: #3b82f6;
+  background: #0a6ff0;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -96,14 +96,14 @@
   display: grid;
   place-items: center;
 }
-.freeIcon { background: #e8f1ff; color: #3b82f6; }
-.starterIcon { background: #e5f6ea; color: #16a34a; }
-.growthIcon { background: #e7f0ff; color: #3b82f6; }
+.freeIcon { background: #eaf3ff; color: #0a6ff0; }
+.starterIcon { background: #e0f4fe; color: #0369a1; }
+.growthIcon { background: #eaf3ff; color: #0a6ff0; }
 .unlimitedIcon { background: #fff1d6; color: #f59e0b; }
 .card h2 {
   margin: 0;
   text-align: center;
-  color: #172033;
+  color: #0e1b3d;
   font-size: 26px;
 }
 .tagline {
@@ -115,7 +115,7 @@
 .price {
   margin: 0;
   text-align: center;
-  color: #172033;
+  color: #0e1b3d;
   font-size: 36px;
   font-weight: 800;
 }
@@ -142,9 +142,9 @@
 .features li span {
   font-weight: 800;
 }
-.free .features li span { color: #3b82f6; }
-.starter .features li span { color: #16a34a; }
-.growth .features li span { color: #3b82f6; }
+.free .features li span { color: #0a6ff0; }
+.starter .features li span { color: #0369a1; }
+.growth .features li span { color: #0a6ff0; }
 .unlimited .features li span { color: #f59e0b; }
 .button {
   margin-top: auto;
@@ -164,32 +164,32 @@
 }
 .button:not(:disabled):hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px #17315c24;
+  box-shadow: 0 8px 16px #0e1b3d24;
 }
 .freeButton {
   background: #fff;
-  color: #3b82f6;
-  border: 1.5px solid #93c5fd;
+  color: #0a6ff0;
+  border: 1.5px solid #8fc3ff;
 }
 .freeButton:not(:disabled):hover {
   background: #eff6ff;
-  border-color: #3b82f6;
+  border-color: #0a6ff0;
 }
 .starterButton {
-  background: #16a34a;
+  background: #0369a1;
   color: #fff;
   border: 0;
 }
 .starterButton:not(:disabled):hover {
-  background: #15803d;
+  background: #075985;
 }
 .growthButton {
-  background: #2563eb;
+  background: #0a6ff0;
   color: #fff;
   border: 0;
 }
 .growthButton:not(:disabled):hover {
-  background: #1d4ed8;
+  background: #0550d8;
 }
 .unlimitedButton {
   background: #f59e0b;

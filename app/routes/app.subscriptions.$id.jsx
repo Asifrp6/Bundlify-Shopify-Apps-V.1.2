@@ -1,6 +1,10 @@
 import { discountLabel } from "../services/discounts";
 import styles from "../styles/plan-form.module.css";
-import { planOptions, schedules } from "../services/delivery-options";
+import { nextFrequency, planOptions } from "../services/delivery-options";
+import FrequencyFields from "../components/FrequencyFields";
+import SubscriptionLengthFields from "../components/SubscriptionLengthFields";
+import PlanProductFields from "../components/PlanProductFields";
+import { SELECTED_PRODUCTS, planSelection, selectionReady, selectionSummary, withMissingProducts } from "../services/product-selection";
 import {
   data,
   Form,
@@ -8,6 +12,7 @@ import {
   useLoaderData,
   useActionData,
   useNavigation,
+  useRevalidator,
 } from "react-router";
 import { Banner } from "@shopify/polaris";
 import { useState } from "react";
@@ -15,6 +20,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { validatePlan } from "../services/validation";
 import { changeSubscription } from "../services/subscription-management.server";
+import { listProducts, productLoadFailure, resolvePlanProducts } from "../services/products.server";
 
 async function findPlan(id, shop) {
   if (
@@ -31,9 +37,22 @@ async function findPlan(id, shop) {
   return plan;
 }
 export async function loader({ request, params }) {
-  const { session } = await authenticate.admin(request);
-  const limits = await (await import("../services/app-billing.server")).shopLimits(session.shop);
-  return { plan: await findPlan(params.id, session.shop), maxOptions: limits?.maxOptions ?? 2 };
+  const { admin, session } = await authenticate.admin(request);
+  const catalog = listProducts(admin);
+  catalog.catch(() => {});
+  const [limits, plan] = await Promise.all([
+    import("../services/app-billing.server").then(({ shopLimits }) => shopLimits(session.shop)),
+    findPlan(params.id, session.shop),
+  ]);
+  const base = { plan, maxOptions: limits?.maxOptions ?? 2, maxProducts: limits?.maxProducts ?? 5 };
+  try {
+    return { ...base, products: await catalog, productError: null };
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    const failure = productLoadFailure(error);
+    console.error("[Bundlify product load]", { code: failure.code, status: failure.status });
+    return { ...base, products: [], productError: `${failure.message} (${failure.code})` };
+  }
 }
 export async function action({ request, params }) {
   const { admin, session, redirect } = await authenticate.admin(request);
@@ -49,11 +68,19 @@ export async function action({ request, params }) {
       { error: "Confirm deletion before continuing." },
       { status: 400 },
     );
-  form.set("productId", plan.productId);
-  for (const id of JSON.parse(plan.productIdsJson || "[]")) form.append("productIds", id);
   const { values, errors } = validatePlan(form, limits);
   if (intent === "update" && Object.keys(errors).length)
     return data({ error: Object.values(errors).join(" ") }, { status: 400 });
+  let assignment;
+  if (intent === "update") {
+    try {
+      assignment = await resolvePlanProducts(admin, values);
+    } catch (error) {
+      if (error instanceof Response) throw error;
+      return data({ error: "Unable to verify the selected products. Please try again." }, { status: 502 });
+    }
+    if (assignment.error) return data({ error: assignment.error }, { status: 400 });
+  }
   try {
     await changeSubscription({
       prisma,
@@ -61,6 +88,7 @@ export async function action({ request, params }) {
       plan,
       values,
       remove: intent === "delete",
+      assignment,
     });
   } catch (error) {
     if (error instanceof Response) throw error;
@@ -74,18 +102,23 @@ export async function action({ request, params }) {
   );
 }
 export default function EditSubscription() {
-  const { plan, maxOptions = 2 } = useLoaderData();
+  const { plan, products = [], productError, maxOptions = 2, maxProducts = 5 } = useLoaderData();
   const result = useActionData();
   const navigation = useNavigation();
+  const revalidator = useRevalidator();
   const busy = navigation.state !== "idle";
   const [name, setName] = useState(plan.name);
   const [options, setOptions] = useState(planOptions(plan));
-
+  const [lengthEnabled, setLengthEnabled] = useState(!!plan.lengthEnabled);
   const [confirm, setConfirm] = useState(false);
-
-  const productTitle =
-    plan.productTitle ||
-    (plan.productId === "ALL_PRODUCTS" ? "All products" : plan.productId);
+  const initial = planSelection(plan);
+  const [productId, setProductId] = useState(initial.productId);
+  const [selected, setSelected] = useState(initial.selected);
+  const savedIds = initial.productId === SELECTED_PRODUCTS ? initial.selected : [initial.productId];
+  const choices = productError ? products : withMissingProducts(products, savedIds.filter(id => id.startsWith("gid://")),
+    plan.productTitle && initial.productId !== SELECTED_PRODUCTS ? { [initial.productId]: `${plan.productTitle} (unavailable)` } : {});
+  const productTitle = productError ? plan.productTitle || selectionSummary(productId, selected, choices) : selectionSummary(productId, selected, choices);
+  const productsReady = selectionReady(productId, selected, maxProducts);
   const updateOption = (index, key, value) =>
     setOptions((current) =>
       current.map((option, i) =>
@@ -96,10 +129,7 @@ export default function EditSubscription() {
     setOptions((current) => [
       ...current,
       {
-        frequency: Object.keys(schedules).find(
-          (frequency) =>
-            !current.some((option) => option.frequency === frequency),
-        ),
+        frequency: nextFrequency(current),
         discount: 0,
       },
     ]);
@@ -157,18 +187,30 @@ export default function EditSubscription() {
                 <p className={styles.help} id="name-help">
                   Customers will see this name in their purchase options.
                 </p>
-                <div className={styles.assignedProduct}>
-                  <span>ASSIGNED PRODUCT</span>
-                  <strong>{productTitle}</strong>
-                  <p>This plan stays linked to its current products.</p>
+              </section>
+              <section className={styles.card} aria-labelledby="products-heading">
+                <div className={styles.sectionHeading}>
+                  <span className={styles.number}>02</span>
+                  <div>
+                    <h2 id="products-heading">Products</h2>
+                    <p>Change which products offer this subscription.</p>
+                  </div>
                 </div>
+                {productError ? <>
+                  <Banner tone="critical" action={{ content: "Retry loading products", onAction: () => revalidator.revalidate(), loading: revalidator.state !== "idle" }}>
+                    {productError} The current products are kept until the list loads.
+                  </Banner>
+                  <input type="hidden" name="productId" value={productId} />
+                  {productId === SELECTED_PRODUCTS && selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
+                  <p className={styles.help}>Currently applies to: {productTitle}</p>
+                </> : <PlanProductFields products={choices} productId={productId} onProductIdChange={setProductId} selected={selected} onSelectedChange={setSelected} maxProducts={maxProducts} disabled={busy} styles={styles} />}
               </section>
               <section
                 className={styles.card}
                 aria-labelledby="delivery-heading"
               >
                 <div className={styles.sectionHeading}>
-                  <span className={styles.number}>02</span>
+                  <span className={styles.number}>03</span>
                   <div>
                     <h2 id="delivery-heading">Delivery & savings</h2>
                     <p>
@@ -201,36 +243,14 @@ export default function EditSubscription() {
                         </button>
                       </div>
                       <div className={styles.optionFields}>
-                        <label
+                        <FrequencyFields
+                          index={index}
+                          option={option}
+                          options={options}
                           className={styles.field}
-                          htmlFor={"frequency-" + index}
-                        >
-                          Delivery frequency
-                          <select
-                            id={"frequency-" + index}
-                            value={option.frequency}
-                            onChange={(event) =>
-                              updateOption(
-                                index,
-                                "frequency",
-                                event.target.value,
-                              )
-                            }
-                          >
-                            {Object.keys(schedules).map((frequency) => (
-                              <option
-                                key={frequency}
-                                disabled={options.some(
-                                  (other, i) =>
-                                    i !== index &&
-                                    other.frequency === frequency,
-                                )}
-                              >
-                                {frequency}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                          disabled={busy}
+                          onChange={(frequency) => updateOption(index, "frequency", frequency)}
+                        />
                         <label className={styles.field}>Discount type<select value={option.discountType || "percentage"} onChange={event => { updateOption(index, "discountType", event.target.value); updateOption(index, "discount", 0); }}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed amount (store currency)</option></select></label>
                         <label className={styles.field} htmlFor={"discount-" + index}
                         >
@@ -271,6 +291,7 @@ export default function EditSubscription() {
                   Offer up to {maxOptions} frequencies. Fixed amounts are deducted per item in store currency on each delivery. Set 0 for the regular price.
                 </p>
               </section>
+              <SubscriptionLengthFields number="04" enabled={lengthEnabled} onEnabledChange={setLengthEnabled} disabled={busy} styles={styles} />
             </div>
             <aside className={styles.summary} aria-labelledby="summary-heading">
               <div className={styles.summaryTop}>
@@ -304,6 +325,9 @@ export default function EditSubscription() {
                   </li>
                 ))}
               </ul>
+              <p className={styles.summaryLabel}>
+                SUBSCRIPTION LENGTH &middot; {lengthEnabled ? "Customer enters times or Unlimited" : "Hidden"}
+              </p>
               <p className={styles.summaryNote}>
                 Customers choose one delivery option when they subscribe.
               </p>
@@ -318,7 +342,7 @@ export default function EditSubscription() {
               <Link to="/app/subscriptions" className={styles.cancel}>
                 Cancel
               </Link>
-              <button type="submit" className={styles.primary} disabled={busy}>
+              <button type="submit" className={styles.primary} disabled={busy || !productsReady}>
                 {busy && !deleting ? "Saving changes..." : "Save changes"}
                 <span aria-hidden="true">&rarr;</span>
               </button>

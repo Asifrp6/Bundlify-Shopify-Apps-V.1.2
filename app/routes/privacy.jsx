@@ -6,7 +6,7 @@ export default function Privacy() {
     <div className={styles.index}>
       <div className={`${styles.content} ${styles.legal}`}>
         <h1 className={styles.heading}>Privacy policy</h1>
-        <p>Bundlify is a Shopify app for product bundles and subscription plans. This policy describes the store and customer data the app uses.</p>
+        <p>Bundle Base is a Shopify app for product bundles and subscription plans. This policy describes the store and customer data the app uses.</p>
         <h2>Data from the store</h2>
         <ul>
           <li>Shop domain, app installation, and the session needed to call Shopify on the merchant’s behalf.</li>
@@ -16,14 +16,14 @@ export default function Privacy() {
         <h2>Data from buyers</h2>
         <ul>
           <li>Subscription contracts created in Shopify, including the product, price, delivery schedule, status, and next charge date.</li>
-          <li>The customer and order identifiers needed to show those subscriptions in the customer account and in the merchant’s Bundlify admin.</li>
+          <li>The customer and order identifiers needed to show those subscriptions in the customer account and in the merchant’s Bundle Base admin.</li>
         </ul>
-        <p>Card numbers are not stored by Bundlify. A buyer who chooses to update a payment method receives Shopify’s secure update email. Cancellation is handled in the buyer’s Shopify customer account.</p>
+        <p>Card numbers are not stored by Bundle Base. A buyer who chooses to update a payment method receives Shopify’s secure update email. Cancellation is handled in the buyer’s Shopify customer account.</p>
         <h2>How the data is used</h2>
         <p>The data is used to show bundles, apply bundle discounts, create subscription plans, bill due subscription cycles, and let buyers view, cancel, or update payment for their own subscriptions. It is not sold.</p>
         <h2>Removal</h2>
-        <p>When the app is uninstalled, Bundlify deletes the shop’s saved sessions and app records after Shopify sends the uninstall and shop-redact notifications. Customer data requests and customer redact requests are handled through Shopify’s required privacy webhooks.</p>
-        <p><Link className={styles.link} to="/">Back to Bundlify</Link></p>
+        <p>When the app is uninstalled, Bundle Base deletes the shop’s saved sessions and app records after Shopify sends the uninstall and shop-redact notifications. Customer data requests and customer redact requests are handled through Shopify’s required privacy webhooks.</p>
+        <p><Link className={styles.link} to="/">Back to Bundle Base</Link></p>
       </div>
     </div>
   );

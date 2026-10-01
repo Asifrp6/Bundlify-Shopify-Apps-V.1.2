@@ -1,4 +1,4 @@
-import { planOptions, optionRecords } from "./delivery-options.js";
+import { planOptions, optionRecords, lengthRecord } from "./delivery-options.js";
 import { createSellingPlan, deleteSellingPlan } from "./sellingPlan.server.js";
 
 export async function createSubscription({
@@ -8,7 +8,7 @@ export async function createSubscription({
   values,
   product,
 }) {
-  const baseValues = { name: values.name, frequency: values.frequency, discount: values.discount, discountType: values.discountType || "percentage", productIdsJson: JSON.stringify(values.productIds || []), productId: values.productId };
+  const baseValues = { name: values.name, frequency: values.frequency, discount: values.discount, discountType: values.discountType || "percentage", productIdsJson: JSON.stringify(values.productIds || []), productId: values.productId, ...lengthRecord(values) };
   const options = planOptions(values);
   const plan = await prisma.subscriptionPlan.create({
     data: {

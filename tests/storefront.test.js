@@ -224,21 +224,50 @@ test("theme subscription helper cannot append an empty plan after the widget sel
   assert.equal(window.getCurrentSellingPlanId, original);
 });
 
-test("bundle product filtering is optional and off by default", async () => {
-  for (const name of ['bundle_create', 'bundle_selection']) {
-    const block = await readFile(new URL(`../extensions/buendly-extation/blocks/${name}.liquid`, import.meta.url), 'utf8');
-    const schema = JSON.parse(block.split('{% schema %}')[1].split('{% endschema %}')[0]);
-    assert.equal(schema.settings.find(setting => setting.id === 'match_product').default, false);
-  }
+test("bundle block requests the same bundle list on every product page", async () => {
+  const block = await readFile(new URL('../extensions/buendly-extation/blocks/bundle_selection.liquid', import.meta.url), 'utf8');
+  const schema = JSON.parse(block.split('{% schema %}')[1].split('{% endschema %}')[0]);
+  assert.equal(schema.settings.some(setting => setting.id === 'match_product'), false);
   const snippet = await readFile(new URL('../extensions/buendly-extation/snippets/bundle-options.liquid', import.meta.url), 'utf8');
-  assert.match(snippet, /data-product="\{% if block.settings.match_product %\}/);
+  assert.doesNotMatch(snippet, /data-product=/);
+  const script = await readFile(new URL('../extensions/buendly-extation/assets/bundlify-bundles.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(script, /productId/);
 });
 
-test("subscription block loads the subscription script", async () => {
+test("bundle block stays styled and stops loading when its CDN assets never load", async () => {
+  const snippet = await readFile(new URL('../extensions/buendly-extation/snippets/bundle-options.liquid', import.meta.url), 'utf8');
+  assert.match(snippet, /render 'bundle-card-styles'/);
+  assert.match(snippet, /class="bundlify-load-state">\s*<p data-message[^>]*>Loading bundle offers…<\/p>\s*<p class="bundlify-load-failed"[^>]*>Bundles could not be loaded/);
+  const styles = await readFile(new URL('../extensions/buendly-extation/snippets/bundle-card-styles.liquid', import.meta.url), 'utf8');
+  assert.match(styles, /\.bundlify-mode-cards \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /bundlify-bundles \.bundlify-mode-card \{\s*display: flex; flex-direction: column;/);
+  assert.match(styles, /bundlify-bundles:not\(:defined\) \.bundlify-load-failed \{[^}]*animation: bundlify-load-failed/);
+  assert.match(styles, /bundlify-bundles:not\(:defined\) \.bundlify-load-state > \[data-message\] \{[^}]*animation: bundlify-load-pending/);
+  assert.doesNotMatch(styles + snippet, /https?:\/\//);
+  const script = await readFile(new URL('../extensions/buendly-extation/assets/bundlify-bundles.js', import.meta.url), 'utf8');
+  assert.match(script, /new URL\(`\$\{root\}\/apps\/bundlify\/bundles`, location\.origin\)/);
+  assert.match(script, /setTimeout\(\(\) => controller\.abort\(\), 10000\)/);
+});
+
+test("subscription block loads the subscription script through a small loader", async () => {
   for (const name of ['subscription_selector']) {
     const block = await readFile(new URL(`../extensions/buendly-extation/blocks/${name}.liquid`, import.meta.url), 'utf8');
-    assert.match(block, /"javascript": "bundlify-subscription.js"/);
+    assert.match(block, /"javascript": "bundlify-subscription-loader.js"/);
   }
+  const loaderUrl = new URL('../extensions/buendly-extation/assets/bundlify-subscription-loader.js', import.meta.url);
+  const loader = await readFile(loaderUrl, 'utf8');
+  assert.ok(Buffer.byteLength(loader) < 10 * 1024);
+  const run = (html) => {
+    const dom = new JSDOM(`<head><script id="loader" src="https://cdn.shopify.com/extensions/x/assets/bundlify-subscription-loader.js?v=7"></script></head><body>${html}</body>`, { runScripts: 'outside-only' });
+    const current = dom.window.document.getElementById('loader');
+    Object.defineProperty(dom.window.document, 'currentScript', { get: () => current });
+    dom.window.eval(loader);
+    const scripts = [...dom.window.document.querySelectorAll('script[src*="/bundlify-subscription.js"]')].map(script => script.src);
+    dom.window.close();
+    return scripts;
+  };
+  assert.deepEqual(run(''), ['https://cdn.shopify.com/extensions/x/assets/bundlify-subscription.js?v=7']);
+  assert.equal(run('<script src="https://cdn.shopify.com/extensions/x/assets/bundlify-subscription.js" defer></script>').length, 1);
 });
 
 
@@ -286,7 +315,7 @@ test("theme helper retains the selected plan through an inter-listener microtask
 });
 
  test("bundle blocks render bundle data independently of subscription choices", async () => {
-   for (const name of ['bundle_create', 'bundle_selection']) {
+   for (const name of ['bundle_selection']) {
      const block = await readFile(new URL('../extensions/buendly-extation/blocks/' + name + '.liquid', import.meta.url), 'utf8');
      assert.match(block, /render 'bundle-options'/);
      assert.match(block, /"javascript": "bundlify-bundles-loader.js"/);

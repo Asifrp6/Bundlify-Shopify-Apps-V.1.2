@@ -1,0 +1,31 @@
+{%- if template.name == 'product' and product.tags contains 'bundlify-gift-option' -%}
+  <script>window.location.replace({{ routes.root_url | json }});</script>
+{%- endif -%}
+<style>.bundlify-gift-hidden{display:none!important}</style>
+<script>
+  (function () {
+    var selector = 'a[href*="/products/bundlify-gift-"]';
+    var cards = 'li, .grid__item, .card-wrapper, .product-card, .product-item, .card, [class*="product-grid-item"], [class*="predictive-search__list-item"]';
+    function hide(root) {
+      (root.querySelectorAll ? root : document).querySelectorAll(selector).forEach(function (link) {
+        if (link.closest('.bundlify-bundles, [data-bundlify-popup], .cart, .cart-drawer, cart-drawer, cart-items')) return;
+        (link.closest(cards) || link).classList.add('bundlify-gift-hidden');
+      });
+    }
+    function start() {
+      hide(document);
+      new MutationObserver(function (records) {
+        records.forEach(function (record) { record.addedNodes.forEach(function (node) { if (node.nodeType === 1) hide(node); }); });
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Hide gift add-on products",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}

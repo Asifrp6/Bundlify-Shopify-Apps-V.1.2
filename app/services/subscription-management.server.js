@@ -1,5 +1,5 @@
-import { deleteSellingPlan } from "./sellingPlan.server.js";
-import { planOptions, sellingPlanInput, optionRecords } from "./delivery-options.js";
+import { deleteSellingPlan, syncPlanProducts } from "./sellingPlan.server.js";
+import { planOptions, sellingPlanInput, optionRecords, planLengths, planCombinations, groupOptionNames, lengthRecord } from "./delivery-options.js";
 export const PLAN_QUERY = `#graphql
 query BundlifyPlan($id: ID!) {
   sellingPlanGroup(id: $id) { id sellingPlans(first: 100) { nodes { id options } pageInfo { hasNextPage } } }
@@ -11,11 +11,14 @@ mutation BundlifyUpdate($id: ID!, $input: SellingPlanGroupInput!) {
     userErrors { field message }
   }
 }`;
-export async function changeSubscription({ prisma, admin, plan, values, remove = false }) {
+// `assignment` ({ productId, productIds, title, image }) replaces the plan's products; omit it to keep them.
+export async function changeSubscription({ prisma, admin, plan, values, remove = false, assignment }) {
   if (plan.status === "PENDING" && !plan.sellingPlanGroupId)
     throw new Error("Review the interrupted creation in Shopify before changing this plan.");
   let updatedGroup;
   const options = remove ? [] : planOptions(values);
+  // Callers that do not edit lengths (e.g. the product block) keep the saved configuration.
+  const lengths = remove ? [] : planLengths(typeof values.lengthEnabled === "boolean" ? values : plan);
   if (plan.sellingPlanGroupId) {
     const response = await admin.graphql(PLAN_QUERY, { variables: { id: plan.sellingPlanGroupId } });
     const result = await response.json();
@@ -26,19 +29,31 @@ export async function changeSubscription({ prisma, admin, plan, values, remove =
     } else {
       if (!group || group.sellingPlans.pageInfo?.hasNextPage)
         throw new Error("This group cannot be edited here. Review its selling plans in Shopify.");
+      if (assignment) {
+        try { await syncPlanProducts(admin, group.id, assignment.productIds); }
+        catch (error) { throw new Error(`Shopify rejected the product change: ${error.message} Plan details were not saved; retrying is safe.`); }
+      }
       const remote = group.sellingPlans.nodes;
       const used = new Set();
       const updates = [], creates = [];
-      for (const option of options) {
-        // Match the live frequency first so retrying after a local save failure is safe.
-        const existing = remote.find(p => p.options?.[0] === option.frequency);
-        const input = sellingPlanInput(values.name, option);
-        if (existing) { used.add(existing.id); updates.push({ ...input, id: existing.id }); }
-        else creates.push(input);
-      }
+      const inputs = planCombinations(options, lengths).map(({ option, length }) => sellingPlanInput(values.name, option, length));
+      const claim = test => {
+        const plan = remote.find(p => !used.has(p.id) && test(p));
+        if (plan) used.add(plan.id);
+        return plan;
+      };
+      // Match exact live options first so retrying after a local save failure is safe,
+      // then reuse a plan with the same frequency when lengths are switched on or off.
+      const matched = inputs.map(input => claim(p => (p.options || []).join("\u0000") === input.options.join("\u0000")));
+      inputs.forEach((input, i) => { matched[i] ||= claim(p => p.options?.[0] === input.options[0]); });
+      inputs.forEach((input, i) => {
+        if (!matched[i]) return creates.push(input);
+        // Explicit nulls clear a previous fixed length when the plan becomes unlimited.
+        updates.push({ ...input, id: matched[i].id, billingPolicy: { recurring: { minCycles: null, maxCycles: null, ...input.billingPolicy.recurring } } });
+      });
       const update = await admin.graphql(UPDATE_PLAN, { variables: {
         id: group.id,
-        input: { name: values.name, sellingPlansToUpdate: updates, sellingPlansToCreate: creates,
+        input: { name: values.name, options: groupOptionNames(lengths), sellingPlansToUpdate: updates, sellingPlansToCreate: creates,
           sellingPlansToDelete: remote.filter(p => !used.has(p.id)).map(p => p.id) },
       } });
       const body = await update.json();
@@ -53,7 +68,8 @@ export async function changeSubscription({ prisma, admin, plan, values, remove =
     if (remove) return await prisma.subscriptionPlan.deleteMany({ where: { id: plan.id, shop: plan.shop } });
     return await prisma.subscriptionPlan.update({
       where: { id: plan.id, shop: plan.shop },
-      data: { name: values.name, frequency: options[0].frequency, discount: options[0].discount, discountType: options[0].discountType || "percentage",
+      data: { name: values.name, frequency: options[0].frequency, discount: options[0].discount, discountType: options[0].discountType || "percentage", ...lengthRecord(values),
+        ...(assignment ? { productId: assignment.productId, productIdsJson: JSON.stringify(assignment.productIds), productTitle: assignment.title, productImage: assignment.image ?? null } : {}),
         deliveryOptions: { deleteMany: {}, create: optionRecords(options, updatedGroup) } },
     });
   } catch {
