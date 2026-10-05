@@ -1,4 +1,5 @@
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
+import { NavMenu } from "@shopify/app-bridge-react";
 
 import { Icon } from "@shopify/polaris";
 import { HomeIcon, PackageIcon, RefreshIcon, SettingsIcon } from "@shopify/polaris-icons";
@@ -94,6 +95,19 @@ export default function App() {
 
   return (
     <AppProvider embedded apiKey={apiKey}>
+      <NavMenu>
+        {navigationItems.map((item) =>
+          item.destination === "/app" ? (
+            <a key={item.destination} href={item.destination} rel="home">
+              {item.label}
+            </a>
+          ) : (
+            <a key={item.destination} href={item.destination}>
+              {item.label}
+            </a>
+          ),
+        )}
+      </NavMenu>
       <header className={styles.header}>
         <div className={styles.inner}>
           <Link to="/app" className={styles.brand} aria-label="Bundle Base home">

@@ -18,7 +18,7 @@ export default function Privacy() {
           <li>Subscription contracts created in Shopify, including the product, price, delivery schedule, status, and next charge date.</li>
           <li>The customer and order identifiers needed to show those subscriptions in the customer account and in the merchant’s Bundle Base admin.</li>
         </ul>
-        <p>Card numbers are not stored by Bundle Base. A buyer who chooses to update a payment method receives Shopify’s secure update email. Cancellation is handled in the buyer’s Shopify customer account.</p>
+        <p>Card numbers are not stored by Bundle Base. A buyer who chooses to update a payment method receives Shopify’s secure update email. When a subscription contract is created, Bundle Base emails the buyer’s address on that contract a link to the customer account Subscriptions page. Cancellation is handled in the buyer’s Shopify customer account.</p>
         <h2>How the data is used</h2>
         <p>The data is used to show bundles, apply bundle discounts, create subscription plans, bill due subscription cycles, and let buyers view, cancel, or update payment for their own subscriptions. It is not sold.</p>
         <h2>Removal</h2>

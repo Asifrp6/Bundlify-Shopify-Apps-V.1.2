@@ -9,6 +9,8 @@ import { Banner } from "@shopify/polaris";
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
 import { createBundleDiscount, removeBundleDiscount } from "../services/bundle-discount.server";
+import { CUSTOM_APPLY_SUCCESS, CUSTOM_BUNDLE_DELETE_INTENT, CUSTOM_DISABLED_SUCCESS, customBundleOffer } from "../services/custom-bundle";
+import { getCustomBundleSettings, saveCustomBundleProducts } from "../services/custom-bundle.server";
 import { getProducts } from "../services/products.server";
 import { bundleActivationError, storefrontIssue } from "../services/product-selection";
 import styles from "../styles/bundles.module.css";
@@ -38,7 +40,7 @@ async function blockedProducts(admin, bundles) {
 
 export async function loader({ request }) {
   const { admin, session } = await authenticate.admin(request);
-  let [usage, bundles, giftOptions, currency, giftEnabled] = await Promise.all([
+  let [usage, bundles, giftOptions, currency, giftEnabled, customSettings] = await Promise.all([
     import("../services/app-billing.server").then(({ shopUsage }) => shopUsage(session.shop)),
     prisma.bundle.findMany({
       where: { shop: session.shop },
@@ -49,6 +51,7 @@ export async function loader({ request }) {
     admin.graphql(`#graphql
       query BundleShopCurrency { shop { currencyCode } }`).then(response => response.json()).then(result => result.data?.shop?.currencyCode || null).catch(() => null),
     loadGiftEnabled(giftStore(prisma), session.shop),
+    getCustomBundleSettings(admin).catch(() => null),
   ]);
   try {
     giftOptions = await repairGiftProducts({ store: giftStore(prisma), admin, shop: session.shop, rows: giftOptions });
@@ -61,6 +64,15 @@ export async function loader({ request }) {
   } catch {
     blocked = bundles.map(() => []);
   }
+  let customProducts = [];
+  if (customSettings?.productIds?.length) {
+    try {
+      customProducts = await getProducts(admin, customSettings.productIds);
+    } catch {
+      customProducts = [];
+    }
+  }
+  const customBundle = customBundleOffer(customSettings ? { ...customSettings, currency: customSettings.currency || currency } : null, customProducts);
   return {
     bundles: bundles.map((bundle, index) => ({ ...bundle, blocked: blocked[index] })),
     bundleLimit: creationBlocked(usage, "bundle", usage?.bundles ?? 0),
@@ -69,6 +81,7 @@ export async function loader({ request }) {
     giftOptions: giftOptions.map(option => ({ ...option, imageUrl: giftImageUrl(option.imageUrl) })),
     giftEnabled,
     currency,
+    customBundle,
   };
 }
 
@@ -102,6 +115,15 @@ export async function action({ request }) {
     } catch (error) {
       if (error instanceof Response) throw error;
       return data({ error: error.message || "Could not save this option. Please try again." }, { status: 500 });
+    }
+  }
+  if (form.get("intent") === CUSTOM_BUNDLE_DELETE_INTENT) {
+    try {
+      await saveCustomBundleProducts(admin, []);
+      return { customDeleted: true };
+    } catch (error) {
+      if (error instanceof Response) throw error;
+      return data({ error: error.message || "Could not delete the custom bundle. Please try again." }, { status: 500 });
     }
   }
   const id = Number(form.get("bundleId"));
@@ -141,7 +163,7 @@ function BundleActivation({ bundle }) {
       </button>
     </fetcher.Form>
     {fetcher.data?.error && <p role="alert">{fetcher.data.error}</p>}
-    <p>{needsDiscount ? "This bundle is visible, but its discount has not been enabled yet." : bundle.blocked?.length && bundle.products.length - bundle.blocked.length < 2 ? "Hidden on your store. At least two products must be active and published to the Online Store." : bundle.blocked?.length ? "Shown on your store. Draft, archived, or unpublished products are left out." : active ? "Active — add the Bundle offers block to your theme to show it." : "Draft — hidden from your website."}</p>
+    <p>{needsDiscount ? "This bundle is visible, but its discount has not been enabled yet." : bundle.blocked?.length && bundle.products.length - bundle.blocked.length < 2 ? "Hidden on your store. At least two products must be active and published to the Online Store." : bundle.blocked?.length ? "Shown on your store. Draft, archived, or unpublished products are left out." : active ? "Active — add the Bundle selection block to a product template. It shows on every product page with that block." : "Draft — hidden from your website."}</p>
     {!!bundle.blocked?.length && <p role="status">{bundle.blocked.join(". ")}.</p>}
     <Link to="/app/extensions">Show on website</Link>
   </div>;
@@ -173,7 +195,7 @@ function GiftFields({ option, kind, currency }) {
   </>;
 }
 
-function GiftDeleteDialog({ option, formId, busy, note, onClose }) {
+function ConfirmDeleteDialog({ titleId, nameId, descId, title, name, description, formId, busy, note, onClose }) {
   const cancelRef = useRef(null);
   const dialogRef = useRef(null);
   const onCloseRef = useRef(onClose);
@@ -207,15 +229,11 @@ function GiftDeleteDialog({ option, formId, busy, note, onClose }) {
       if (previous instanceof HTMLElement && document.contains(previous)) previous.focus({ preventScroll: true });
     };
   }, []);
-  const label = (GIFT_LABELS[option.kind] || "option").toLowerCase();
-  const titleId = `gift-delete-title-${option.id}`;
-  const nameId = `gift-delete-name-${option.id}`;
-  const descId = `gift-delete-desc-${option.id}`;
   return <div className={styles.confirmOverlay} onClick={() => onCloseRef.current()}>
     <div ref={dialogRef} className={styles.confirmDialog} role="dialog" aria-modal="true" aria-labelledby={`${titleId} ${nameId}`} aria-describedby={descId} onClick={event => event.stopPropagation()}>
-      <h2 id={titleId}>Delete this {label}?</h2>
-      <p id={nameId} className={styles.confirmName}>{option.name}</p>
-      <p id={descId} className={styles.confirmText}>It will be removed from the gift box popup.</p>
+      <h2 id={titleId}>{title}</h2>
+      <p id={nameId} className={styles.confirmName}>{name}</p>
+      <p id={descId} className={styles.confirmText}>{description}</p>
       {note && <p role="alert" className={styles.giftError}>{note}</p>}
       <div className={styles.confirmActions}>
         <button ref={cancelRef} className={styles.edit} type="button" onClick={() => onCloseRef.current()}>Cancel</button>
@@ -223,6 +241,11 @@ function GiftDeleteDialog({ option, formId, busy, note, onClose }) {
       </div>
     </div>
   </div>;
+}
+
+function GiftDeleteDialog({ option, formId, busy, note, onClose }) {
+  const label = (GIFT_LABELS[option.kind] || "option").toLowerCase();
+  return <ConfirmDeleteDialog titleId={`gift-delete-title-${option.id}`} nameId={`gift-delete-name-${option.id}`} descId={`gift-delete-desc-${option.id}`} title={`Delete this ${label}?`} name={option.name} description="It will be removed from the gift box popup." formId={formId} busy={busy} note={note} onClose={onClose} />;
 }
 
 function GiftOptionRow({ option, currency }) {
@@ -335,20 +358,52 @@ function GiftOptions({ options, currency, enabled }) {
   </section>;
 }
 
+function CustomBundleSection({ bundle }) {
+  const fetcher = useFetcher();
+  const [confirming, setConfirming] = useState(false);
+  const busy = fetcher.state !== "idle";
+  const deleted = Boolean(fetcher.data?.customDeleted);
+  const deleteError = fetcher.data?.error || "";
+  const formId = "custom-bundle-delete";
+  if (!bundle || deleted) return <>
+    {deleted && <Banner tone="info">Custom bundle deleted successfully.</Banner>}
+    <section className={styles.customSetup} aria-labelledby="custom-bundle-heading"><span className={styles.cardIcon}><BundleIcon /></span><div><h2 id="custom-bundle-heading">Customer-created bundles</h2><p>Choose the products customers can mix into their own bundle.</p></div><Link className={styles.edit} to="/app/bundles/custom">Manage products <span aria-hidden="true">→</span></Link></section>
+  </>;
+  return <section className={`${styles.collection} ${styles.customBundle}`} aria-labelledby="custom-bundle-heading">
+    <div className={styles.collectionHeader}><div><h2 id="custom-bundle-heading">Customer-created bundles <span>1</span></h2></div></div>
+    <div className={styles.grid}><article className={styles.card}>
+      <div className={styles.cardHeading}><span className={styles.cardIcon}><BundleIcon /></span><div className={styles.cardTitle}><Link to={bundle.editTo}><h3>{bundle.name}</h3></Link><p>Customer-created</p></div><span className={`${styles.badge} ${styles.activeBadge}`}><span aria-hidden="true" />Active</span></div>
+      <div className={styles.cardMeta}><div><span>Products</span><strong>{bundle.products.length}</strong></div><div className={styles.discount}><span>Bundle discount</span><strong>{bundle.discountText}</strong></div></div>
+      <div className={styles.productList}><span className={styles.label}>THE LINEUP</span><ul>{bundle.products.map(product => <li key={product.productId}>{product.productTitle}</li>)}</ul></div>
+      {deleteError && !confirming && <div className={styles.activation}><p role="alert">{deleteError}</p></div>}
+      <footer className={styles.cardFooter}><Link className={styles.edit} to={bundle.editTo}>Edit bundle <span aria-hidden="true">→</span></Link><button className={styles.delete} type="button" onClick={() => setConfirming(true)} disabled={busy} aria-label={`Delete ${bundle.name}`}>Delete bundle</button></footer>
+    </article></div>
+    <fetcher.Form method="post" id={formId} className={styles.giftDeleteForm}>
+      <input type="hidden" name="intent" value={CUSTOM_BUNDLE_DELETE_INTENT} />
+    </fetcher.Form>
+    {confirming && createPortal(
+      <ConfirmDeleteDialog titleId="custom-bundle-delete-title" nameId="custom-bundle-delete-name" descId="custom-bundle-delete-desc" title="Delete this custom bundle?" name={bundle.name} description="It will be removed from your store. Customers will no longer be able to build this bundle." formId={formId} busy={busy} note={deleteError} onClose={() => setConfirming(false)} />,
+      document.body,
+    )}
+  </section>;
+}
+
 /* eslint-enable react/prop-types */
 function BundleIcon() {
   return <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 10 11-5 11 5v13l-11 5-11-5V10Z"/><path d="m5 10 11 5 11-5M16 15v13M10 7.7l11 5v6"/></svg>;
 }
 
 export default function Bundles() {
-  const { bundles, bundleLimit, planName, maxBundles, giftOptions, giftEnabled, currency } = useLoaderData();
+  const { bundles, bundleLimit, planName, maxBundles, giftOptions, giftEnabled, currency, customBundle } = useLoaderData();
   const [params] = useSearchParams();
-  const [toast, setToast] = useState(() => params.get("created") === "1" ? "Bundle created successfully." : params.get("updated") === "1" ? "Bundle updated successfully." : "");
+  const [toast, setToast] = useState(() => params.get("created") === "1" ? "Bundle created successfully." : params.get("updated") === "1" ? "Bundle updated successfully." : params.get("applied") === "1" ? CUSTOM_APPLY_SUCCESS : params.get("customDisabled") === "1" ? CUSTOM_DISABLED_SUCCESS : "");
   useEffect(() => {
     if (!toast) return;
     const url = new URL(window.location.href);
     url.searchParams.delete("created");
     url.searchParams.delete("updated");
+    url.searchParams.delete("applied");
+    url.searchParams.delete("customDisabled");
     window.history.replaceState(window.history.state, "", url);
     const timer = setTimeout(() => setToast(""), 2000);
     return () => clearTimeout(timer);
@@ -366,7 +421,7 @@ export default function Bundles() {
     {bundleLimit && <Banner tone="warning">{bundleLimit}</Banner>}
     <div className={styles.info}><p>{planName ? `${planName} plan${maxBundles == null ? " includes unlimited bundles" : `: ${bundles.length} of ${maxBundles} bundles`}. ` : ""}Click Activate bundle below to display it in your theme. <Link to="/app/extensions">Set up your storefront block</Link>. Active bundle discounts apply in the cart and at checkout. After deploying the discount extension, reactivate existing bundles to enable their savings.</p></div>
 
-    <section className={styles.customSetup} aria-labelledby="custom-bundle-heading"><span className={styles.cardIcon}><BundleIcon /></span><div><h2 id="custom-bundle-heading">Customer-created bundles</h2><p>Choose the products customers can mix into their own bundle.</p></div><Link className={styles.edit} to="/app/bundles/custom">Manage products <span aria-hidden="true">→</span></Link></section>
+    <CustomBundleSection bundle={customBundle} />
     <section className={styles.collection} aria-labelledby="bundle-collection-title">
       <div className={styles.collectionHeader}><div><h2 id="bundle-collection-title">Your bundles <span>{bundles.length}</span></h2><p>A home for your next great product pairing.</p></div><span className={styles.productCount}>{products} unique {products === 1 ? "product" : "products"}</span></div>
       {!bundles.length ? <div className={styles.empty}>

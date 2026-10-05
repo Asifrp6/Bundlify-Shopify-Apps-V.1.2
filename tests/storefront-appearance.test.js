@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { colorKeys, defaults, knownDefaultColors, normalizeHex, resolveMatchStore, validateAppearance } from "../app/services/appearance.js";
+import { colorKeys, defaults, knownDefaultColors, normalizeHex, resolveMatchStore, retiredDescriptions, validateAppearance } from "../app/services/appearance.js";
 
 const read = (path) => readFile(new URL("../extensions/buendly-extation/" + path, import.meta.url), "utf8");
 
@@ -56,6 +56,30 @@ test("settings saved before the switch match the store only while every color is
   assert.equal(resolveMatchStore({ accent: "#ff0066" }), false, "a picked color keeps the merchant palette");
   assert.equal(resolveMatchStore({ accent: "#ff0066", matchStore: true }), true, "an explicit choice wins");
   assert.equal(resolveMatchStore({ matchStore: false }), false);
+});
+
+test("storefront card descriptions use the short defaults and treat a saved previous default as unset", async () => {
+  const bundles = await read("snippets/bundle-options.liquid");
+  const subscription = await read("snippets/subscription-options.liquid");
+  const cards = [
+    [bundles, "preset_description", "presetDescription", "Ready-made bundle."],
+    [bundles, "custom_description", "customDescription", "Pick your favorites."],
+    [subscription, "one_time_description", "oneTimeDescription", "Buy once"],
+    [subscription, "subscription_unavailable", "subscriptionUnavailableText", "No subscription available"],
+  ];
+  for (const [source, variable, field, current] of cards) {
+    const retired = retiredDescriptions[field];
+    const kind = field === "presetDescription" || field === "customDescription" ? "bundle" : "subscription";
+    assert.equal(defaults[kind][field], current);
+    assert.match(source, new RegExp(`${variable} == blank or ${variable} == '${retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'`));
+    assert.match(source, new RegExp(`assign ${variable} = '${current.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'`));
+    assert.match(source, new RegExp(`\\{\\{ ${variable} \\| escape \\}\\}`));
+    assert.doesNotMatch(source, new RegExp(`default:\\s*'${retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'`));
+  }
+  assert.match(bundles, /default: 'Our bundle'/);
+  assert.match(bundles, /default: 'Custom bundle'/);
+  assert.match(subscription, /default: 'One-time purchase'/);
+  assert.match(subscription, /default: 'Subscribe & Save'/);
 });
 
 test("the storefront snippet mirrors the admin's match-store rule and never loads Poppins", async () => {
@@ -136,4 +160,18 @@ test("the subscription block still loads the small loader and keeps the stack-on
   assert.match(subscription, /@container bundlify-subscription \(max-width: 380px\) \{\s*bundlify-subscription\.bundlify-subscription-widget\[data-variant-id\] \.bundlify-purchase-cards \{ grid-template-columns: minmax\(0, 1fr\)/);
   const bundles = await read("assets/bundlify-bundles.css");
   assert.match(bundles, /@container bundlify \(max-width: 359px\)/);
+});
+
+test("bundle choice cards sit side by side until a 480px viewport", async () => {
+  const bundles = await read("assets/bundlify-bundles.css");
+  assert.match(bundles, /bundlify-bundles \.bundlify-mode-cards \{\s*display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(bundles, /@media \(max-width: 480px\) \{\s*bundlify-bundles \.bundlify-mode-cards \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(bundles, /bundlify-bundles \.bundlify-mode-cards\.bundlify-mode-cards\[role="group"\] \{\s*display: grid; grid-auto-flow: row; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(bundles, /\[role="group"\] > button\.bundlify-mode-card:nth-child\(1\) \{ grid-column: 1; \}/);
+  assert.match(bundles, /\[role="group"\] > button\.bundlify-mode-card:nth-child\(2\) \{ grid-column: 2; \}/);
+  assert.match(bundles, /@media \(max-width: 480px\) \{\s*bundlify-bundles \.bundlify-mode-cards\.bundlify-mode-cards\[role="group"\] \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  assert.doesNotMatch(bundles, /@container bundlify \(max-width: 480px\)[\s\S]*?bundlify-mode-cards \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.doesNotMatch(bundles, /@container bundlify \(max-width: 640px\) \{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
+  const purchase = await read("assets/bundlify-subscription.css");
+  assert.match(purchase, /@container bundlify-subscription \(max-width: 380px\)/);
 });

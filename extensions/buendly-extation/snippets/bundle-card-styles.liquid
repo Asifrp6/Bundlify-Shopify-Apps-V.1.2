@@ -4,6 +4,21 @@
   bundlify-bundles * { box-sizing: border-box; }
   bundlify-bundles [hidden] { display: none !important; }
   :where(bundlify-bundles) .bundlify-mode-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 24px; }
+  @media (max-width: 480px) {
+    :where(bundlify-bundles) .bundlify-mode-cards { grid-template-columns: minmax(0, 1fr); }
+  }
+  /* :where() is specificity 0, so the stylesheet container query and theme column rules were still stacking these cards. This block is in the body and wins at buy-box width. */
+  bundlify-bundles[data-root][data-currency] { width: 100%; min-width: 0; align-self: stretch; justify-self: stretch; }
+  bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] {
+    display: grid; grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%; min-width: 0; align-self: stretch;
+  }
+  bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card:nth-child(1) { grid-column: 1; grid-row: 1; }
+  bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card:nth-child(2) { grid-column: 2; grid-row: 1; }
+  @media (max-width: 480px) {
+    bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] { grid-template-columns: minmax(0, 1fr); }
+    bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card:nth-child(n) { grid-column: 1; grid-row: auto; }
+  }
   bundlify-bundles .bundlify-mode-card {
     display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; row-gap: 2px;
     width: 100%; min-width: 0; margin: 0; padding: 16px;

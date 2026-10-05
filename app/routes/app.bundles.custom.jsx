@@ -1,10 +1,11 @@
 import BundleProductFields from "../components/BundleProductFields";
 import { SELECTED_PRODUCTS, bundleInitialMode, bundleSelectionChange, withMissingProducts } from "../services/product-selection";
 import { Form, Link, data, useLoaderData, useActionData, useNavigation } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Banner } from '@shopify/polaris';
 import { authenticate } from '../shopify.server';
 import { listProducts } from '../services/products.server';
+import { customApplyPath } from '../services/custom-bundle';
 import { getCustomBundleSettings, saveCustomBundleProducts } from '../services/custom-bundle.server';
 import styles from '../styles/bundle-editor.module.css';
 import setup from '../styles/custom-bundle-setup.module.css';
@@ -27,8 +28,9 @@ export async function action({ request }) {
   try {
     const percentage = form.get('percentage');
     if (typeof percentage !== 'string' || !percentage.trim()) throw new Error('Enter a discount value.');
-    await saveCustomBundleProducts(admin, form.getAll('productIds'), Number(percentage), String(form.get('discountType') || 'percentage'), limits.maxProducts);
-    return { saved: true };
+    const productIds = form.getAll('productIds');
+    await saveCustomBundleProducts(admin, productIds, Number(percentage), String(form.get('discountType') || 'percentage'), limits.maxProducts);
+    return redirect(customApplyPath(productIds));
   } catch (error) {
     if (error instanceof Response) throw error;
     return data({ error: error.message || 'Could not save custom bundle products.' }, { status: 400 });
@@ -43,13 +45,6 @@ export default function CustomBundleProducts() {
   const [step, setStep] = useState(1);
   const result = useActionData();
   const busy = useNavigation().state !== 'idle';
-  const [toast, setToast] = useState(false);
-  useEffect(() => {
-    if (!result?.saved) return;
-    setToast(true);
-    const timer = setTimeout(() => setToast(false), 2000);
-    return () => clearTimeout(timer);
-  }, [result]);
   const choices = withMissingProducts(products, selectedIds);
   const [mode, setMode] = useState(() => bundleInitialMode(selectedIds, choices));
   const [pickerKey, setPickerKey] = useState(0);
@@ -63,7 +58,6 @@ export default function CustomBundleProducts() {
     <Link className={styles.back} to="/app/bundles">All bundles</Link>
     <header className={styles.header}><div><h1>Custom bundle products</h1><p>Choose which products customers can combine into their own bundle.</p></div></header>
     {result?.error && <Banner tone="critical">{result.error}</Banner>}
-    <div className={setup.toast} role="status" aria-live="polite">{toast && 'Applied successfully. Your selected products are now available for custom bundles.'}</div>
     <p role="status">Step {step} of 2: {step === 1 ? 'Select products' : 'Set discount and apply'}</p>
     <Form method="post" onSubmit={event => {
       if (step === 1) { event.preventDefault(); if (selected.length !== 1 && selected.length <= maxProducts) setStep(2); }
@@ -71,7 +65,7 @@ export default function CustomBundleProducts() {
       {selected.map(id => <input key={id} type="hidden" name="productIds" value={id} />)}
       <section className={styles.card} hidden={step !== 1}>
         <div className={styles.sectionHeading}><div><h2>Eligible products</h2><p>Select 2–{maxProducts} products. Customers must choose at least 2 different products from this list.</p></div><b className={styles.count}>{selected.length} selected</b></div>
-        <p>Keep the Bundle offers app block on your product template. This list applies to all bundle blocks. Only available products published to your online store can be purchased.</p>
+        <p>Keep the Bundle selection app block on your product template. This list shows on every product page where that block is added. Only available products published to your online store can be purchased.</p>
         <BundleProductFields key={pickerKey} products={choices} mode={mode} onModeChange={setMode} selected={selected} onSelectedChange={setSelected} maxProducts={maxProducts} disabled={busy} idPrefix="custom-bundle-product" label="Eligible custom bundle products" emptyText="No products found." missingText="Remove this unavailable product before saving." emptyHelp="Choose a product, select products by category, or include your current catalog. Leave empty to keep custom bundles disabled." />
         <p>Your selection stays unpublished until you click Apply in the next step. Clear the selection and apply to disable custom bundles.</p>
         {selected.length === 1 && <p role="status">Select at least one more product, or clear the selection to disable custom bundles.</p>}

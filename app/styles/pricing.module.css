@@ -53,8 +53,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 18px 18px;
+  padding: 32px 22px 28px;
   border: 1px solid #e6ebf2;
   border-radius: 22px;
   background: #fff;
@@ -88,10 +87,16 @@
   font-size: 12px;
   font-weight: 700;
 }
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
 .icon {
   width: 46px;
   height: 46px;
-  margin: 0 auto;
+  margin: 0 auto 10px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -105,19 +110,24 @@
   text-align: center;
   color: #0e1b3d;
   font-size: 26px;
+  line-height: 1.2;
 }
 .tagline {
-  margin: -8px 0 0;
+  margin: 0;
   text-align: center;
   color: #98a2b3;
   font-size: 14px;
+  line-height: 1.4;
 }
 .price {
-  margin: 0;
+  margin: 20px 0 0;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e6ebf2;
   text-align: center;
   color: #0e1b3d;
   font-size: 36px;
   font-weight: 800;
+  line-height: 1;
 }
 .price span {
   color: #98a2b3;
@@ -126,11 +136,11 @@
 }
 .features {
   margin: 0;
-  padding: 8px 0 0;
+  padding: 18px 0 0;
   list-style: none;
-  border-top: 1px solid #e6ebf2;
   display: grid;
   gap: 10px;
+  flex: 1;
 }
 .features li {
   display: flex;
@@ -146,8 +156,10 @@
 .starter .features li span { color: #0369a1; }
 .growth .features li span { color: #0a6ff0; }
 .unlimited .features li span { color: #f59e0b; }
+.action {
+  margin-top: 24px;
+}
 .button {
-  margin-top: auto;
   width: 100%;
   min-height: 44px;
   border-radius: 12px;

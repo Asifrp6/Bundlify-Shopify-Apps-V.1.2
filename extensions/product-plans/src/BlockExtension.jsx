@@ -6,7 +6,7 @@ export default async () => {
   render(<Extension />, document.body);
 };
 
-const APP = "https://bundlify.imranwebstudio.me/api/product-plans";
+const APP = "https://bundlebase.imranwebstudio.me/api/product-plans";
 const FREQUENCIES = ["Weekly", "Every 2 weeks", "Monthly", "Every 2 months", "Every 3 months", "Yearly"];
 
 async function appCall(body) {

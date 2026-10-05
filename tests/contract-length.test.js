@@ -54,11 +54,18 @@ function mockAdmin(responses) {
   } } };
 }
 const committed = times => ({ data: { subscriptionDraftCommit: { contract: { id: ID, billingPolicy: { maxCycles: times, minCycles: times } }, userErrors: [] } } });
+const portal = {
+  data: {
+    subscriptionContract: { customer: { defaultEmailAddress: { emailAddress: "buyer@example.com" } } },
+    shop: { name: "Demo", customerAccountsV2: { url: "https://shopify.com/1/account" } },
+  },
+};
 const flow = (subject, extra = {}) => ({
   BundlifyContractLength: { data: { subscriptionContract: subject } },
   BundlifyContractEdit: { data: { subscriptionContractUpdate: { draft: { id: "gid://shopify/SubscriptionDraft/3" }, userErrors: [] } } },
   BundlifyDraftLength: { data: { subscriptionDraftUpdate: { draft: { id: "gid://shopify/SubscriptionDraft/3" }, userErrors: [] } } },
   BundlifyDraftCommit: committed(6),
+  BundlifySubscriptionPortal: portal,
   ...extra,
 });
 
@@ -84,7 +91,7 @@ test("webhook sets maxCycles and minCycles 3 from the contract line property", a
   const { admin, calls } = mockAdmin(flow(weekly, { BundlifyDraftCommit: committed(3) }));
   const response = await handleContractCreated({ admin, payload: { admin_graphql_api_id: ID, id: 7 }, shop: "demo.myshopify.com" });
   assert.equal(response.status, 200);
-  assert.deepEqual(calls.map(c => c.name), ["BundlifyContractLength", "BundlifyContractEdit", "BundlifyDraftLength", "BundlifyDraftCommit"]);
+  assert.deepEqual(calls.map(c => c.name), ["BundlifyContractLength", "BundlifyContractEdit", "BundlifyDraftLength", "BundlifyDraftCommit", "BundlifySubscriptionPortal"]);
   assert.deepEqual(calls[2].variables.input.billingPolicy, { interval: "WEEK", intervalCount: 1, minCycles: 3, maxCycles: 3, anchors: [{ type: "WEEKDAY", day: 1 }] });
 });
 

@@ -135,6 +135,7 @@ bundlify-bundles .bundlify-custom-choice input { width:20px; height:20px; flex:n
 .bundlify-cart-drawer button { float:right; padding:8px 12px; cursor:pointer; }
 .bundlify-cart-row { padding:16px 0; border-bottom:1px solid var(--bundlify-line); }
 .bundlify-cart-row strong { margin-left:12px; color:inherit; }
+.bundlify-cart-plan { margin:4px 0 0; }
 .bundlify-cart-drawer > a { display:block; text-align:center; padding:14px; margin-top:12px; border-radius:10px; background:var(--bundlify-accent); color:var(--bundlify-on-accent); }
 @media(max-width:440px) { bundlify-bundles article { padding:16px; } bundlify-bundles .bundlify-product { grid-template-columns:72px minmax(0,1fr); gap:12px; } bundlify-bundles .bundlify-product :is(img,.bundlify-image-placeholder) { width:72px; height:88px; } }
 
@@ -146,6 +147,13 @@ bundlify-bundles {
   border: 0;
   border-radius: 0;
   background: none;
+}
+/* Fill the product column. A later theme rule of equal weight was leaving this block shrink-wrapped, with empty space on the right. */
+bundlify-bundles[data-root][data-currency] {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  justify-self: stretch;
 }
 bundlify-bundles > h2 {
   margin: 0 0 16px; color: inherit; line-height: 1.25; letter-spacing: -.01em;
@@ -231,7 +239,8 @@ bundlify-bundles .bundlify-builder-dialog article > p {
 bundlify-bundles .bundlify-builder-dialog article { box-shadow: none; }
 /* Create-your-bundle product cards only. Gift rows, summaries, and mode cards keep their own layout. */
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product {
-  gap: 0; padding: 0; overflow: hidden; min-height: min-content;
+  gap: 0; padding: 0; overflow: hidden;
+  width: 100%; max-width: 100%; height: auto; align-self: stretch; justify-self: stretch;
   border-radius: 16px; border-color: #e7eaee; box-shadow: none;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product:has(input:checked) {
@@ -250,19 +259,37 @@ bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product
   display: grid; place-items: center;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice {
-  position: absolute; top: 8px; left: 8px; z-index: 1;
-  display: inline-flex; align-items: center; gap: 4px;
-  width: auto; max-width: calc(100% - 16px);
-  margin: 0; padding: 2px 8px 2px 5px; border: 0; border-radius: 999px;
-  background: #fff; color: var(--bundlify-accent);
-  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.2;
-  white-space: nowrap; box-shadow: 0 2px 8px #171d2624;
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 8px;
+  width: auto; max-width: calc(100% - 20px); min-height: 36px;
+  margin: 0; padding: 6px 12px 6px 8px; border: 1px solid #d5dbe3; border-radius: 999px;
+  background: #fff; color: #171d26;
+  font-size: calc(13px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.2;
+  white-space: nowrap; box-shadow: 0 4px 14px #171d2629; cursor: pointer; user-select: none;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice:has(input:checked) {
+  border-color: var(--bundlify-accent);
+  box-shadow: 0 4px 14px #171d2629;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice:focus-within {
+  outline: 2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset: 2px;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice input {
-  width: 14px; height: 14px; margin: 0; flex: none;
+  appearance: none; -webkit-appearance: none;
+  width: 18px; height: 18px; margin: 0; flex: none;
+  border: 1.5px solid #5c6773; border-radius: 5px;
+  background-color: #fff; background-repeat: no-repeat; background-position: center; background-size: 12px 12px;
+  cursor: pointer;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice input:checked {
+  border-color: var(--bundlify-accent); background-color: var(--bundlify-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3.2 8.4 6.4 11.6 12.8 4.6'/%3E%3C/svg%3E");
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-custom-choice input:focus-visible {
+  outline: 2px solid var(--bl-focusColor, var(--bundlify-accent)); outline-offset: 2px;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product > div {
-  flex: 0 0 auto; gap: 4px; padding: 10px 12px 12px;
+  display: flex; flex-direction: column; flex: 1 1 auto; gap: 4px; padding: 10px 12px 12px; min-height: 0;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product a {
   display: block; margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
@@ -283,7 +310,12 @@ bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-sale-ba
   font-size: calc(10px * var(--bundlify-font-scale, 1)); font-weight: 600; line-height: 1.45; white-space: nowrap;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product label:not(.bundlify-custom-choice) {
-  margin: 6px 0 0; font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 500; line-height: 1.2; color: #666d75;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  margin: auto 0 0; min-height: 54px;
+  font-size: calc(11px * var(--bundlify-font-scale, 1)); font-weight: 500; line-height: 1.2; color: #666d75;
+}
+bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-variant-reserved {
+  visibility: hidden; pointer-events: none;
 }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-variant-label { display: block; margin: 0 0 4px; }
 bundlify-bundles .bundlify-builder-dialog [data-custom-picker] .bundlify-product select {
@@ -430,17 +462,28 @@ bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:focus-visible { ou
   bundlify-bundles button.bundlify-mode-card.bundlify-mode-card .bundlify-choice-icon { width: 38px; height: 38px; padding: 8px; }
   bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:disabled small { margin-top: 2px; }
 }
-/* Below this each card is under ~235px, too tight for icon + text beside the badge, so stack the cards. */
-@container bundlify (max-width: 480px) {
+/* The block usually sits in the product column, often ~400–560px on desktop and tablet.
+   A container query at 480px stacked these two cards on that column. Stack only when the
+   viewport itself is narrow, and keep icon, text, and the check in one row. */
+@media (max-width: 480px) {
   bundlify-bundles .bundlify-mode-cards { grid-template-columns: minmax(0, 1fr); }
   bundlify-bundles button.bundlify-mode-card.bundlify-mode-card { padding-right: 50px; }
 }
-@container bundlify (max-width: 280px) {
-  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card { grid-template-columns: minmax(0, 1fr); padding-top: 16px; }
-  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card .bundlify-choice-icon { grid-row: auto; margin: 0 0 8px; }
-  bundlify-bundles .bundlify-mode-card :is(strong, small) { grid-column: 1; }
-  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::after { top: 14px; margin-top: 0; }
-  bundlify-bundles button.bundlify-mode-card.bundlify-mode-card::before { top: 19px; margin-top: 0; }
+/* The rules above lose to a theme product-column flex/grid of equal specificity, and to
+   @container bundlify (max-width: 640px), which matches a normal buy box. This selector
+   keeps Our bundle and Custom bundle on one row there. Stack only under a 480px viewport. */
+bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] {
+  display: grid; grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%; min-width: 0; align-self: stretch;
+}
+bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card {
+  grid-row: 1; min-width: 0; max-width: none;
+}
+bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card:nth-child(1) { grid-column: 1; }
+bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card:nth-child(2) { grid-column: 2; }
+@media (max-width: 480px) {
+  bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] { grid-template-columns: minmax(0, 1fr); }
+  bundlify-bundles .bundlify-mode-cards.bundlify-mode-cards[role="group"] > button.bundlify-mode-card:nth-child(n) { grid-column: 1; grid-row: auto; }
 }
 @media (hover: hover) and (prefers-reduced-motion: reduce) {
   bundlify-bundles button.bundlify-mode-card.bundlify-mode-card:not(:disabled):hover { transform: none; }
@@ -556,7 +599,8 @@ bundlify-bundles .bundlify-builder-dialog [data-custom-picker] > .bundlify-produ
   overflow-y: auto;
   overscroll-behavior: contain;
   align-content: start;
-  align-items: start;
+  align-items: stretch;
+  justify-items: stretch;
   padding: 4px;
   scrollbar-gutter: stable;
 }

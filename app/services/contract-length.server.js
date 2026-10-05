@@ -1,4 +1,5 @@
 import { LENGTH_OPTION } from "./delivery-options.js";
+import { emailSubscriptionPortal } from "./subscription-email.server.js";
 
 export const CONTRACT = `#graphql
 query BundlifyContractLength($id: ID!) {
@@ -136,7 +137,7 @@ function contractIdFrom(payload) {
   return /^\d+$/.test(String(payload?.id ?? "")) ? `gid://shopify/SubscriptionContract/${payload.id}` : null;
 }
 
-export async function handleContractCreated({ admin, payload, shop }) {
+export async function handleContractCreated({ admin, payload, shop, mail = emailSubscriptionPortal }) {
   const contractId = contractIdFrom(payload);
   if (!contractId) {
     console.warn(`[contract-length] ${shop}: webhook without a contract id`);
@@ -149,9 +150,15 @@ export async function handleContractCreated({ admin, payload, shop }) {
   try {
     const result = await applyContractLength({ admin, contractId });
     console.log(`[contract-length] ${shop} ${contractId}: ${result.status}${result.reason ? ` (${result.reason})` : ""}${result.times ? ` maxCycles=${result.times}` : ""}`);
-    return new Response(null, { status: 200 });
   } catch (error) {
     console.error(`[contract-length] ${shop} ${contractId}: ${error.message}`, JSON.stringify(error.userErrors || []));
     return new Response(null, { status: 500 });
   }
+  try {
+    const emailed = await mail({ admin, contractId, shop, payload });
+    console.log(`[subscription-email] ${shop} ${contractId}: ${emailed.status}${emailed.reason ? ` (${emailed.reason})` : ""}`);
+  } catch (error) {
+    console.error(`[subscription-email] ${shop} ${contractId}: ${error.message}`);
+  }
+  return new Response(null, { status: 200 });
 }

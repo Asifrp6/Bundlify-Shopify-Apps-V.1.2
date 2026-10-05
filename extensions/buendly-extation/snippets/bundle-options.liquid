@@ -1,4 +1,8 @@
 {% assign appearance = shop.metafields.bundlify.bundle_appearance.value %}
+{% assign preset_description = appearance.presetDescription %}
+{% if preset_description == blank or preset_description == 'Ready-made combinations for you' %}{% assign preset_description = 'Ready-made bundle.' %}{% endif %}
+{% assign custom_description = appearance.customDescription %}
+{% if custom_description == blank or custom_description == 'Pick your favorites. Make it yours.' %}{% assign custom_description = 'Pick your favorites.' %}{% endif %}
 {% assign custom_bundle_products = shop.metafields.bundlify.custom_bundle_products.value %}
 {{ 'bundlify-bundles.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'bundlify-bundles.js' | asset_url }}" defer></script>
@@ -10,11 +14,11 @@
   <div class="bundlify-mode-cards" role="group" aria-label="Choose your bundle">
     <button type="button" class="bundlify-mode-card" data-preset-toggle aria-pressed="true" aria-controls="bundlify-ours-{{ block.id }}">
       {% render 'appearance-icon', name: appearance.presetIcon, fallback: 'gift' %}
-      <strong>{{ appearance.presetText | default: 'Our bundle' | escape }}</strong><small>{{ appearance.presetDescription | default: 'Ready-made combinations for you' | escape }}</small>
+      <strong>{{ appearance.presetText | default: 'Our bundle' | escape }}</strong><small>{{ preset_description | escape }}</small>
     </button>
     <button type="button" class="bundlify-mode-card" data-custom-toggle aria-haspopup="dialog" aria-pressed="false" aria-expanded="false" aria-controls="bundlify-custom-{{ block.id }}" {% unless custom_bundle_products.count >= 2 %}disabled{% endunless %}>
       {% render 'appearance-icon', name: appearance.customIcon, fallback: 'grid' %}
-      <strong>{{ appearance.customText | default: 'Custom bundle' | escape }}</strong><small>{% if custom_bundle_products.count >= 2 %}{{ appearance.customDescription | default: 'Pick your favorites. Make it yours.' | escape }}{% else %}{{ appearance.customUnavailableText | default: 'Not available yet' | escape }}{% endif %}</small>
+      <strong>{{ appearance.customText | default: 'Custom bundle' | escape }}</strong><small>{% if custom_bundle_products.count >= 2 %}{{ custom_description | escape }}{% else %}{{ appearance.customUnavailableText | default: 'Not available yet' | escape }}{% endif %}</small>
     </button>
   </div>
   <div id="bundlify-ours-{{ block.id }}" data-preset-panel>

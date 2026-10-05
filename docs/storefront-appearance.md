@@ -7,7 +7,7 @@ When using `npm run dev`, Shopify must open the CLI tunnel connected to this loc
 Both `shopify.app.toml` and `shopify.app.bundlify.toml` now set
 `[build].automatically_update_urls_on_dev = true` for this reason. Previously it was
 false, and the generated development manifest still pointed to the hosted app at
-`bundlify.imranwebstudio.me`, so local JSX edits could not appear there.
+`bundlebase.imranwebstudio.me`, so local JSX edits could not appear there.
 
 After changing this configuration:
 
@@ -17,9 +17,10 @@ After changing this configuration:
 4. Open **Settings** and refresh the page. Saving JSX changes should now update the local preview.
 
 The deployed app still needs a server deployment to receive code changes. `npm start`
-serves `build/server/index.js`, not live JSX source. Editing default appearance values
-also does not override a shop's already-saved settings: use **Restore defaults**, then
-**Save changes** if that is the intended result.
+serves `build/server/index.js`, not live JSX source. A saved card description that is
+still exactly a previous default is treated as unset, so customers see the current
+default. Any other saved wording stays until the merchant chooses **Restore defaults**
+and **Save changes**.
 
 ## Shop owner guide
 

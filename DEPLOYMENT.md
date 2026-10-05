@@ -1,6 +1,6 @@
 # Bundle Base production deployment
 
-Production domain: https://bundlify.imranwebstudio.me
+Production domain: https://bundlebase.imranwebstudio.me
 
 Shopify client ID: `597fad9e0520214bdfa371cb2953e5df`.
 

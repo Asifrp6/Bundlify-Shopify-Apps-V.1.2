@@ -23,25 +23,25 @@ export default function Extensions() {
     <div className={styles.collectionHeader}><div><h2>Bundles</h2><p>Show active bundles as named choices on the product page.</p></div></div>
     <ol>
       <li><Link to="/app/bundles">Open Bundles</Link> and save a bundle as active.</li>
-      <li>Add the Bundle offers app block to the product template.</li>
+      <li>Add the Bundle selection app block to the product template.</li>
       <li>Save the theme. Buyers choose a bundle name, then see its products and discount.</li>
     </ol>
     </section>
     <section className={styles.collection}>
       <div className={styles.collectionHeader}><div><h2>Subscriptions</h2><p>Offer one-time purchase and Subscribe &amp; Save on the same product.</p></div></div>
-      <p>Add the Subscription app block to the product template. It is separate from Bundle offers.</p>
+      <p>Add the Subscription app block to the product template. It shows only on product pages and is separate from Bundle selection.</p>
     </section>
     <div className={styles.actions}>
       <a href={bundles} target="_top" className={styles.primary}>Add bundle block</a>
       <a href={subscriptions} target="_top" className={styles.primary}>Add subscription block</a>
     </div>
-    <p>Active bundles appear for products that are active and published to the Online Store. A bundle stays visible when at least two of its products are published. On a product page, the block shows only active bundles that include that product.</p>
+    <p>A bundle stays visible when at least two of its products are active and published to the Online Store. Every qualifying active bundle shows on each product page where the Bundle selection block is added.</p>
     <p>An active bundle discount is applied automatically at checkout.</p>
     <section className={styles.collection}>
       <div className={styles.collectionHeader}><div><h2>Customer accounts</h2><p>Buyers manage subscriptions from the same login as their orders.</p></div></div>
       <ol>
         <li>In the checkout and accounts editor, add the Subscriptions page, the order status block, and the profile block.</li>
-        <li>The order confirmation email links to the order status page. On orders that include a subscription, the order status block shows Manage subscription, which opens the Subscriptions page after the buyer signs in.</li>
+        <li>After a subscription contract is created, the buyer is emailed a link to the customer account Subscriptions page. The order confirmation email also links to the order status page, where Manage subscription opens that same page after the buyer signs in.</li>
         <li>On the product page in Shopify admin, pin Bundle Base subscriptions to create a plan for selected variants.</li>
       </ol>
     </section>

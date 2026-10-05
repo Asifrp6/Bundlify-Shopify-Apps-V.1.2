@@ -75,6 +75,8 @@
 .notice { margin: 0; padding: 0 18px 14px; color: #6f757c; font-size: 13px; line-height: 1.5; }
 .planNotice { margin: 0 18px 14px; padding: 8px 12px; color: #7d6832; background: #fcf8ee; border-radius: 8px; font-size: 13px; line-height: 1.5; }
 .collectionFooter { padding: 13px 24px; border-top: 1px solid #e9e9ee; font-size: 14px; color: #898b91; }
+.subscriberFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.subscriberNotice { margin: 0 24px 4px; color: #a1443f; font-size: 13px; line-height: 1.5; }
 .footnote { display: flex; justify-content: center; align-items: center; gap: 7px; margin: 0; font-size: 14px; color: #7f8389; line-height: 1.6; text-align: center; }
 .empty { grid-column: 1 / -1; padding: 36px 12px; text-align: center; }
 .empty h3 { margin: 14px 0 8px; font-size: 18px; }

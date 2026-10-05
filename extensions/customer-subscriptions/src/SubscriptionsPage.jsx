@@ -1,29 +1,14 @@
 import "@shopify/ui-extensions/preact";
 import {render} from "preact";
-import {useEffect, useState} from "preact/hooks";
+import {useEffect, useRef, useState} from "preact/hooks";
+import {CONTRACTS, contractLineNodes, loadSubscriptionContracts} from "./subscription-contracts.js";
 
 export default async () => {
   render(<Extension />, document.body);
 };
 
 const API = "shopify://customer-account/api/2026-07/graphql.json";
-const APP = "https://bundlify.imranwebstudio.me/api/subscription-payment";
-const CONTRACTS = `query {
-  customer {
-    subscriptionContracts(first: 20) {
-      nodes {
-        id
-        status
-        nextBillingDate
-        currencyCode
-        deliveryPolicy { interval intervalCount { count } }
-        lines(first: 10) {
-          nodes { id title variantTitle quantity currentPrice { amount currencyCode } }
-        }
-      }
-    }
-  }
-}`;
+const APP = "https://bundlebase.imranwebstudio.me/api/subscription-payment";
 
 function schedule(policy) {
   const count = policy?.intervalCount?.count;
@@ -49,16 +34,48 @@ async function customerApi(query, variables) {
 
 function Extension() {
   const [contracts, setContracts] = useState(null);
+  const [more, setMore] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState("");
+  const requestId = useRef(0);
 
-  async function load() {
-    const body = await customerApi(CONTRACTS);
-    setContracts(body.data?.customer?.subscriptionContracts?.nodes || []);
+  async function load({after = null, previous = []} = {}) {
+    const id = ++requestId.current;
+    try {
+      const page = await loadSubscriptionContracts(
+        (cursor) => customerApi(CONTRACTS, {after: cursor}),
+        {after},
+      );
+      if (requestId.current !== id) return;
+      setContracts(previous.concat(page.contracts));
+      setMore(page.after);
+    } catch (error) {
+      if (requestId.current !== id) return;
+      const loaded = previous.concat(error?.contracts || []);
+      setContracts(loaded);
+      setMore(error?.after || null);
+      setMessage(!loaded.length
+        ? "Subscriptions could not be loaded. Refresh the page to try again."
+        : (error?.after
+          ? "Some subscriptions could not be loaded. Show more subscriptions to try again."
+          : "Some subscriptions could not be loaded. Refresh the page to try again."));
+    }
   }
 
   useEffect(() => {
     load().catch(() => setContracts([]));
   }, []);
+
+  async function showMore() {
+    if (!more || loadingMore) return;
+    setLoadingMore(true);
+    setMessage("");
+    try {
+      await load({after: more, previous: contracts || []});
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function cancel(id) {
     setMessage("");
@@ -100,9 +117,9 @@ function Extension() {
     <s-page heading="Subscriptions" subheading="Products, delivery schedule, price, and the next charge">
       <s-stack direction="block" gap="base">
         {message ? <s-banner tone="info">{message}</s-banner> : null}
-        {contracts.length === 0 ? <s-text>You do not have any subscriptions yet.</s-text> : null}
+        {contracts.length === 0 && !message ? <s-text>You do not have any subscriptions yet.</s-text> : null}
         {contracts.map((contract) => {
-          const lines = contract.lines?.nodes || [];
+          const lines = contractLineNodes(contract);
           return (
           <s-section key={contract.id} heading={lines[0]?.title || "Subscription"}>
             <s-stack direction="block" gap="base">
@@ -124,6 +141,11 @@ function Extension() {
           </s-section>
           );
         })}
+        {more ? (
+          <s-button disabled={loadingMore} onClick={showMore}>
+            {loadingMore ? "Loading more subscriptions…" : "Show more subscriptions"}
+          </s-button>
+        ) : null}
       </s-stack>
     </s-page>
   );

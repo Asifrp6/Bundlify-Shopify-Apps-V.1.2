@@ -1,6 +1,6 @@
 import { discountLabel } from "../services/discounts";
 import { creationBlocked } from "../services/app-plans";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLoaderData, useSearchParams, useFetcher, data } from "react-router";
 import { setSubscriptionStatus } from "../services/subscription-status.server";
 import { Banner } from "@shopify/polaris";
@@ -19,7 +19,7 @@ export async function loader({ request }) {
     throw error;
   }
   try {
-    const [usage, subscriptions, contracts] = await Promise.all([
+    const [usage, subscriptions, subscriberPage] = await Promise.all([
       import("../services/app-billing.server").then(({ shopUsage }) => shopUsage(session.shop)),
       prisma.subscriptionPlan.findMany({
         where: { shop: session.shop },
@@ -28,11 +28,12 @@ export async function loader({ request }) {
       }),
       import("../services/subscription-portal.server")
         .then(({ listSubscriberContracts }) => listSubscriberContracts(admin, session.shop))
-        .catch(() => []),
+        .catch(() => ({ contracts: [], after: null })),
     ]);
     return {
       subscriptions,
-      contracts,
+      contracts: subscriberPage.contracts,
+      contractsAfter: subscriberPage.after,
       planLimit: creationBlocked(usage, "plan", usage?.plans ?? subscriptions.length),
       planName: usage?.name || null,
       maxPlans: usage?.maxPlans ?? null,
@@ -80,8 +81,43 @@ function PlanSymbol() {
 
 const statusOf = plan => plan.status === "ACTIVE" && plan.sellingPlanGroupId ? "active" : plan.status === "PENDING" ? "review" : "draft";
 
+function orderLinksFor(contract) {
+  if (contract.orderLinks?.length) return contract.orderLinks;
+  if (contract.orderUrl) return [{ url: contract.orderUrl, label: contract.orderName || "Order" }];
+  return [];
+}
+
 export default function Subscriptions() {
-  const { subscriptions, contracts, planLimit, planName, maxPlans } = useLoaderData();
+  const { subscriptions, contracts: loadedContracts, contractsAfter, planLimit, planName, maxPlans } = useLoaderData();
+  const [extraContracts, setExtraContracts] = useState([]);
+  const [more, setMore] = useState(contractsAfter || null);
+  const [subscriberNotice, setSubscriberNotice] = useState("");
+  const moreFetcher = useFetcher();
+  const appliedPage = useRef(null);
+  useEffect(() => {
+    setExtraContracts([]);
+    setMore(contractsAfter || null);
+    setSubscriberNotice("");
+    appliedPage.current = null;
+  }, [loadedContracts, contractsAfter]);
+  useEffect(() => {
+    const page = moreFetcher.data;
+    if (!page?.subscriberPage || page === appliedPage.current || !Array.isArray(page.contracts)) return;
+    appliedPage.current = page;
+    if (!page.contracts.length && page.contractsAfter) {
+      setSubscriberNotice("More subscribers could not be loaded. Show more subscribers to try again.");
+      return;
+    }
+    setSubscriberNotice("");
+    setExtraContracts(current => current.concat(page.contracts));
+    setMore(page.contractsAfter || null);
+  }, [moreFetcher.data]);
+  const contracts = loadedContracts.concat(extraContracts);
+  function showMoreSubscribers() {
+    if (!more || moreFetcher.state !== "idle") return;
+    const params = new URLSearchParams({ after: more });
+    moreFetcher.load(`/app/subscriber-contracts?${params}`);
+  }
   const [params] = useSearchParams();
   const [savedToast, setSavedToast] = useState(() => params.get("created") === "1" ? "Subscription plan saved successfully." : params.get("updated") === "1" ? "Subscription plan updated successfully." : "");
   useEffect(() => {
@@ -117,7 +153,8 @@ export default function Subscriptions() {
     </section>
 
     <section className={styles.collection} aria-label="Subscriber contracts">
-      <div className={styles.collectionHeading}><div><h2>Subscribers <span>{contracts.length}</span></h2><p>Each purchase links to the customer and the Shopify order.</p></div></div>
+      <div className={styles.collectionHeading}><div><h2>Subscribers <span>{more ? `${contracts.length}+` : contracts.length}</span></h2><p>Each purchase links to the customer and the Shopify order.</p></div></div>
+      {subscriberNotice && <p role="alert" className={styles.subscriberNotice}>{subscriberNotice}</p>}
       <div className={styles.cards}>
         {contracts.length ? contracts.map(contract => <article key={contract.id} className={styles.planCard}>
           <div className={styles.planHeading}><div className={styles.planTitle}><h3>{contract.customerName}</h3><p>{contract.frequency} · {contract.cycleLimit} · {contract.status}</p></div></div>
@@ -126,11 +163,15 @@ export default function Subscriptions() {
             <span>{contract.orderName || "No order yet"}</span>
             <div>
               {contract.customerUrl && <a className={styles.editButton} href={contract.customerUrl} target="_top">Customer</a>}
-              {contract.orderUrl && <a className={styles.editButton} href={contract.orderUrl} target="_top">{contract.orderName || "Order"}</a>}
+              {orderLinksFor(contract).map(order => <a key={order.url} className={styles.editButton} href={order.url} target="_top">{order.label}</a>)}
             </div>
           </footer>
         </article>) : <p className={styles.notice}>No subscription purchases yet. New contracts appear here after a customer subscribes.</p>}
       </div>
+      {(contracts.length > 0 || more) && <div className={`${styles.collectionFooter} ${styles.subscriberFooter}`} role="status">
+        <span>Showing {contracts.length}{more ? "+" : ""} {contracts.length === 1 && !more ? "subscriber" : "subscribers"}</span>
+        {more && <button type="button" className={styles.editButton} onClick={showMoreSubscribers} disabled={moreFetcher.state !== "idle"}>{moreFetcher.state !== "idle" ? "Loading more subscribers…" : "Show more subscribers"}</button>}
+      </div>}
     </section>
 
     <section className={styles.collection} aria-label="Your subscription plans">

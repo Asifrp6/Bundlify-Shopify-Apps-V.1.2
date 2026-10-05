@@ -71,14 +71,16 @@ export default function Pricing() {
         const current = handle === plan.handle;
         return <article key={plan.handle} className={`${styles.card} ${styles[plan.tone]}`}>
           {plan.popular && <span className={styles.badge}>Most Popular</span>}
-          <span className={`${styles.icon} ${styles[`${plan.tone}Icon`]}`}>{icons[plan.handle]}</span>
-          <h2>{plan.name}</h2>
-          <p className={styles.tagline}>{plan.tagline}</p>
+          <div className={styles.cardHead}>
+            <span className={`${styles.icon} ${styles[`${plan.tone}Icon`]}`}>{icons[plan.handle]}</span>
+            <h2>{plan.name}</h2>
+            <p className={styles.tagline}>{plan.tagline}</p>
+          </div>
           <p className={styles.price}>${plan.price}<span>/month</span></p>
           <ul className={styles.features}>
             {plan.features.map((feature) => <li key={feature}><span aria-hidden="true">✓</span>{feature}</li>)}
           </ul>
-          <Form method="post">
+          <Form method="post" className={styles.action}>
             <input type="hidden" name="handle" value={plan.handle} />
             <button className={`${styles.button} ${current ? styles.current : styles[`${plan.tone}Button`]}`} type="submit" disabled={busy || current}>
               {current ? "Current plan" : busy && pending === plan.handle ? "Opening Shopify…" : `Choose ${plan.name}`}

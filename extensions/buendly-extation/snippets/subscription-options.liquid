@@ -2,6 +2,10 @@
 <script src="{{ 'bundlify-subscription.js' | asset_url }}" defer></script>
 {% render 'subscription-card-styles' %}
 {% assign appearance = shop.metafields.bundlify.subscription_appearance.value %}
+{% assign one_time_description = appearance.oneTimeDescription %}
+{% if one_time_description == blank or one_time_description == 'Buy once, without a subscription' %}{% assign one_time_description = 'Buy once' %}{% endif %}
+{% assign subscription_unavailable = appearance.subscriptionUnavailableText %}
+{% if subscription_unavailable == blank or subscription_unavailable == 'No subscription available for this option' %}{% assign subscription_unavailable = 'No subscription available' %}{% endif %}
 {% render 'block-appearance', kind: 'subscription', appearance: appearance %}
 {% assign selected_variant = product.selected_or_first_available_variant %}
 
@@ -21,7 +25,7 @@
                   {% render 'appearance-icon', name: appearance.oneTimeIcon, fallback: 'box' %}
                 </span>
                 <span class="bundlify-card-title">{{ appearance.oneTimeText | default: 'One-time purchase' | escape }}</span>
-                <small>{{ appearance.oneTimeDescription | default: 'Buy once, without a subscription' | escape }}</small>
+                <small>{{ one_time_description | escape }}</small>
                 <strong>{{ variant.price | money_with_currency }}</strong>
               </label>
             {% endunless %}
@@ -36,7 +40,7 @@
                 {% if variant.selling_plan_allocations.size > 0 %}
                 <small>{{ appearance.subscriptionDescription | default: 'Choose your delivery schedule' | escape }}</small>
                 {% else %}
-                <small>{{ appearance.subscriptionUnavailableText | default: 'No subscription available for this option' | escape }}</small>
+                <small>{{ subscription_unavailable | escape }}</small>
                 {% endif %}
               </label>
           </div>

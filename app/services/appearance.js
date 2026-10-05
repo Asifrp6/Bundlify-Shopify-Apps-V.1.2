@@ -41,8 +41,22 @@ export const defaults = {
   bundle: { matchStore: true, background: "#ffffff", text: "#0e1b3d", accent: "#0a6ff0", buttonTextColor: "#ffffff", fontSize: "16", logoUrl: "", heading: "Better together", buttonText: "Add bundle to cart" },
   subscription: { matchStore: true, background: "#f1f3f8", text: "#0a1435", accent: "#020b3f", buttonTextColor: "#ffffff", fontSize: "16", logoUrl: "", heading: "Purchase options", buttonText: "Subscribe & Save", oneTimeText: "One-time purchase" },
 };
-Object.assign(defaults.bundle, cardColors, { presetText: "Our bundle", presetDescription: "Ready-made combinations for you", customText: "Custom bundle", customDescription: "Pick your favorites. Make it yours.", customUnavailableText: "Not available yet", presetIcon: "gift", customIcon: "grid" });
-Object.assign(defaults.subscription, cardColors, { purchaseHint: "Choose how to purchase", oneTimeDescription: "Buy once, without a subscription", subscriptionDescription: "Choose your delivery schedule", subscriptionUnavailableText: "No subscription available for this option", oneTimeIcon: "box", subscriptionIcon: "repeat" });
+Object.assign(defaults.bundle, cardColors, { presetText: "Our bundle", presetDescription: "Ready-made bundle.", customText: "Custom bundle", customDescription: "Pick your favorites.", customUnavailableText: "Not available yet", presetIcon: "gift", customIcon: "grid" });
+Object.assign(defaults.subscription, cardColors, { purchaseHint: "Choose how to purchase", oneTimeDescription: "Buy once", subscriptionDescription: "Choose your delivery schedule", subscriptionUnavailableText: "No subscription available", oneTimeIcon: "box", subscriptionIcon: "repeat" });
+// Card descriptions this app previously shipped as defaults. An exact saved match is unset so the current default shows.
+export const retiredDescriptions = {
+  presetDescription: "Ready-made combinations for you",
+  customDescription: "Pick your favorites. Make it yours.",
+  oneTimeDescription: "Buy once, without a subscription",
+  subscriptionUnavailableText: "No subscription available for this option",
+};
+export function unsetRetiredDescriptions(saved = {}) {
+  const next = saved && typeof saved === "object" ? { ...saved } : {};
+  for (const [key, retired] of Object.entries(retiredDescriptions)) {
+    if (next[key] === retired) delete next[key];
+  }
+  return next;
+}
 export function validateAppearance(kind, form) {
   if (!Object.hasOwn(defaults, kind)) throw new Error("Choose a valid block.");
   const values = {};

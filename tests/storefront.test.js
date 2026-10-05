@@ -240,7 +240,11 @@ test("bundle block stays styled and stops loading when its CDN assets never load
   assert.match(snippet, /class="bundlify-load-state">\s*<p data-message[^>]*>Loading bundle offers…<\/p>\s*<p class="bundlify-load-failed"[^>]*>Bundles could not be loaded/);
   const styles = await readFile(new URL('../extensions/buendly-extation/snippets/bundle-card-styles.liquid', import.meta.url), 'utf8');
   assert.match(styles, /\.bundlify-mode-cards \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(styles, /bundlify-bundles \.bundlify-mode-card \{\s*display: flex; flex-direction: column;/);
+  assert.match(styles, /bundlify-bundles \.bundlify-mode-card \{\s*display: grid; grid-template-columns: auto minmax\(0, 1fr\)/);
+  assert.match(styles, /@media \(max-width: 480px\) \{\s*:where\(bundlify-bundles\) \.bundlify-mode-cards \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styles, /bundlify-bundles \.bundlify-mode-cards\.bundlify-mode-cards\[role="group"\] \{\s*display: grid; grid-auto-flow: row; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(styles, /:nth-child\(2\) \{ grid-column: 2; grid-row: 1; \}/);
+  assert.match(styles, /@media \(max-width: 480px\) \{\s*bundlify-bundles \.bundlify-mode-cards\.bundlify-mode-cards\[role="group"\] \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(styles, /bundlify-bundles:not\(:defined\) \.bundlify-load-failed \{[^}]*animation: bundlify-load-failed/);
   assert.match(styles, /bundlify-bundles:not\(:defined\) \.bundlify-load-state > \[data-message\] \{[^}]*animation: bundlify-load-pending/);
   assert.doesNotMatch(styles + snippet, /https?:\/\//);

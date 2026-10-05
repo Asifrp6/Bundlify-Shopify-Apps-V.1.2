@@ -1,5 +1,12 @@
 (() => {
   if (customElements.get("bundlify-bundles")) return;
+  function cartLineLabel(item) {
+    const title = item?.product_title || item?.title || "Item";
+    const plan = typeof item?.selling_plan_allocation?.selling_plan?.name === "string"
+      ? item.selling_plan_allocation.selling_plan.name.trim()
+      : "";
+    return { title: `${title} × ${item?.quantity}`, plan };
+  }
   customElements.define(
     "bundlify-bundles",
     class extends HTMLElement {
@@ -434,8 +441,17 @@
             }
             label.append(select);
             if (product.variantId && variants.some(variant => String(variant.id) === product.variantId)) select.value = product.variantId;
-            label.hidden =
-              variants.length === 1 && variants[0].title === "Default Title";
+            const singleDefault = variants.length === 1 && variants[0].title === "Default Title";
+            if (bundle.custom && !bundle.review) {
+              label.classList.add("bundlify-variant-slot");
+              if (singleDefault) {
+                label.classList.add("bundlify-variant-reserved");
+                label.setAttribute("aria-hidden", "true");
+                select.tabIndex = -1;
+              }
+            } else {
+              label.hidden = singleDefault;
+            }
             info.append(link, prices, label);
             let checkbox;
             if (bundle.custom) {
@@ -955,9 +971,16 @@
         for (const item of cart.items) {
           const row = document.createElement("div");
           row.className = "bundlify-cart-row";
+          const label = cartLineLabel(item);
           const name = document.createElement("p");
-          name.textContent = `${item.product_title || item.title} × ${item.quantity}`;
+          name.textContent = label.title;
           row.append(name);
+          if (label.plan) {
+            const plan = document.createElement("p");
+            plan.className = "bundlify-cart-plan";
+            plan.textContent = label.plan;
+            row.append(plan);
+          }
           if (item.original_line_price > item.final_line_price) {
             const was = document.createElement("s");
             was.textContent = money(item.original_line_price);
