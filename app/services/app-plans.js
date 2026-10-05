@@ -61,7 +61,24 @@ export const APP_NAME = "Bundle Base";
 const SUBSCRIPTION_NAME_PREFIXES = [APP_NAME, "Codemart", "Bundlify"];
 
 export function planFromSubscriptionName(name) {
-  return plans.find((plan) => plan.price > 0 && SUBSCRIPTION_NAME_PREFIXES.some((prefix) => name === `${prefix} ${plan.name}`)) || null;
+  const value = String(name || "").trim();
+  if (!value) return null;
+  const prefixed = plans.find((plan) => plan.price > 0 && SUBSCRIPTION_NAME_PREFIXES.some((prefix) => value === `${prefix} ${plan.name}`));
+  if (prefixed) return prefixed;
+  return plans.find((plan) => plan.price > 0 && (value === plan.name || value.toLowerCase() === plan.handle)) || null;
+}
+
+export function planFromSubscription(subscription) {
+  const named = planFromSubscriptionName(subscription?.name);
+  if (named) return named;
+  const amounts = [];
+  for (const item of subscription?.lineItems || []) {
+    const price = item?.plan?.pricingDetails?.price;
+    if (!price || (price.currencyCode && price.currencyCode !== "USD")) continue;
+    const amount = Number(price.amount);
+    if (Number.isFinite(amount)) amounts.push(amount);
+  }
+  return plans.find((plan) => plan.price > 0 && amounts.includes(plan.price)) || null;
 }
 
 export function limitsFor(handle) {

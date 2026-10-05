@@ -57,7 +57,7 @@ export const loader = async ({ request }) => {
 // every in-app navigation.
 export const shouldRevalidate = ({ currentUrl, nextUrl, formMethod, defaultShouldRevalidate }) => {
   if (formMethod && formMethod !== "GET") return defaultShouldRevalidate;
-  if (nextUrl.searchParams.has("charge_id")) return true;
+  if (nextUrl.searchParams.has("charge_id") || nextUrl.searchParams.has("plan_handle")) return true;
   if (currentUrl.pathname === "/app/pricing" && nextUrl.pathname !== "/app/pricing") return true;
   return false;
 };

@@ -1,9 +1,9 @@
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
-import { useEffect } from "react";
 import { Banner } from "@shopify/polaris";
+import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { plans } from "../services/app-plans";
-import { billingReturnUrl, isApprovedCharge } from "../services/billing-return";
+import { hostedPlanSelectionPath, hostedPlanSelectionUrl, isApprovedCharge } from "../services/billing-return";
 import styles from "../styles/pricing.module.css";
 
 const icons = {
@@ -20,43 +20,41 @@ export async function loader({ request }) {
   try {
     const handle = await syncShopPlan(admin, session.shop);
     if (chargeId && handle && isApprovedCharge(await activeSubscriptionId(session.shop), chargeId)) return redirect("/app");
-    return { handle, error: null, declined: Boolean(chargeId) };
+    return { handle, error: null, declined: Boolean(chargeId), pricingUrl: hostedPlanSelectionUrl({ shop: session.shop }) };
   } catch (error) {
     if (error instanceof Response) throw error;
-    return { handle: null, error: "Shopify could not confirm your plan. Refresh and try again.", declined: false };
+    let pricingUrl = null;
+    try { pricingUrl = hostedPlanSelectionUrl({ shop: session.shop }); } catch { /* session shop is not a store handle */ }
+    return { handle: null, error: "Shopify could not confirm your plan. Refresh and try again.", declined: false, pricingUrl };
   }
 }
 
 export async function action({ request }) {
   const { admin, session, redirect } = await authenticate.admin(request);
-  const { billingTestMode, chooseShopPlan } = await import("../services/app-billing.server");
+  const { chooseShopPlan } = await import("../services/app-billing.server");
   const handle = String((await request.formData()).get("handle") || "");
   try {
-    const returnUrl = billingReturnUrl({ appUrl: process.env.SHOPIFY_APP_URL || new URL(request.url).origin, shop: session.shop });
-    const result = await chooseShopPlan({
-      admin,
-      shop: session.shop,
-      handle,
-      returnUrl,
-      test: billingTestMode(),
-    });
-    if (result.confirmationUrl) return { confirmationUrl: result.confirmationUrl };
+    const result = await chooseShopPlan({ admin, shop: session.shop, handle });
+    // shopify://admin is the embedded redirect. A raw admin.shopify.com URL from this
+    // action is a data request, so the helper answers 401 and the app renders it.
+    if (result.pricingUrl) return redirect(hostedPlanSelectionPath(), { target: "_top" });
     return redirect("/app");
   } catch (error) {
     if (error instanceof Response) throw error;
-    return { error: error.message || "Could not change the plan." };
+    const message = error.message || "Could not change the plan.";
+    return { error: message.includes("Cannot use the Billing API") ? "Shopify hosts these plans. Choose Starter, Growth, or Unlimited on Shopify's plan page." : message };
   }
 }
 
+// Forward the App Bridge reauthorize header when a paid-plan post breaks out of the iframe.
+export const headers = (headersArgs) => boundary.headers(headersArgs);
+
 export default function Pricing() {
-  const { handle, error, declined } = useLoaderData();
+  const { handle, error, declined, pricingUrl } = useLoaderData();
   const result = useActionData();
   const navigation = useNavigation();
   const busy = navigation.state !== "idle";
   const pending = String(navigation.formData?.get("handle") || "");
-  useEffect(() => {
-    if (result?.confirmationUrl) window.open(result.confirmationUrl, "_top");
-  }, [result]);
 
   return <main className={styles.page}>
     {(error || result?.error) && <div className={styles.message}><Banner tone="critical">{error || result.error}</Banner></div>}
@@ -80,12 +78,17 @@ export default function Pricing() {
           <ul className={styles.features}>
             {plan.features.map((feature) => <li key={feature}><span aria-hidden="true">✓</span>{feature}</li>)}
           </ul>
-          <Form method="post" className={styles.action}>
-            <input type="hidden" name="handle" value={plan.handle} />
-            <button className={`${styles.button} ${current ? styles.current : styles[`${plan.tone}Button`]}`} type="submit" disabled={busy || current}>
-              {current ? "Current plan" : busy && pending === plan.handle ? "Opening Shopify…" : `Choose ${plan.name}`}
-            </button>
-          </Form>
+          <div className={styles.action}>
+            {current ? <button className={`${styles.button} ${styles.current}`} type="button" disabled>Current plan</button>
+              : plan.price > 0 && pricingUrl ? <a className={`${styles.button} ${styles[`${plan.tone}Button`]}`} href={pricingUrl} target="_top">{`Choose ${plan.name}`}</a>
+              : plan.price > 0 ? <button className={`${styles.button} ${styles[`${plan.tone}Button`]}`} type="button" disabled>{`Choose ${plan.name}`}</button>
+              : <Form method="post">
+                <input type="hidden" name="handle" value={plan.handle} />
+                <button className={`${styles.button} ${styles.freeButton}`} type="submit" disabled={busy}>
+                  {busy && pending === plan.handle ? "Switching…" : `Choose ${plan.name}`}
+                </button>
+              </Form>}
+          </div>
         </article>;
       })}
     </div>

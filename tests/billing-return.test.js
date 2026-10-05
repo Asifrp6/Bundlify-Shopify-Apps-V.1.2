@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { billingReturnUrl, isApprovedCharge } from "../app/services/billing-return.js";
+import { ADMIN_APP_HANDLE, billingReturnUrl, hostedPlanSelectionPath, hostedPlanSelectionUrl, isApprovedCharge } from "../app/services/billing-return.js";
 
 test("billing return URL is absolute and carries shop and host for the embedded session", () => {
   const url = new URL(billingReturnUrl({ appUrl: "https://bundlify.example.com", shop: "demo-store.myshopify.com" }));
@@ -21,6 +21,22 @@ test("billing return URL ignores a trailing slash or path on the app URL and acc
 test("billing return URL refuses a missing or malformed shop", () => {
   for (const shop of ["", null, "evil.com/../x", "a b.myshopify.com"])
     assert.throws(() => billingReturnUrl({ appUrl: "https://bundlify.example.com", shop }), /Unknown shop/);
+});
+
+test("hosted plan page stays in the shop admin and uses Shopify's app handle", () => {
+  assert.equal(ADMIN_APP_HANDLE, "bundlify-36");
+  assert.equal(hostedPlanSelectionPath(), "shopify://admin/charges/bundlify-36/pricing_plans");
+  assert.equal(
+    hostedPlanSelectionUrl({ shop: "bundlify-apps-test.myshopify.com" }),
+    "https://admin.shopify.com/store/bundlify-apps-test/charges/bundlify-36/pricing_plans",
+  );
+  assert.equal(
+    hostedPlanSelectionUrl({ shop: "demo-store.myshopify.com", appHandle: "bundle-base" }),
+    "https://admin.shopify.com/store/demo-store/charges/bundle-base/pricing_plans",
+  );
+  for (const appHandle of ["", "Bundle Base", "../growth", "growth?x=1"])
+    assert.throws(() => hostedPlanSelectionUrl({ shop: "demo.myshopify.com", appHandle }), /app/);
+  assert.throws(() => hostedPlanSelectionUrl({ shop: "evil.com/../x", appHandle: "bundle-base" }), /Unknown shop/);
 });
 
 test("a charge is approved only when it is the shop's active subscription", () => {

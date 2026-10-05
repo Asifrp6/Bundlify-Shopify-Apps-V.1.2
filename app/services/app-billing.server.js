@@ -1,19 +1,25 @@
 import prisma from "../db.server";
-import { APP_NAME, limitsFor, planByHandle, planFromSubscriptionName, plans } from "./app-plans.js";
+import { ADMIN_APP_HANDLE, hostedPlanSelectionUrl } from "./billing-return.js";
+import { APP_NAME, limitsFor, planByHandle, planFromSubscription, plans } from "./app-plans.js";
 
 export const CURRENT_SUBSCRIPTIONS = `#graphql
   query CurrentAppSubscriptions {
     currentAppInstallation {
-      activeSubscriptions { id name status }
-    }
-  }`;
-
-export const CREATE_SUBSCRIPTION = `#graphql
-  mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean, $replacementBehavior: AppSubscriptionReplacementBehavior, $lineItems: [AppSubscriptionLineItemInput!]!) {
-    appSubscriptionCreate(name: $name, returnUrl: $returnUrl, test: $test, replacementBehavior: $replacementBehavior, lineItems: $lineItems) {
-      userErrors { field message }
-      confirmationUrl
-      appSubscription { id status }
+      activeSubscriptions {
+        id
+        name
+        status
+        lineItems {
+          plan {
+            pricingDetails {
+              __typename
+              ... on AppRecurringPricing {
+                price { amount currencyCode }
+              }
+            }
+          }
+        }
+      }
     }
   }`;
 
@@ -25,9 +31,9 @@ export const CANCEL_SUBSCRIPTION = `#graphql
     }
   }`;
 
-async function shopify(admin, document, variables) {
+async function shopify(admin, document, variables, failure = "Shopify could not update the app plan.") {
   const result = await (await admin.graphql(document, { variables })).json();
-  if (result.errors?.length) throw new Error("Shopify could not update the app plan.");
+  if (result.errors?.length) throw new Error(failure);
   return result.data;
 }
 
@@ -37,7 +43,7 @@ export async function syncShopPlan(admin, shop) {
     prisma.shopPlan.findUnique({ where: { shop } }),
   ]);
   const active = data?.currentAppInstallation?.activeSubscriptions || [];
-  const match = active.map((subscription) => ({ subscription, plan: planFromSubscriptionName(subscription.name) })).find((item) => item.plan);
+  const match = active.map((subscription) => ({ subscription, plan: planFromSubscription(subscription) })).find((item) => item.plan);
   if (match) {
     const current = local?.status === "active" && local.handle === match.plan.handle && local.subscriptionId === match.subscription.id;
     if (!current) {
@@ -56,7 +62,7 @@ export async function syncShopPlan(admin, shop) {
   return local?.status === "active" ? local.handle : null;
 }
 
-export async function chooseShopPlan({ admin, shop, handle, returnUrl, test }) {
+export async function chooseShopPlan({ admin, shop, handle }) {
   const plan = planByHandle(handle);
   if (!plan) throw new Error(`Choose a ${APP_NAME} plan.`);
   const local = await prisma.shopPlan.findUnique({ where: { shop } });
@@ -75,27 +81,13 @@ export async function chooseShopPlan({ admin, shop, handle, returnUrl, test }) {
     });
     return { handle: "free" };
   }
-  const created = await shopify(admin, CREATE_SUBSCRIPTION, {
-    name: `${APP_NAME} ${plan.name}`,
-    returnUrl,
-    test,
-    replacementBehavior: "APPLY_IMMEDIATELY",
-    lineItems: [{ plan: { appRecurringPricingDetails: { price: { amount: plan.price, currencyCode: "USD" }, interval: "EVERY_30_DAYS" } } }],
-  });
-  const payload = created?.appSubscriptionCreate;
-  if (payload?.userErrors?.length || !payload?.confirmationUrl) {
-    throw new Error(payload?.userErrors?.map((error) => error.message).filter(Boolean).join(" ") || "Shopify did not start the plan charge.");
-  }
-  return { confirmationUrl: payload.confirmationUrl };
+  // Shopify App Pricing rejects appSubscriptionCreate. Open the hosted plan page instead.
+  return { pricingUrl: hostedPlanSelectionUrl({ shop, appHandle: ADMIN_APP_HANDLE }) };
 }
 
 export async function activeSubscriptionId(shop) {
   const local = await prisma.shopPlan.findUnique({ where: { shop } });
   return local?.status === "active" ? local.subscriptionId : null;
-}
-
-export function billingTestMode() {
-  return process.env.NODE_ENV !== "production";
 }
 
 export async function shopLimits(shop) {

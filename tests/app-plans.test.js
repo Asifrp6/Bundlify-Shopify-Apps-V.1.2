@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { creationBlocked, limitsFor } from "../app/services/app-plans.js";
+import { creationBlocked, limitsFor, planFromSubscription, planFromSubscriptionName, plans } from "../app/services/app-plans.js";
 import { validateBundle, validatePlan } from "../app/services/validation.js";
 
 test("free plan limits bundle products and subscription options", () => {
@@ -43,4 +43,14 @@ test("paid plans raise the bundle and subscription limits", () => {
     ["free", "starter", "growth", "unlimited"].map((handle) => limitsFor(handle).maxPlans),
     [2, 3, 7, null],
   );
+});
+
+test("subscription name or USD price maps to the paid plan Shopify reports", () => {
+  assert.equal(plans.find((plan) => plan.handle === "growth").price, 14);
+  assert.equal(planFromSubscriptionName("Bundle Base Growth").handle, "growth");
+  assert.equal(planFromSubscriptionName("Growth").handle, "growth");
+  assert.equal(planFromSubscriptionName("growth").handle, "growth");
+  assert.equal(planFromSubscriptionName("Free"), null);
+  assert.equal(planFromSubscription({ name: "Something else", lineItems: [{ plan: { pricingDetails: { price: { amount: "14.0", currencyCode: "USD" } } } }] }).handle, "growth");
+  assert.equal(planFromSubscription({ name: "Something else", lineItems: [{ plan: { pricingDetails: { price: { amount: "14.0", currencyCode: "CAD" } } } }] }), null);
 });
