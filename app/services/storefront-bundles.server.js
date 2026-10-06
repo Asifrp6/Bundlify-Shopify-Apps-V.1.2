@@ -1,6 +1,7 @@
 import { storefrontIssue } from "./product-selection.js";
 import { storefrontGiftOptions } from "./gift-options.js";
 import { giftStore, loadGiftEnabled } from "./gift-options.server.js";
+import { readBundleDiscounts } from "./discount-rollouts.server.js";
 
 export const STOREFRONT_PRODUCTS_QUERY = `#graphql
   query BundleProducts($ids: [ID!]!) {
@@ -13,14 +14,24 @@ export const storefrontBundleWhere = shop => ({ shop, status: "ACTIVE" });
 
 export const storefrontVisible = (product, now = new Date()) => !storefrontIssue(product, now);
 
-export function storefrontBundles(bundles, products, { shopCurrency } = {}) {
+function buyerDiscount(bundle, availability) {
+  if (!bundle.discountNodeId) return { advertise: false, note: null };
+  const record = availability instanceof Map ? availability.get(bundle.discountNodeId) : undefined;
+  if (!record) return { advertise: true, note: null };
+  if (!record.present) return { advertise: false, note: null };
+  if (!record.availability) return { advertise: true, note: null };
+  return { advertise: record.availability.reachesEveryBuyer, note: record.availability.buyerNote || null };
+}
+
+export function storefrontBundles(bundles, products, { shopCurrency, availability } = {}) {
   return bundles.flatMap(bundle => {
     if (bundle.status !== "ACTIVE") return [];
     const visible = bundle.products.filter(product => products.has(product.productId));
     if (visible.length < 2) return [];
-    const discounted = !!bundle.discountNodeId;
+    const offer = buyerDiscount(bundle, availability);
+    const discounted = offer.advertise;
     const fixed = bundle.discountType === "fixed";
-    return [{
+    const result = {
       id: String(bundle.id),
       discount: discounted && !fixed ? bundle.discount : 0,
       discountType: bundle.discountType,
@@ -31,11 +42,13 @@ export function storefrontBundles(bundles, products, { shopCurrency } = {}) {
         const product = products.get(row.productId);
         return { title: product.title, handle: product.handle };
       }),
-    }];
+    };
+    if (offer.note) result.discountNote = offer.note;
+    return [result];
   });
 }
 
-export async function loadStorefrontBundles({ db, admin, shop, now = new Date() }) {
+export async function loadStorefrontBundles({ db, admin, shop, now = new Date(), scopes } = {}) {
   const bundles = await db.bundle.findMany({
     where: storefrontBundleWhere(shop),
     include: { products: true },
@@ -52,7 +65,16 @@ export async function loadStorefrontBundles({ db, admin, shop, now = new Date() 
     shopCurrency = result.data.shop?.currencyCode;
     for (const product of result.data.nodes) if (storefrontVisible(product, now)) products.set(product.id, product);
   }
-  return storefrontBundles(bundles, products, { shopCurrency });
+  const discountIds = bundles.map(bundle => bundle.discountNodeId).filter(Boolean);
+  let availability = new Map();
+  if (discountIds.length) {
+    try {
+      availability = await readBundleDiscounts(admin, discountIds, { scopes, now });
+    } catch {
+      availability = new Map();
+    }
+  }
+  return storefrontBundles(bundles, products, { shopCurrency, availability });
 }
 
 // Gift options are optional extras: a failure here must not hide the bundles themselves.

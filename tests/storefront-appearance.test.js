@@ -112,10 +112,14 @@ test("both widgets inherit the theme font and derive colors from theme variables
   const bundles = await read("assets/bundlify-bundles.css");
   const selected = bundles.match(/button\.bundlify-mode-card\.bundlify-mode-card\[aria-pressed="true"\] \{([^}]*)\}/)[1];
   assert.match(selected, /border-color: color-mix\(in srgb, var\(--bl-selectedBorder, var\(--bundlify-ring\)\) 40%, var\(--bundlify-ring\)\)/);
-  assert.match(selected, /color: var\(--bl-selectedText, inherit\)/);
+  assert.match(selected, /color: var\(--bl-selectedText, var\(--bundlify-accent\)\)/);
+  assert.match(bundles, /bundlify-bundles > h2 \{[^}]*color: var\(--bundlify-accent\)/);
+  assert.match(bundles, /\.bundlify-product-price strong \{[^}]*color:var\(--bundlify-accent\)/);
   assert.match(selected, /background: var\(--bundlify-selected-tint\) var\(--bundlify-glass-strong\)/, "selected mode card is tinted glass, not a solid fill");
   assert.match(selected, /box-shadow: var\(--bundlify-selected-shadow\)/);
   const subscription = await read("assets/bundlify-subscription.css");
+  assert.match(subscription, /\.bundlify-subscription-widget > h3 \{[^}]*color:var\(--bundlify-accent\)/);
+  assert.match(subscription, /\.bundlify-purchase-card > strong \{[^}]*color: var\(--bundlify-accent\)/);
   const checked = subscription.match(/\.bundlify-purchase-card:has\(input:checked\) \{([^}]*background: var\(--bundlify-selected-tint\) var\(--bundlify-glass-strong\)[^}]*)\}/)[1];
   assert.match(checked, /border-color: color-mix\(in srgb, var\(--bl-selectedBorder, var\(--bundlify-ring\)\) 40%, var\(--bundlify-ring\)\)/);
   assert.match(checked, /box-shadow: var\(--bundlify-selected-shadow\)/);

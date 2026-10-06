@@ -276,7 +276,7 @@ bundlify-subscription.bundlify-subscription-widget > * {
 .bundlify-subscription-widget { display:block; margin:24px auto; font-family:inherit; line-height:1.5; }
 .bundlify-subscription-widget * { box-sizing:border-box; }
 .bundlify-subscription-widget > h3 {
-  margin:0 0 4px; color:inherit; font-size:calc(20px * var(--bundlify-font-scale, 1)); line-height:1.25; letter-spacing:-.01em;
+  margin:0 0 4px; color:var(--bundlify-accent); font-size:calc(20px * var(--bundlify-font-scale, 1)); line-height:1.25; letter-spacing:-.01em;
   font-family:var(--font-heading-family, inherit); font-style:var(--font-heading-style, normal); font-weight:var(--font-heading-weight, 600);
 }
 .bundlify-subscription-widget fieldset { min-width:0; margin:0; padding:0; border:0; }
@@ -358,13 +358,13 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-pu
   grid-column: 2; justify-self: start; min-width: 0;
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card > strong {
-  padding-top: 4px; color: inherit;
+  padding-top: 4px; color: var(--bundlify-accent);
   font-size: calc(16px * var(--bundlify-font-scale, 1)); font-weight: 700; line-height: 1.15;
   font-variant-numeric: tabular-nums; letter-spacing: -.02em;
 }
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card:has(input:checked) {
   background: var(--bundlify-selected-tint) var(--bundlify-glass-strong);
-  color: var(--bl-selectedText, inherit);
+  color: var(--bl-selectedText, var(--bundlify-accent));
   border-color: color-mix(in srgb, var(--bl-selectedBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
   box-shadow: var(--bundlify-selected-shadow);
 }
@@ -481,7 +481,7 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-op
 bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-option:has(input:checked) {
   background: var(--bundlify-selected-tint) var(--bundlify-glass-strong);
   border-color: color-mix(in srgb, var(--bl-selectedBorder, var(--bundlify-ring)) 40%, var(--bundlify-ring));
-  color: var(--bl-selectedText, inherit);
+  color: var(--bl-selectedText, var(--bundlify-accent));
   box-shadow: none;
 }
 /* Drawn radio: the native one takes the (often black) selected text color and themes add dark focus rings. */
@@ -532,7 +532,7 @@ bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-pr
   width: auto;
   margin: 0;
   text-align: right;
-  color: inherit;
+  color: var(--bundlify-accent);
   font-size: calc(14px * var(--bundlify-font-scale, 1));
   line-height: 1.4;
   font-weight: 600;

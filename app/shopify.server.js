@@ -31,7 +31,7 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ session, admin }) => {
       try {
-        await reconcileSavedResources({ db: prisma, admin, shop: session.shop });
+        await reconcileSavedResources({ db: prisma, admin, shop: session.shop, scopes: session.scope });
       } catch (error) {
         // Retry reconciliation on the next authentication.
         await prisma.session.deleteMany({ where: { id: session.id, accessToken: session.accessToken } });

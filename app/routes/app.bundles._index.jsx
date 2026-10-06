@@ -9,6 +9,7 @@ import { Banner } from "@shopify/polaris";
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
 import { createBundleDiscount, removeBundleDiscount } from "../services/bundle-discount.server";
+import { readBundleDiscounts } from "../services/discount-rollouts.server";
 import { CUSTOM_APPLY_SUCCESS, CUSTOM_BUNDLE_DELETE_INTENT, CUSTOM_DISABLED_SUCCESS, customBundleOffer } from "../services/custom-bundle";
 import { getCustomBundleSettings, saveCustomBundleProducts } from "../services/custom-bundle.server";
 import { getProducts } from "../services/products.server";
@@ -73,8 +74,22 @@ export async function loader({ request }) {
     }
   }
   const customBundle = customBundleOffer(customSettings ? { ...customSettings, currency: customSettings.currency || currency } : null, customProducts);
+  const discountIds = [...new Set([
+    ...bundles.map(bundle => bundle.discountNodeId),
+    customSettings?.discount?.discountNodeId,
+  ].filter(Boolean))];
+  let discountReads = new Map();
+  if (discountIds.length) {
+    try {
+      discountReads = await readBundleDiscounts(admin, discountIds, { scopes: session.scope });
+    } catch {
+      discountReads = new Map();
+    }
+  }
+  const rolloutNote = id => discountReads.get(id)?.availability?.note || null;
+  if (customBundle) customBundle.rolloutNote = rolloutNote(customSettings?.discount?.discountNodeId);
   return {
-    bundles: bundles.map((bundle, index) => ({ ...bundle, blocked: blocked[index] })),
+    bundles: bundles.map((bundle, index) => ({ ...bundle, blocked: blocked[index], rolloutNote: rolloutNote(bundle.discountNodeId) })),
     bundleLimit: creationBlocked(usage, "bundle", usage?.bundles ?? 0),
     planName: usage?.name || null,
     maxBundles: usage?.maxBundles ?? null,
@@ -374,6 +389,7 @@ function CustomBundleSection({ bundle }) {
     <div className={styles.grid}><article className={styles.card}>
       <div className={styles.cardHeading}><span className={styles.cardIcon}><BundleIcon /></span><div className={styles.cardTitle}><Link to={bundle.editTo}><h3>{bundle.name}</h3></Link><p>Customer-created</p></div><span className={`${styles.badge} ${styles.activeBadge}`}><span aria-hidden="true" />Active</span></div>
       <div className={styles.cardMeta}><div><span>Products</span><strong>{bundle.products.length}</strong></div><div className={styles.discount}><span>Bundle discount</span><strong>{bundle.discountText}</strong></div></div>
+      {bundle.rolloutNote ? <p className={styles.rolloutNote}>{bundle.rolloutNote}</p> : null}
       <div className={styles.productList}><span className={styles.label}>THE LINEUP</span><ul>{bundle.products.map(product => <li key={product.productId}>{product.productTitle}</li>)}</ul></div>
       {deleteError && !confirming && <div className={styles.activation}><p role="alert">{deleteError}</p></div>}
       <footer className={styles.cardFooter}><Link className={styles.edit} to={bundle.editTo}>Edit bundle <span aria-hidden="true">→</span></Link><button className={styles.delete} type="button" onClick={() => setConfirming(true)} disabled={busy} aria-label={`Delete ${bundle.name}`}>Delete bundle</button></footer>
@@ -434,6 +450,7 @@ export default function Bundles() {
       </div> : <div className={styles.grid}>{bundles.map(bundle => <article className={styles.card} key={bundle.id}>
         <div className={styles.cardHeading}><span className={styles.cardIcon}><BundleIcon /></span><div className={styles.cardTitle}><Link to={`/app/bundles/${bundle.id}`}><h3>{bundle.name}</h3></Link><p>Bundle ID: {bundle.id}</p></div><span className={`${styles.badge} ${bundle.status === "ACTIVE" ? styles.activeBadge : ""}`}><span aria-hidden="true" />{bundle.status !== "ACTIVE" ? "Draft" : bundle.products.length - (bundle.blocked?.length || 0) < 2 ? "Active · hidden" : "Active"}</span></div>
         <div className={styles.cardMeta}><div><span>Products</span><strong>{bundle.products.length}</strong></div><div className={styles.discount}><span>Bundle discount</span><strong>{discountLabel(bundle.discount, bundle.discountType)}</strong></div></div>
+        {bundle.rolloutNote ? <p className={styles.rolloutNote}>{bundle.rolloutNote}</p> : null}
         <div className={styles.productList}><span className={styles.label}>THE LINEUP</span><ul>{bundle.products.map(product => <li key={product.productId}>{product.productTitle}</li>)}</ul></div>
         <BundleActivation bundle={bundle} /><footer className={styles.cardFooter}><Link className={styles.edit} to={`/app/bundles/${bundle.id}`}>Edit bundle <span aria-hidden="true">→</span></Link><Link className={styles.delete} to={`/app/bundles/${bundle.id}#delete-bundle`} aria-label={`Delete ${bundle.name}`}>Delete bundle</Link></footer>
       </article>)}</div>}

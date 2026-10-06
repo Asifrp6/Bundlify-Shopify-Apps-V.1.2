@@ -18,9 +18,12 @@ function fakeDb(rows) {
     return rows.filter(b => b.shop === where.shop && b.status === where.status);
   } } };
 }
-const fakeAdmin = catalog => ({ graphql: async (_query, { variables }) => ({ json: async () => ({
-  data: { shop: { currencyCode: "USD" }, nodes: variables.ids.map(id => catalog.find(p => p.id === id) || null) },
-}) }) });
+const fakeAdmin = catalog => ({ graphql: async (query, { variables } = {}) => ({ json: async () => {
+  if (String(query).includes("BundleDiscountWindows")) {
+    return { data: { nodes: variables.ids.map(id => ({ id, automaticDiscount: { status: "ACTIVE", startsAt: "2020-01-01T00:00:00Z", endsAt: null } })) } };
+  }
+  return { data: { shop: { currencyCode: "USD" }, nodes: variables.ids.map(id => catalog.find(p => p.id === id) || null) } };
+} }) });
 
 test("storefront query reads every active bundle for the shop, not only the current product's", () => {
   assert.deepEqual(storefrontBundleWhere("shop.myshopify.com"), { shop: "shop.myshopify.com", status: "ACTIVE" });
@@ -56,6 +59,16 @@ test("two active bundles both show on a product page whose product is in one of 
 test("draft bundles are never returned", () => {
   const products = new Map([11, 12].map(id => [gid(id), published(id)]));
   assert.deepEqual(storefrontBundles([bundle(1, "DRAFT", [11, 12])], products), []);
+});
+
+test("a serving rollout that reaches part of the store is not advertised as a storewide discount", () => {
+  const products = new Map([11, 12].map(id => [gid(id), published(id)]));
+  const discountNodeId = "gid://shopify/DiscountAutomaticNode/1";
+  const availability = new Map([[discountNodeId, { present: true, availability: { reachesEveryBuyer: false, buyerNote: "Live for 40% of buyers" } }]]);
+  const [result] = storefrontBundles([bundle(1, "ACTIVE", [11, 12])], products, { availability });
+  assert.equal(result.discount, 0);
+  assert.equal(result.fixedDiscount, 0);
+  assert.equal(result.discountNote, "Live for 40% of buyers");
 });
 
 test("an active bundle without a created discount still shows, but advertises no discount", () => {

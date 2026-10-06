@@ -1,4 +1,4 @@
-import { deleteSellingPlan, syncPlanProducts } from "./sellingPlan.server.js";
+import { deleteSellingPlan, groupIdsForPlan, listAppSellingPlanGroups, syncPlanProducts } from "./sellingPlan.server.js";
 import { planOptions, sellingPlanInput, optionRecords, planLengths, planCombinations, groupOptionNames, lengthRecord } from "./delivery-options.js";
 export const PLAN_QUERY = `#graphql
 query BundlifyPlan($id: ID!) {
@@ -12,24 +12,34 @@ mutation BundlifyUpdate($id: ID!, $input: SellingPlanGroupInput!) {
   }
 }`;
 // `assignment` ({ productId, productIds, title, image }) replaces the plan's products; omit it to keep them.
+async function deletePlanGroups(admin, plan) {
+  const groups = await listAppSellingPlanGroups(admin);
+  for (const id of groupIdsForPlan(plan, groups)) await deleteSellingPlan(admin, id, { missingOk: true });
+}
+
 export async function changeSubscription({ prisma, admin, plan, values, remove = false, assignment }) {
+  if (remove) {
+    await deletePlanGroups(admin, plan);
+    try {
+      return await prisma.subscriptionPlan.deleteMany({ where: { id: plan.id, shop: plan.shop } });
+    } catch {
+      throw new Error("Shopify was updated, but the local save failed. Retry this same operation to synchronize the record.");
+    }
+  }
   if (plan.status === "PENDING" && !plan.sellingPlanGroupId)
     throw new Error("Review the interrupted creation in Shopify before changing this plan.");
   let updatedGroup;
-  const options = remove ? [] : planOptions(values);
+  const options = planOptions(values);
   // Callers that do not edit lengths (e.g. the product block) keep the saved configuration.
-  const lengths = remove ? [] : planLengths(typeof values.lengthEnabled === "boolean" ? values : plan);
+  const lengths = planLengths(typeof values.lengthEnabled === "boolean" ? values : plan);
   if (plan.sellingPlanGroupId) {
     const response = await admin.graphql(PLAN_QUERY, { variables: { id: plan.sellingPlanGroupId } });
     const result = await response.json();
     if (result.errors?.length || !result.data) throw new Error("Unable to verify the Shopify plan. Please retry.");
     const group = result.data.sellingPlanGroup;
-    if (remove) {
-      if (group) await deleteSellingPlan(admin, group.id);
-    } else {
-      if (!group || group.sellingPlans.pageInfo?.hasNextPage)
-        throw new Error("This group cannot be edited here. Review its selling plans in Shopify.");
-      if (assignment) {
+    if (!group || group.sellingPlans.pageInfo?.hasNextPage)
+      throw new Error("This group cannot be edited here. Review its selling plans in Shopify.");
+    if (assignment) {
         try { await syncPlanProducts(admin, group.id, assignment.productIds); }
         catch (error) { throw new Error(`Shopify rejected the product change: ${error.message} Plan details were not saved; retrying is safe.`); }
       }
@@ -62,10 +72,8 @@ export async function changeSubscription({ prisma, admin, plan, values, remove =
       if (payload.userErrors?.length) throw new Error(payload.userErrors.map(e => e.message).join(" "));
       if (payload.sellingPlanGroup?.id !== group.id) throw new Error("Shopify did not confirm the update.");
       updatedGroup = payload.sellingPlanGroup;
-    }
   }
   try {
-    if (remove) return await prisma.subscriptionPlan.deleteMany({ where: { id: plan.id, shop: plan.shop } });
     return await prisma.subscriptionPlan.update({
       where: { id: plan.id, shop: plan.shop },
       data: { name: values.name, frequency: options[0].frequency, discount: options[0].discount, discountType: options[0].discountType || "percentage", ...lengthRecord(values),

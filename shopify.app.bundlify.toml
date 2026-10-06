@@ -30,7 +30,7 @@ api_version = "2026-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_discounts,write_app_proxy,write_products,read_publications,write_publications,read_own_subscription_contracts,write_own_subscription_contracts,write_customers,read_customer_payment_methods,read_purchase_options,write_purchase_options"
+scopes = "write_discounts,read_discounts,write_app_proxy,write_products,read_publications,write_publications,read_own_subscription_contracts,write_own_subscription_contracts,write_customers,read_customer_payment_methods,read_purchase_options,write_purchase_options,read_rollouts"
 
 [auth]
 redirect_urls = [ "https://bundlebase.imranwebstudio.me/auth/callback" ]

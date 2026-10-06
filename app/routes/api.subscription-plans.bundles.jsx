@@ -8,7 +8,7 @@ export async function loader({ request }) {
   if (!admin || !session?.shop) return json({ bundles: [] }, 401);
   try {
     const [bundles, giftOptions, giftEnabled] = await Promise.all([
-      loadStorefrontBundles({ db: prisma, admin, shop: session.shop }),
+      loadStorefrontBundles({ db: prisma, admin, shop: session.shop, scopes: session.scope }),
       loadStorefrontGiftOptions({ db: prisma, shop: session.shop }),
       loadStorefrontGiftEnabled({ db: prisma, shop: session.shop }),
     ]);

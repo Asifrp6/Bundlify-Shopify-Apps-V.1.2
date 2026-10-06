@@ -182,12 +182,51 @@ export async function removePlanProducts(admin, id, productIds) {
     throw new Error(payload?.userErrors?.map(error => error.message).join(" ") || "Could not remove the product from this plan.");
 }
 
-export async function deleteSellingPlan(admin, id) {
+const APP_GROUPS = `#graphql
+query BundlifyAppGroups($after: String) {
+  sellingPlanGroups(first: 50, after: $after) {
+    nodes { id merchantCode }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+export async function listAppSellingPlanGroups(admin) {
+  const groups = [];
+  const seen = new Set();
+  let after = null;
+  do {
+    const result = await (await admin.graphql(APP_GROUPS, { variables: { after } })).json();
+    const connection = result.data?.sellingPlanGroups;
+    if (result.errors?.length || !connection) throw new Error("Unable to verify the Shopify plan. Please retry.");
+    groups.push(...(connection.nodes || []));
+    if (!connection.pageInfo?.hasNextPage) return groups;
+    after = connection.pageInfo.endCursor;
+    if (!after || seen.has(after)) throw new Error("Unable to verify the Shopify plan. Please retry.");
+    seen.add(after);
+  } while (groups.length < 200);
+  return groups;
+}
+
+export function groupIdsForPlan(plan, groups = []) {
+  const ids = [];
+  const add = id => { if (id && !ids.includes(id)) ids.push(id); };
+  add(plan?.sellingPlanGroupId);
+  const code = `bundlify-${plan?.id}`;
+  for (const group of groups) if (group?.merchantCode === code) add(group.id);
+  return ids;
+}
+
+function alreadyDeleted(payload) {
+  return payload?.userErrors?.length > 0 && payload.userErrors.every(error => /does not exist|not found/i.test(error.message || ""));
+}
+
+export async function deleteSellingPlan(admin, id, { missingOk = false } = {}) {
   const response = await admin.graphql(DELETE_SELLING_PLAN, {
     variables: { id },
   });
   const result = await response.json();
   const payload = result.data?.sellingPlanGroupDelete;
+  if (missingOk && alreadyDeleted(payload)) return;
   if (
     result.errors?.length ||
     payload?.userErrors?.length ||

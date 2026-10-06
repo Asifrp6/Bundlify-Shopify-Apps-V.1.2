@@ -80,6 +80,7 @@
               choice.className = "bundlify-bundle-option";
               const count = Array.isArray(bundle.products) ? bundle.products.length : 0;
               const save = Number.isInteger(bundle.discount) && bundle.discount > 0 ? `Save ${bundle.discount}%` : "";
+              const rolloutNote = typeof bundle.discountNote === "string" ? bundle.discountNote : "";
               const mark = document.createElement("span");
               mark.className = "bundlify-bundle-option-mark";
               mark.setAttribute("aria-hidden", "true");
@@ -89,7 +90,7 @@
               const name = document.createElement("strong");
               name.textContent = bundle.name || "Bundle";
               const meta = document.createElement("small");
-              meta.textContent = [count ? `${count} product${count === 1 ? "" : "s"}` : "Bundle offer", save].filter(Boolean).join(" · ");
+              meta.textContent = [count ? `${count} product${count === 1 ? "" : "s"}` : "Bundle offer", save, rolloutNote].filter(Boolean).join(" · ");
               copy.append(name, meta);
               const radio = document.createElement("span");
               radio.className = "bundlify-bundle-option-radio";

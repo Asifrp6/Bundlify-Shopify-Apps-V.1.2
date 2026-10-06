@@ -18,6 +18,7 @@ import { Banner } from "@shopify/polaris";
 import { useState } from "react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { embeddedAppRedirect, subscriptionSavedPath } from "../services/embedded-navigation.server";
 import { validatePlan } from "../services/validation";
 import { changeSubscription } from "../services/subscription-management.server";
 import { listProducts, productLoadFailure, resolvePlanProducts } from "../services/products.server";
@@ -97,9 +98,7 @@ export async function action({ request, params }) {
       { status: 502 },
     );
   }
-  return redirect(
-    `/app/subscriptions?${intent === "delete" ? "deleted" : "updated"}=1`,
-  );
+  throw embeddedAppRedirect(subscriptionSavedPath(intent));
 }
 export default function EditSubscription() {
   const { plan, products = [], productError, maxOptions = 2, maxProducts = 5 } = useLoaderData();

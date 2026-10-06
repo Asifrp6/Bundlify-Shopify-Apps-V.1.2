@@ -76,6 +76,8 @@
   bundlify-bundles .bundlify-product-price strong, bundlify-bundles .bundlify-total strong { color:{{ appearance.accent | escape }}; }
   {%- else %}
   bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-cards { padding:6px; border-radius:22px; }
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-price,
+  bundlify-subscription.bundlify-subscription-widget[data-variant-id] .bundlify-purchase-card > strong { color:inherit; }
   {%- endif %}
 {%- endunless %}
 </style>

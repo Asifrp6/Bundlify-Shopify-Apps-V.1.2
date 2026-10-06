@@ -19,6 +19,9 @@ export async function loader({ request }) {
     throw error;
   }
   try {
+    await import("../services/import-selling-plans.server.js")
+      .then(({ importMissingPlans }) => importMissingPlans({ prisma, admin, shop: session.shop }))
+      .catch(error => reportRouteFailure(error, "subscription-list shopify plans"));
     const [usage, subscriptions, subscriberPage] = await Promise.all([
       import("../services/app-billing.server").then(({ shopUsage }) => shopUsage(session.shop)),
       prisma.subscriptionPlan.findMany({
